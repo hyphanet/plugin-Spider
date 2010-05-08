@@ -63,6 +63,7 @@ public class LibraryBuffer implements FredPluginTalker {
 		TermPageEntry exTPE = termPageBuffer.get(newTPE);
 		if(exTPE==null) {	// TPE is new
 			increaseEstimate(newTPE.sizeEstimate());
+			termPageBuffer.put(newTPE, newTPE);
 			return newTPE;
 		} else
 			return exTPE;
