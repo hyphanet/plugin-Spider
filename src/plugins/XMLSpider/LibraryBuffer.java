@@ -119,7 +119,7 @@ public class LibraryBuffer implements FredPluginTalker {
 			}
 			os.close();
 			bucket.setReadOnly();
-			libraryTalker.send(sfs, bucket);
+			libraryTalker.sendSyncInternalOnly(sfs, bucket);
 			Logger.normal(this, "Buffer successfully sent to Library, size = "+bucket.size());
 		} catch (IOException ex) {
 			Logger.error(this, "Could not make bucket to transfer buffer", ex);
