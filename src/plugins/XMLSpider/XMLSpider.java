@@ -108,6 +108,10 @@ public class XMLSpider implements FredPlugin, FredPluginThreadless,
 	private PluginRespirator pr;
 
 	private LibraryBuffer librarybuffer;
+	
+	public int getLibraryBufferSize() {
+		return librarybuffer.bufferUsageEstimate();
+	}
 
 	public synchronized boolean cancelWrite() {
 		if(writingIndex) {

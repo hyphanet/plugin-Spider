@@ -43,6 +43,10 @@ public class LibraryBuffer implements FredPluginTalker {
 			sendBuffer();
 	}
 	
+	public int bufferUsageEstimate() {
+		return bufferUsageEstimate;
+	}
+	
 
 	LibraryBuffer(PluginRespirator pr) {
 		this.pr = pr;

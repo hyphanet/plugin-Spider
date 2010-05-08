@@ -146,6 +146,8 @@ class MainPage implements WebPage {
 			}
 		}
 		statusContent.addChild("br");
+		statusContent.addChild("#", "Library buffer size: "+xmlSpider.getLibraryBufferSize());
+		statusContent.addChild("br");
 		statusContent.addChild("#", "Last Written: "
 		        + (xmlSpider.getIndexWriter().tProducedIndex == 0 ? "NEVER" : new Date(
 		                xmlSpider.getIndexWriter().tProducedIndex).toString()));
