@@ -120,8 +120,10 @@ public class LibraryBuffer implements FredPluginTalker {
 	 */
 	private void sendBuffer() {
 		if(SAVE_FILE.exists()) {
+			System.out.println("Restoring data from last time from "+SAVE_FILE);
 			Bucket bucket = new FileBucket(SAVE_FILE, true, false, false, false, false);
 			innerSend(bucket);
+			System.out.println("Restored data from last time from "+SAVE_FILE);
 		}
 		long tStart = System.currentTimeMillis();
 		try {
@@ -159,7 +161,6 @@ public class LibraryBuffer implements FredPluginTalker {
 		try {
 			libraryTalker = pr.getPluginTalker(this, "plugins.Library.Main", "SpiderBuffer");
 			libraryTalker.sendSyncInternalOnly(sfs, bucket);
-			bucket.free();
 		} catch (PluginNotFoundException e) {
 			Logger.error(this, "Couldn't connect buffer to Library", e);
 		}
@@ -181,6 +182,10 @@ public class LibraryBuffer implements FredPluginTalker {
 	public void terminate() {
 		Collection<TermPageEntry> buffer2;
 		synchronized(this) {
+			if(shutdown) {
+				Logger.error(this, "Shutdown called twice", new Exception("error"));
+				return;
+			}
 			shutdown = true;
 			buffer2 = termPageBuffer.values();
 			termPageBuffer = new TreeMap();
