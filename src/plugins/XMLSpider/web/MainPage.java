@@ -20,6 +20,7 @@ import freenet.keys.FreenetURI;
 import freenet.pluginmanager.PluginRespirator;
 import freenet.support.HTMLNode;
 import freenet.support.Logger;
+import freenet.support.TimeUtil;
 import freenet.support.api.HTTPRequest;
 
 class MainPage implements WebPage {
@@ -151,7 +152,14 @@ class MainPage implements WebPage {
 		statusContent.addChild("#", "Last Written: "
 		        + (xmlSpider.getIndexWriter().tProducedIndex == 0 ? "NEVER" : new Date(
 		                xmlSpider.getIndexWriter().tProducedIndex).toString()));
-
+		
+		long tStalled = xmlSpider.getStalledTime();
+		long tNotStalled = xmlSpider.getNotStalledTime();
+		statusContent.addChild("br");
+		statusContent.addChild("#", "Time stalled: "+TimeUtil.formatTime(tStalled));
+		statusContent.addChild("br");
+		statusContent.addChild("#", "Time not stalled: "+TimeUtil.formatTime(tNotStalled)+" ("+(tNotStalled * 100.0) / (tStalled + tNotStalled)+"%)");
+		
 		// Column 2
 		nextTableCell = overviewTableRow.addChild("td", "class", "second");
 		HTMLNode mainContent = pageMaker.getInfobox("#", "Main", nextTableCell);

@@ -25,11 +25,15 @@ import plugins.Library.index.TermPageEntry;
  */
 public class LibraryBuffer implements FredPluginTalker {
 	private PluginRespirator pr;
+	private long timeStalled = 0;
+	private long timeNotStalled = 0;
+	private long timeLastNotStalled = System.currentTimeMillis();
 
 	private TreeMap<TermPageEntry, TermPageEntry> termPageBuffer = new TreeMap();
 
 	private int bufferUsageEstimate = 0;
-	private final int bufferMax = 2000000;
+	// A big buffer will use a lot of RAM but should be more efficient = less XMLSpider time spent waiting for Library.
+	private final int bufferMax = 1<<20;
 
 
 
@@ -101,6 +105,7 @@ public class LibraryBuffer implements FredPluginTalker {
 	 * FIXME : I think there is something wrong with the way it writes to the bucket, I may be using the wrong kind of buffer
 	 */
 	private void sendBuffer() {
+		long tStart = System.currentTimeMillis();
 		try {
 			PluginTalker libraryTalker = pr.getPluginTalker(this, "plugins.Library.Main", "SpiderBuffer");
 			Logger.normal(this, "Sending buffer of estimated size "+bufferUsageEstimate+" bytes to Library");
@@ -126,6 +131,20 @@ public class LibraryBuffer implements FredPluginTalker {
 		} catch (PluginNotFoundException ex) {
 			Logger.error(this, "Couldn't connect buffer to Library", ex);
 		}
+		long tEnd = System.currentTimeMillis();
+		synchronized(this) {
+			timeNotStalled += (tStart - timeLastNotStalled);
+			timeLastNotStalled = tEnd;
+			timeStalled += (tEnd - tStart);
+		}
+	}
+	
+	public long getTimeStalled() {
+		return timeStalled;
+	}
+	
+	public long getTimeNotStalled() {
+		return timeNotStalled;
 	}
 
 	public void onReply(String pluginname, String indentifier, SimpleFieldSet params, Bucket data) {

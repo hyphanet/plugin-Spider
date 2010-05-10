@@ -112,6 +112,14 @@ public class XMLSpider implements FredPlugin, FredPluginThreadless,
 	public int getLibraryBufferSize() {
 		return librarybuffer.bufferUsageEstimate();
 	}
+	
+	public long getStalledTime() {
+		return librarybuffer.getTimeStalled();
+	}
+	
+	public long getNotStalledTime() {
+		return librarybuffer.getTimeNotStalled();
+	}
 
 	public synchronized boolean cancelWrite() {
 		if(writingIndex) {
