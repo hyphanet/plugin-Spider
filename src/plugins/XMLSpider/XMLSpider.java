@@ -608,6 +608,8 @@ public class XMLSpider implements FredPlugin, FredPluginThreadless,
 		try { db.close(); } catch (Exception e) {}
 		
 		webInterface.unload();
+		
+		librarybuffer.terminate();
 
 		Logger.normal(this, "XMLSpider terminated");
 	}

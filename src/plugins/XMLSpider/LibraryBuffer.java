@@ -8,6 +8,9 @@ import freenet.pluginmanager.PluginTalker;
 import freenet.support.Logger;
 import freenet.support.SimpleFieldSet;
 import freenet.support.api.Bucket;
+import freenet.support.io.FileBucket;
+
+import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Collection;
@@ -28,13 +31,15 @@ public class LibraryBuffer implements FredPluginTalker {
 	private long timeStalled = 0;
 	private long timeNotStalled = 0;
 	private long timeLastNotStalled = System.currentTimeMillis();
+	private boolean shutdown;
 
 	private TreeMap<TermPageEntry, TermPageEntry> termPageBuffer = new TreeMap();
 
 	private int bufferUsageEstimate = 0;
 	// A big buffer will use a lot of RAM but should be more efficient = less XMLSpider time spent waiting for Library.
-	private final int bufferMax = 1<<20;
+	private final int bufferMax = 1<<24;
 
+	static final File SAVE_FILE = new File("xmlspider.saved.data");
 
 
 	/**
@@ -64,6 +69,15 @@ public class LibraryBuffer implements FredPluginTalker {
 	 * @return
 	 */
 	private synchronized TermPageEntry get(TermPageEntry newTPE) {
+		if(shutdown) {
+			while(true)
+				try {
+					wait();// Don't add anything more, don't allow the transaction to commit.
+					// FIXME throw something instead???
+				} catch (InterruptedException e) {
+					// Ignore
+				} 
+		}
 		TermPageEntry exTPE = termPageBuffer.get(newTPE);
 		if(exTPE==null) {	// TPE is new
 			increaseEstimate(newTPE.sizeEstimate());
@@ -105,12 +119,13 @@ public class LibraryBuffer implements FredPluginTalker {
 	 * FIXME : I think there is something wrong with the way it writes to the bucket, I may be using the wrong kind of buffer
 	 */
 	private void sendBuffer() {
+		if(SAVE_FILE.exists()) {
+			Bucket bucket = new FileBucket(SAVE_FILE, true, false, false, false, false);
+			innerSend(bucket);
+		}
 		long tStart = System.currentTimeMillis();
 		try {
-			PluginTalker libraryTalker = pr.getPluginTalker(this, "plugins.Library.Main", "SpiderBuffer");
 			Logger.normal(this, "Sending buffer of estimated size "+bufferUsageEstimate+" bytes to Library");
-			SimpleFieldSet sfs = new SimpleFieldSet(true);
-			sfs.putSingle("command", "pushBuffer");
 			Bucket bucket = pr.getNode().clientCore.tempBucketFactory.makeBucket(3000000);
 			Collection<TermPageEntry> buffer2;
 			synchronized (this) {
@@ -124,12 +139,10 @@ public class LibraryBuffer implements FredPluginTalker {
 			}
 			os.close();
 			bucket.setReadOnly();
-			libraryTalker.sendSyncInternalOnly(sfs, bucket);
+			innerSend(bucket);
 			Logger.normal(this, "Buffer successfully sent to Library, size = "+bucket.size());
 		} catch (IOException ex) {
 			Logger.error(this, "Could not make bucket to transfer buffer", ex);
-		} catch (PluginNotFoundException ex) {
-			Logger.error(this, "Couldn't connect buffer to Library", ex);
 		}
 		long tEnd = System.currentTimeMillis();
 		synchronized(this) {
@@ -137,6 +150,20 @@ public class LibraryBuffer implements FredPluginTalker {
 			timeLastNotStalled = tEnd;
 			timeStalled += (tEnd - tStart);
 		}
+	}
+	
+	private void innerSend(Bucket bucket) {
+		SimpleFieldSet sfs = new SimpleFieldSet(true);
+		sfs.putSingle("command", "pushBuffer");
+		PluginTalker libraryTalker;
+		try {
+			libraryTalker = pr.getPluginTalker(this, "plugins.Library.Main", "SpiderBuffer");
+			libraryTalker.sendSyncInternalOnly(sfs, bucket);
+			bucket.free();
+		} catch (PluginNotFoundException e) {
+			Logger.error(this, "Couldn't connect buffer to Library", e);
+		}
+
 	}
 	
 	public long getTimeStalled() {
@@ -149,6 +176,29 @@ public class LibraryBuffer implements FredPluginTalker {
 
 	public void onReply(String pluginname, String indentifier, SimpleFieldSet params, Bucket data) {
 		// TODO maybe
+	}
+
+	public void terminate() {
+		Collection<TermPageEntry> buffer2;
+		synchronized(this) {
+			shutdown = true;
+			buffer2 = termPageBuffer.values();
+			termPageBuffer = new TreeMap();
+			bufferUsageEstimate = 0;
+		}
+		FileBucket bucket = new FileBucket(SAVE_FILE, false, false, false, false, false);
+		OutputStream os;
+		try {
+			os = bucket.getOutputStream();
+			for (TermPageEntry termPageEntry : buffer2) {
+				TermEntryWriter.getInstance().writeObject(termPageEntry, os);
+			}
+			os.close();
+			bucket.setReadOnly();
+			System.out.println("Stored remaining data on shutdown to "+SAVE_FILE);
+		} catch (IOException e) {
+			// Ignore
+		}
 	}
 
 }
