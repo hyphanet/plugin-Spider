@@ -121,7 +121,7 @@ public class LibraryBuffer implements FredPluginTalker {
 	private void sendBuffer() {
 		if(SAVE_FILE.exists()) {
 			System.out.println("Restoring data from last time from "+SAVE_FILE);
-			Bucket bucket = new FileBucket(SAVE_FILE, true, false, false, false, false);
+			Bucket bucket = new FileBucket(SAVE_FILE, true, false, false, false, true);
 			innerSend(bucket);
 			System.out.println("Restored data from last time from "+SAVE_FILE);
 		}
