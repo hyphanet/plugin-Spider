@@ -130,6 +130,10 @@ class SearchTokenizer implements Iterable<String>, Iterator<String> {
 			assert cjkTokenizer.hasNext();
 			return cjkTokenizer.next();
 
+		case UNDEF:
+			// E.g. a number. We do index these. FIXME should we? Probably yes...
+			return curSeg;
+			
 		default:
 			assert false; // DOH!
 		}
