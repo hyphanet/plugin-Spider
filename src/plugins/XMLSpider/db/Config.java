@@ -32,7 +32,7 @@ public class Config extends Persistent implements Cloneable {
 
 	private boolean debug;
 	
-	private boolean generateNewFormatIndexes;
+	private int newFormatIndexBufferLimit;
 
 	public Config() {
 	}
@@ -228,11 +228,11 @@ public class Config extends Persistent implements Cloneable {
 		this.debug = debug;
 	}
 	
-	public synchronized boolean generateNewFormatIndexes() {
-		return generateNewFormatIndexes;
+	public synchronized int getNewFormatIndexBufferLimit() {
+		return newFormatIndexBufferLimit;
 	}
 	
-	public synchronized void setGenerateNewFormatIndexes(boolean b) {
-		generateNewFormatIndexes = b;
+	public synchronized void setNewFormatIndexBufferLimit(int limit) {
+		newFormatIndexBufferLimit = limit;
 	}
 }

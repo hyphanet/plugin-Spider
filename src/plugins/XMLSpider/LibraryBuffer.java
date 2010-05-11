@@ -37,18 +37,17 @@ public class LibraryBuffer implements FredPluginTalker {
 	private TreeMap<TermPageEntry, TermPageEntry> termPageBuffer = new TreeMap();
 
 	private int bufferUsageEstimate = 0;
-	// A big buffer will use a lot of RAM but should be more efficient = less XMLSpider time spent waiting for Library.
-	private final int bufferMax = 1<<24;
+	private int bufferMax;
 
 	static final File SAVE_FILE = new File("xmlspider.saved.data");
 
-
-	synchronized void setEnabled(boolean e) {
-		if(e == false && enabled) {
+	synchronized void setBufferSize(int maxSize) {
+		if(maxSize == 0 && enabled) {
 			termPageBuffer.clear();
 			bufferUsageEstimate = 0;
 		}
-		enabled = e;
+		enabled = (maxSize != 0);
+		bufferMax = maxSize;
 	}
 	
 	/**

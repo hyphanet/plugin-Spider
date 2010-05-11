@@ -95,8 +95,8 @@ class ConfigPage implements WebPage {
 			config.debug(Boolean.valueOf(v));
 		}
 		if(request.isPartSet("newFormatEnabled")) {
-			String v = request.getPartAsString("newFormatEnabled", 10);
-			config.setGenerateNewFormatIndexes(Boolean.valueOf(v));
+			String v = request.getPartAsString("newFormatBufferSize", 10);
+			config.setNewFormatIndexBufferLimit(Integer.valueOf(v));
 		}
 		
 		xmlSpider.setConfig(config);
@@ -175,11 +175,10 @@ class ConfigPage implements WebPage {
 		        new String[] { "false", "true" }, //
 		        Boolean.toString(config.isDebug()));
 		addConfig(indexConfig, //
-		        "Enable new-format indexes", "Enable new-format indexes (will be written by Library, will only include sites found since this option was enabled)", // 
-		        "newFormatEnabled", //
-		        new String[] { "false", "true" }, //
-		        Boolean.toString(config.generateNewFormatIndexes()));
-		
+		        "Buffer size for new format indexes (MB, 0 = disable)", "In-memory buffer size for new format indexes. 0 means only write old format indexes. Probably a good idea for this to be fairly big, although we will use more memory than the limit given.", // 
+		        "newFormatBufferSize", //
+		        new String[] { "0", "1", "2", "4", "8", "16", "32", "64", "128" }, //
+		        Integer.toString(config.getNewFormatIndexBufferLimit()));		
 		
 		configForm.addChild("input", //
 		        new String[] { "type", "value" }, //
