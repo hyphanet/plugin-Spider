@@ -31,6 +31,8 @@ public class Config extends Persistent implements Cloneable {
 	private short requestPriority;
 
 	private boolean debug;
+	
+	private boolean generateNewFormatIndexes;
 
 	public Config() {
 	}
@@ -224,5 +226,13 @@ public class Config extends Persistent implements Cloneable {
 	public synchronized void debug(boolean debug) {
 		assert !isPersistent();
 		this.debug = debug;
+	}
+	
+	public synchronized boolean generateNewFormatIndexes() {
+		return generateNewFormatIndexes;
+	}
+	
+	public synchronized void setGenerateNewFormatIndexes(boolean b) {
+		generateNewFormatIndexes = b;
 	}
 }

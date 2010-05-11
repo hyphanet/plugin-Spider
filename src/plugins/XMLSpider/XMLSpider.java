@@ -465,6 +465,7 @@ public class XMLSpider implements FredPlugin, FredPluginThreadless,
 		boolean dbTransactionEnded = false;
 		db.beginThreadTransaction(Storage.EXCLUSIVE_TRANSACTION);
 		try {
+			librarybuffer.setEnabled(getConfig().generateNewFormatIndexes());
 			/*
 			 * instead of passing the current object, the pagecallback object for every page is
 			 * passed to the content filter this has many benefits to efficiency, and allows us to

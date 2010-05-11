@@ -32,6 +32,7 @@ public class LibraryBuffer implements FredPluginTalker {
 	private long timeNotStalled = 0;
 	private long timeLastNotStalled = System.currentTimeMillis();
 	private boolean shutdown;
+	private boolean enabled;
 
 	private TreeMap<TermPageEntry, TermPageEntry> termPageBuffer = new TreeMap();
 
@@ -42,6 +43,14 @@ public class LibraryBuffer implements FredPluginTalker {
 	static final File SAVE_FILE = new File("xmlspider.saved.data");
 
 
+	synchronized void setEnabled(boolean e) {
+		if(e == false && enabled) {
+			termPageBuffer.clear();
+			bufferUsageEstimate = 0;
+		}
+		enabled = e;
+	}
+	
 	/**
 	 * Increments the estimate by specified amount and if the estimate is above the max send the buffer
 	 * @param increment
@@ -92,7 +101,8 @@ public class LibraryBuffer implements FredPluginTalker {
 	 * @param termPageEntry
 	 * @param s
 	 */
-	void setTitle(TermPageEntry termPageEntry, String s) {
+	synchronized void setTitle(TermPageEntry termPageEntry, String s) {
+		if(!enabled) return;
 		get(termPageEntry).title = s;
 	}
 
@@ -102,6 +112,7 @@ public class LibraryBuffer implements FredPluginTalker {
 	 * @param position
 	 */
 	synchronized void addPos(TermPageEntry tp, int position) {
+		if(!enabled) return;
 		try{
 			//Logger.normal(this, "length : "+bufferUsageEstimate+", adding to "+tp);
 			get(tp).pos.put(position, "");

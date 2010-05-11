@@ -94,6 +94,10 @@ class ConfigPage implements WebPage {
 			String v = request.getPartAsString("debug", 10);
 			config.debug(Boolean.valueOf(v));
 		}
+		if(request.isPartSet("newFormatEnabled")) {
+			String v = request.getPartAsString("newFormatEnabled", 10);
+			config.setGenerateNewFormatIndexes(Boolean.valueOf(v));
+		}
 		
 		xmlSpider.setConfig(config);
 	}
@@ -170,6 +174,12 @@ class ConfigPage implements WebPage {
 		        "debug", //
 		        new String[] { "false", "true" }, //
 		        Boolean.toString(config.isDebug()));
+		addConfig(indexConfig, //
+		        "Enable new-format indexes", "Enable new-format indexes (will be written by Library, will only include sites found since this option was enabled)", // 
+		        "newFormatEnabled", //
+		        new String[] { "false", "true" }, //
+		        Boolean.toString(config.generateNewFormatIndexes()));
+		
 		
 		configForm.addChild("input", //
 		        new String[] { "type", "value" }, //
