@@ -74,7 +74,7 @@ class ConfigPage implements WebPage {
 			}
 		}
 		if(request.isPartSet("badListedKeywords")) {
-			String v = request.getPartAsString("badListedKeywords", 1024);
+			String v = request.getPartAsString("badListedKeywords", 32768);
 			String[] v0 = v.split(",");
 			boolean good = true;
 			for (int i = 0; i < v0.length; i++) {
