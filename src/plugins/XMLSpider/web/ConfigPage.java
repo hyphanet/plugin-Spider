@@ -94,7 +94,7 @@ class ConfigPage implements WebPage {
 			String v = request.getPartAsString("debug", 10);
 			config.debug(Boolean.valueOf(v));
 		}
-		if(request.isPartSet("newFormatEnabled")) {
+		if(request.isPartSet("newFormatBufferSize")) {
 			String v = request.getPartAsString("newFormatBufferSize", 10);
 			config.setNewFormatIndexBufferLimit(Integer.valueOf(v));
 		}
