@@ -214,6 +214,7 @@ public class Config extends Persistent implements Cloneable {
 	}
 	
 	public synchronized String[] getBadlistedKeywords() {
+		if(badlistedKeywords == null) return new String[0];
 		return badlistedKeywords;
 	}
 
