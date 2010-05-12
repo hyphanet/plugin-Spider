@@ -60,7 +60,7 @@ public class LibraryBuffer implements FredPluginTalker {
 			sendBuffer();
 	}
 	
-	public int bufferUsageEstimate() {
+	public synchronized int bufferUsageEstimate() {
 		return bufferUsageEstimate;
 	}
 	
