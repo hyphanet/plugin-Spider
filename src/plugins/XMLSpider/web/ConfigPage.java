@@ -238,10 +238,13 @@ class ConfigPage implements WebPage {
 	}
 	
 	private void addConfig(HTMLNode configUi, String shortDesc, String longDesc, String name, String[] value) {
-		StringBuilder value2 = new StringBuilder(value[0]);
-		for (int i = 1; i < value.length; i++) {
-			value2.append(", ");
-			value2.append(value[i]);
+		StringBuilder value2 = new StringBuilder();
+		if(value.length > 0) {
+			value2.append(value[0]);
+			for (int i = 1; i < value.length; i++) {
+				value2.append(", ");
+				value2.append(value[i]);
+			}
 		}
 
 		HTMLNode li = configUi.addChild("li");
