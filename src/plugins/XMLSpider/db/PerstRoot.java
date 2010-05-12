@@ -48,9 +48,11 @@ public class PerstRoot extends Persistent {
 	
 	public void onStart(Storage db) {
 		if(notPushedPages == null) {
+			db.beginThreadTransaction(Storage.EXCLUSIVE_TRANSACTION);
 			System.err.println("Upgrading database: adding field index for NOT_PUSHED");
 			notPushedPages = db.createFieldIndex(Page.class, "lastChange", false);
-			db.setRoot(this);
+			modify();
+			db.endThreadTransaction();
 		}
 	}
 	
