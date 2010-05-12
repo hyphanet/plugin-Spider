@@ -17,6 +17,8 @@ import java.util.Collection;
 import java.util.TreeMap;
 import plugins.Library.index.TermEntryWriter;
 import plugins.Library.index.TermPageEntry;
+import plugins.XMLSpider.db.Status;
+import plugins.XMLSpider.org.garret.perst.Storage;
 
 /**
  * Buffer which stores TermPageEntrys as they are found by the Spider. When the
@@ -40,6 +42,9 @@ public class LibraryBuffer implements FredPluginTalker {
 	private int bufferMax;
 
 	static final File SAVE_FILE = new File("xmlspider.saved.data");
+	
+	/** For resetPages */
+	private XMLSpider spider;
 
 	synchronized void setBufferSize(int maxSize) {
 		if(maxSize == 0 && enabled) {
@@ -72,8 +77,16 @@ public class LibraryBuffer implements FredPluginTalker {
 	}
 	
 
-	LibraryBuffer(PluginRespirator pr) {
+	LibraryBuffer(PluginRespirator pr, XMLSpider spider) {
 		this.pr = pr;
+		this.spider = spider;
+	}
+	
+	public void start() {
+		// Do in a transaction so it gets committed separately.
+		spider.db.beginThreadTransaction(Storage.EXCLUSIVE_TRANSACTION);
+		spider.resetPages(Status.NOT_PUSHED, Status.QUEUED);
+		spider.db.commit();
 	}
 
 	/**
@@ -154,6 +167,8 @@ public class LibraryBuffer implements FredPluginTalker {
 			bucket.setReadOnly();
 			innerSend(bucket);
 			Logger.normal(this, "Buffer successfully sent to Library, size = "+bucket.size());
+			// Not a separate transaction, commit with the index updates.
+			spider.resetPages(Status.NOT_PUSHED, Status.SUCCEEDED);
 		} catch (IOException ex) {
 			Logger.error(this, "Could not make bucket to transfer buffer", ex);
 		}
@@ -163,6 +178,7 @@ public class LibraryBuffer implements FredPluginTalker {
 			timeLastNotStalled = tEnd;
 			timeStalled += (tEnd - tStart);
 		}
+		
 	}
 	
 	private void innerSend(Bucket bucket) {
@@ -215,6 +231,10 @@ public class LibraryBuffer implements FredPluginTalker {
 		} catch (IOException e) {
 			// Ignore
 		}
+	}
+
+	public synchronized boolean isEnabled() {
+		return bufferMax != 0;
 	}
 
 }

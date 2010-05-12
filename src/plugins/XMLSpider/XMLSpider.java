@@ -505,7 +505,10 @@ public class XMLSpider implements FredPlugin, FredPluginThreadless,
 				return;
 			}
 
-			page.setStatus(Status.SUCCEEDED);
+			if(librarybuffer.isEnabled())
+				page.setStatus(Status.NOT_PUSHED);
+			else
+				page.setStatus(Status.SUCCEEDED);
 			db.endThreadTransaction();
 			dbTransactionEnded  = true;
 
@@ -662,7 +665,8 @@ public class XMLSpider implements FredPlugin, FredPluginThreadless,
 			queueURI(initialURIs[i], "bookmark", false);
 		}
 
-		librarybuffer = new LibraryBuffer(pr);
+		librarybuffer = new LibraryBuffer(pr, this);
+		librarybuffer.start();
 
 		callbackExecutor.execute(new StartSomeRequestsCallback());
 	}
@@ -882,5 +886,15 @@ public class XMLSpider implements FredPlugin, FredPluginThreadless,
 
 	public void removeFrom(ObjectContainer container) {
 		throw new UnsupportedOperationException();
+	}
+
+	public void resetPages(Status from, Status to) {
+		int count = 0;
+		Iterator<Page> pages = getRoot().getPages(from);
+		while(pages.hasNext()) {
+			pages.next().setStatus(to);
+			count++;
+		}
+		System.out.println("Reset "+count+" pages status from "+from+" to "+to);
 	}
 }
