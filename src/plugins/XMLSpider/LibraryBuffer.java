@@ -55,9 +55,16 @@ public class LibraryBuffer implements FredPluginTalker {
 	 * @param increment
 	 */
 	private void increaseEstimate(int increment) {
-		bufferUsageEstimate += increment;
-		if (bufferUsageEstimate > bufferMax)
-			sendBuffer();
+		Collection<TermPageEntry> buffer2 = null;
+		synchronized(this) {
+			bufferUsageEstimate += increment;
+			if (bufferUsageEstimate > bufferMax) {
+				buffer2 = termPageBuffer.values();
+				termPageBuffer = new TreeMap();
+				bufferUsageEstimate = 0;
+			}
+		}
+		if(buffer2 != null) sendBuffer(buffer2);
 	}
 	
 	public synchronized int bufferUsageEstimate() {
@@ -128,7 +135,7 @@ public class LibraryBuffer implements FredPluginTalker {
 	 *
 	 * FIXME : I think there is something wrong with the way it writes to the bucket, I may be using the wrong kind of buffer
 	 */
-	private void sendBuffer() {
+	private void sendBuffer(Collection<TermPageEntry>buffer2) {
 		if(SAVE_FILE.exists()) {
 			System.out.println("Restoring data from last time from "+SAVE_FILE);
 			Bucket bucket = new FileBucket(SAVE_FILE, true, false, false, false, true);
@@ -139,12 +146,6 @@ public class LibraryBuffer implements FredPluginTalker {
 		try {
 			Logger.normal(this, "Sending buffer of estimated size "+bufferUsageEstimate+" bytes to Library");
 			Bucket bucket = pr.getNode().clientCore.tempBucketFactory.makeBucket(3000000);
-			Collection<TermPageEntry> buffer2;
-			synchronized (this) {
-				buffer2 = termPageBuffer.values();
-				termPageBuffer = new TreeMap();
-				bufferUsageEstimate = 0;
-			}
 			OutputStream os = bucket.getOutputStream();
 			for (TermPageEntry termPageEntry : buffer2) {
 				TermEntryWriter.getInstance().writeObject(termPageEntry, os);
