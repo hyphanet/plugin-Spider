@@ -47,8 +47,11 @@ public class PerstRoot extends Persistent {
 	}
 	
 	public void onStart(Storage db) {
-		if(notPushedPages == null)
+		if(notPushedPages == null) {
+			System.err.println("Upgrading database: adding field index for NOT_PUSHED");
 			notPushedPages = db.createFieldIndex(Page.class, "lastChange", false);
+			db.setRoot(this);
+		}
 	}
 	
 	public Term getTermByWord(String word, boolean create) {
