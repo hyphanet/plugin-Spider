@@ -830,6 +830,7 @@ public class XMLSpider implements FredPlugin, FredPluginThreadless,
 
 		PerstRoot root = (PerstRoot) db.getRoot();
 		if (root == null) PerstRoot.createRoot(db);
+		else root.onStart(db);
 
 		return db;
 	}

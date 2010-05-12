@@ -19,6 +19,7 @@ public class PerstRoot extends Persistent {
 	protected FieldIndex<Page> queuedPages;
 	protected FieldIndex<Page> failedPages;
 	protected FieldIndex<Page> succeededPages;
+	protected FieldIndex<Page> notPushedPages;
 
 	private Config config;
 
@@ -36,6 +37,7 @@ public class PerstRoot extends Persistent {
 		root.queuedPages = storage.createFieldIndex(Page.class, "lastChange", false);
 		root.failedPages = storage.createFieldIndex(Page.class, "lastChange", false);
 		root.succeededPages = storage.createFieldIndex(Page.class, "lastChange", false);
+		root.notPushedPages = storage.createFieldIndex(Page.class, "lastChange", false);
 
 		root.config = new Config(storage);
 
@@ -43,7 +45,12 @@ public class PerstRoot extends Persistent {
 
 		return root;
 	}
-
+	
+	public void onStart(Storage db) {
+		if(notPushedPages == null)
+			notPushedPages = db.createFieldIndex(Page.class, "lastChange", false);
+	}
+	
 	public Term getTermByWord(String word, boolean create) {
 		md5Term.exclusiveLock();
 		wordTerm.exclusiveLock();
@@ -132,6 +139,8 @@ public class PerstRoot extends Persistent {
 			return queuedPages;
 		case SUCCEEDED:
 			return succeededPages;
+		case NOT_PUSHED:
+			return notPushedPages;
 		default:
 			return null;
 		}
@@ -180,4 +189,5 @@ public class PerstRoot extends Persistent {
 	public synchronized Config getConfig() {
 		return config;
 	}
+
 }
