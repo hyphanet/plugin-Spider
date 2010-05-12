@@ -59,7 +59,7 @@ class ConfigPage implements WebPage {
 			config.setIndexSubindexMaxSize(v * 1024 * 1024);
 		}
 		if (request.isPartSet("badListedExtensions")) {
-			String v = request.getPartAsString("badListedExtensions", 512);
+			String v = request.getPartAsString("badListedExtensions", 32768);
 			String[] v0 = v.split(",");
 			boolean good = true;
 			for (int i = 0; i < v0.length; i++) {
