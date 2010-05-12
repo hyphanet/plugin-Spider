@@ -28,6 +28,7 @@ public class Config extends Persistent implements Cloneable {
 	private int beginWorkingPeriod; // Between 0 and 23
 	private int endWorkingPeriod; // Between 0 and 23
 	private String[] badlistedExtensions;
+	private String[] badlistedKeywords;
 	private short requestPriority;
 
 	private boolean debug;
@@ -62,6 +63,8 @@ public class Config extends Persistent implements Cloneable {
 		        ".mpg", ".ogg", ".ogv", ".mp3", ".avi", ".wv", ".swf", ".wmv", ".mkv", ".flac", ".ogm", ".divx", ".mpeg", ".rm", ".wma", ".asf", ".rmvb", ".mov", ".flv", ".mp4", ".m4v", ".wav", ".aac", ".cda", ".fla", ".m4a", ".midi", ".vob", // media
 		        ".css", ".sig", ".gml", ".df", ".cbr", ".gf", ".pdf", ".db", ".dbf", ".accdb", ".dat", ".docx", ".dwg", ".mdf", ".odg", ".odt", ".ods", ".pps", ".wdb", ".xls", ".xlsx" // other
 		};
+		
+		badlistedKeywords = new String[] {}; // No excluded keywords by default.
 
 		requestPriority = RequestStarter.IMMEDIATE_SPLITFILE_PRIORITY_CLASS;
 
@@ -204,6 +207,14 @@ public class Config extends Persistent implements Cloneable {
 	public synchronized void setBadlistedExtensions(String[] badlistedExtensions) {
 		assert !isPersistent();
 		this.badlistedExtensions = badlistedExtensions;
+	}
+	
+	public synchronized void setBadlistedKeywords(String[] badlistedKeywords) {
+		this.badlistedKeywords = badlistedKeywords;
+	}
+	
+	public synchronized String[] getBadlistedKeywords() {
+		return badlistedKeywords;
 	}
 
 	public synchronized String[] getBadlistedExtensions() {

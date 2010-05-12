@@ -169,6 +169,12 @@ public class XMLSpider implements FredPlugin, FredPluginThreadless,
 				return; // be smart
 			}
 		}
+		
+		for(String keyword : getRoot().getConfig().getBadlistedKeywords()) {
+			if(lowerCaseURI.indexOf(keyword.toLowerCase()) != -1) {
+				return; // Fascist keyword exclusion feature. Off by default!
+			}
+		}
 
 		if (uri.isUSK()) {
 			if (uri.getSuggestedEdition() < 0) {

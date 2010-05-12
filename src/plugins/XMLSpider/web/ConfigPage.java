@@ -73,7 +73,21 @@ class ConfigPage implements WebPage {
 				config.setBadlistedExtensions(v0);
 			}
 		}
-		
+		if(request.isPartSet("badListedKeywords")) {
+			String v = request.getPartAsString("badListedKeywords", 1024);
+			String[] v0 = v.split(",");
+			boolean good = true;
+			for (int i = 0; i < v0.length; i++) {
+				v0[i] = v0[i].trim();
+				if (v0[i].length() == 0 || v0[i].charAt(0) != '.') {
+					good = false;
+					break;
+				}
+			}
+			if (good) {
+				config.setBadlistedKeywords(v0);
+			}
+		}
 		if (request.isPartSet("indexDir")) {
 			String v = request.getPartAsString("indexDir", 256);
 			config.setIndexDir(v);
@@ -143,6 +157,11 @@ class ConfigPage implements WebPage {
 		        "Bad Listed Extensions", "Comma seprated list of banned URI suffix.", // 
 		        "badListedExtensions", //
 		        config.getBadlistedExtensions());
+		
+		addConfig(spiderConfig, //
+		        "Bad Listed Keywords", "Comma seprated list of banned URI keywords.", // 
+		        "badListedKeywords", //
+		        config.getBadlistedKeywords());
 		
 		configForm.addChild("div", "class", "configprefix", "Index Writer Options");
 		
