@@ -54,22 +54,28 @@ public class LibraryBuffer implements FredPluginTalker {
 		enabled = (maxSize != 0);
 		bufferMax = maxSize;
 	}
-	
-	/**
-	 * Increments the estimate by specified amount and if the estimate is above the max send the buffer
-	 * @param increment
-	 */
-	private void increaseEstimate(int increment) {
+
+	/** We only consider sending the data after a file has been parsed, not mid way through. */
+	public void maybeSend() {
 		Collection<TermPageEntry> buffer2 = null;
 		synchronized(this) {
-			bufferUsageEstimate += increment;
+			if (bufferMax == 0) return;
 			if (bufferUsageEstimate > bufferMax) {
 				buffer2 = termPageBuffer.values();
 				termPageBuffer = new TreeMap();
 				bufferUsageEstimate = 0;
 			}
 		}
-		if(buffer2 != null) sendBuffer(buffer2);
+		if(buffer2 != null)
+			sendBuffer(buffer2);
+	}
+	
+	/**
+	 * Increments the estimate by specified amount.
+	 * @param increment
+	 */
+	private synchronized void increaseEstimate(int increment) {
+		bufferUsageEstimate += increment;
 	}
 	
 	public synchronized int bufferUsageEstimate() {
@@ -132,16 +138,11 @@ public class LibraryBuffer implements FredPluginTalker {
 	 */
 	synchronized void addPos(TermPageEntry tp, int position) {
 		if(!enabled) return;
-		try{
-			//Logger.normal(this, "length : "+bufferUsageEstimate+", adding to "+tp);
-			get(tp).pos.put(position, "");
-			//Logger.normal(this, "length : "+bufferUsageEstimate+", increasing length "+tp);
-			increaseEstimate(4);
-		}catch(Exception e){
-			Logger.error(this, "Exception adding", e);
-		}
+		//Logger.normal(this, "length : "+bufferUsageEstimate+", adding to "+tp);
+		get(tp).pos.put(position, "");
+		//Logger.normal(this, "length : "+bufferUsageEstimate+", increasing length "+tp);
+		increaseEstimate(4);
 	}
-
 
 	/**
 	 * Emptys the buffer into a bucket and sends it to the Library plugin with the command "pushBuffer"

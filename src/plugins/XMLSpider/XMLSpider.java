@@ -492,6 +492,7 @@ public class XMLSpider implements FredPlugin, FredPluginThreadless,
 						pageCallBack.onText(line, mimeType, uri.toURI("http://127.0.0.1:8888/"));
 					}
 				}
+				librarybuffer.maybeSend();
 
 			} catch (UnsafeContentTypeException e) {
 				// wrong mime type
