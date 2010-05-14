@@ -75,11 +75,14 @@ class ConfigPage implements WebPage {
 		}
 		if(request.isPartSet("badListedKeywords")) {
 			String v = request.getPartAsString("badListedKeywords", 32768);
-			String[] v0 = v.split(",");
-			for (int i = 0; i < v0.length; i++) {
-				v0[i] = v0[i].trim();
+			v = v.trim();
+			if(v.length() > 0) {
+				String[] v0 = v.split(",");
+				for (int i = 0; i < v0.length; i++) {
+					v0[i] = v0[i].trim();
+				}
+				config.setBadlistedKeywords(v0);
 			}
-			config.setBadlistedKeywords(v0);
 		}
 		if (request.isPartSet("indexDir")) {
 			String v = request.getPartAsString("indexDir", 256);
