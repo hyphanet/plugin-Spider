@@ -139,7 +139,7 @@ public class LibraryBuffer implements FredPluginTalker {
 	synchronized void addPos(TermPageEntry tp, int position) {
 		if(!enabled) return;
 		//Logger.normal(this, "length : "+bufferUsageEstimate+", adding to "+tp);
-		get(tp).pos.put(position, "");
+		get(tp).pos.put(position, null);
 		//Logger.normal(this, "length : "+bufferUsageEstimate+", increasing length "+tp);
 		increaseEstimate(4);
 	}

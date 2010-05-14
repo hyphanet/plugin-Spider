@@ -48,7 +48,10 @@ public class TermEntryWriter {
 			}
 			for (Map.Entry<Integer, String> p: enn.pos.entrySet()) {
 				dos.writeInt(p.getKey());
-				dos.writeUTF(p.getValue());
+				if(p.getValue() == null)
+					dos.writeUTF("");
+				else
+					dos.writeUTF(p.getValue());
 			}
 			return;
 		}
