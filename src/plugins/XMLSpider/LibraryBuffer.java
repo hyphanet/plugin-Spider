@@ -150,12 +150,6 @@ public class LibraryBuffer implements FredPluginTalker {
 	 * FIXME : I think there is something wrong with the way it writes to the bucket, I may be using the wrong kind of buffer
 	 */
 	private void sendBuffer(Collection<TermPageEntry>buffer2) {
-		if(SAVE_FILE.exists()) {
-			System.out.println("Restoring data from last time from "+SAVE_FILE);
-			Bucket bucket = new FileBucket(SAVE_FILE, true, false, false, false, true);
-			innerSend(bucket);
-			System.out.println("Restored data from last time from "+SAVE_FILE);
-		}
 		long tStart = System.currentTimeMillis();
 		try {
 			Logger.normal(this, "Sending buffer of estimated size "+bufferUsageEstimate+" bytes to Library");
@@ -179,7 +173,13 @@ public class LibraryBuffer implements FredPluginTalker {
 			timeLastNotStalled = tEnd;
 			timeStalled += (tEnd - tStart);
 		}
-		
+		// Robustness: Send SAVE_FILE *after* sending new data, because *it is already on disk*, whereas the new data is not.
+		if(SAVE_FILE.exists()) {
+			System.out.println("Restoring data from last time from "+SAVE_FILE);
+			Bucket bucket = new FileBucket(SAVE_FILE, true, false, false, false, true);
+			innerSend(bucket);
+			System.out.println("Restored data from last time from "+SAVE_FILE);
+		}
 	}
 	
 	private void innerSend(Bucket bucket) {
