@@ -215,6 +215,9 @@ public class Config extends Persistent implements Cloneable {
 	
 	public synchronized String[] getBadlistedKeywords() {
 		if(badlistedKeywords == null) return new String[0];
+		// FIXME remove - caused by config errors some time before 91346024428393592fc971bbcdec5f7ca5b4f055
+		if(badlistedKeywords.length == 1 && badlistedKeywords[0].equals(""))
+			badlistedKeywords = new String[0];
 		return badlistedKeywords;
 	}
 
