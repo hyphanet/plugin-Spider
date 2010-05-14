@@ -82,6 +82,8 @@ class ConfigPage implements WebPage {
 					v0[i] = v0[i].trim();
 				}
 				config.setBadlistedKeywords(v0);
+			} else {
+				config.setBadlistedKeywords(new String[0]);
 			}
 		}
 		if (request.isPartSet("indexDir")) {
