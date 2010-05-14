@@ -189,6 +189,7 @@ public class LibraryBuffer implements FredPluginTalker {
 		try {
 			libraryTalker = pr.getPluginTalker(this, "plugins.Library.Main", "SpiderBuffer");
 			libraryTalker.sendSyncInternalOnly(sfs, bucket);
+			bucket.free();
 		} catch (PluginNotFoundException e) {
 			Logger.error(this, "Couldn't connect buffer to Library", e);
 		}
