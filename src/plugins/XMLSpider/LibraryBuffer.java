@@ -37,6 +37,8 @@ public class LibraryBuffer implements FredPluginTalker {
 	private boolean enabled;
 
 	private TreeMap<TermPageEntry, TermPageEntry> termPageBuffer = new TreeMap();
+	// Garbage collection behaving perversely. Lets try moving stuff into instance members.
+	private Collection<TermPageEntry> pushing = null;
 
 	private int bufferUsageEstimate = 0;
 	private int bufferMax;
@@ -57,17 +59,20 @@ public class LibraryBuffer implements FredPluginTalker {
 
 	/** We only consider sending the data after a file has been parsed, not mid way through. */
 	public void maybeSend() {
-		Collection<TermPageEntry> buffer2 = null;
+		boolean push = false;
 		synchronized(this) {
 			if (bufferMax == 0) return;
 			if (bufferUsageEstimate > bufferMax) {
-				buffer2 = termPageBuffer.values();
+				if(pushing != null) {
+					throw new IllegalStateException("Still pushing?!");
+				}
+				pushing = termPageBuffer.values();
+				push = true;
 				termPageBuffer = new TreeMap();
 				bufferUsageEstimate = 0;
 			}
 		}
-		if(buffer2 != null)
-			sendBuffer(buffer2);
+		if(push) sendBuffer();
 	}
 	
 	/**
@@ -149,18 +154,11 @@ public class LibraryBuffer implements FredPluginTalker {
 	 *
 	 * FIXME : I think there is something wrong with the way it writes to the bucket, I may be using the wrong kind of buffer
 	 */
-	private void sendBuffer(Collection<TermPageEntry>buffer2) {
+	private void sendBuffer() {
 		long tStart = System.currentTimeMillis();
 		try {
 			Logger.normal(this, "Sending buffer of estimated size "+bufferUsageEstimate+" bytes to Library");
-			Bucket bucket = pr.getNode().clientCore.tempBucketFactory.makeBucket(3000000);
-			OutputStream os = bucket.getOutputStream();
-			for (TermPageEntry termPageEntry : buffer2) {
-				TermEntryWriter.getInstance().writeObject(termPageEntry, os);
-			}
-			buffer2 = null;
-			os.close();
-			bucket.setReadOnly();
+			Bucket bucket = writeToPush();
 			innerSend(bucket);
 			Logger.normal(this, "Buffer successfully sent to Library, size = "+bucket.size());
 			// Not a separate transaction, commit with the index updates.
@@ -183,6 +181,18 @@ public class LibraryBuffer implements FredPluginTalker {
 		}
 	}
 	
+	private synchronized Bucket writeToPush() throws IOException {
+		Bucket bucket = pr.getNode().clientCore.tempBucketFactory.makeBucket(3000000);
+		OutputStream os = bucket.getOutputStream();
+		for (TermPageEntry termPageEntry : pushing) {
+			TermEntryWriter.getInstance().writeObject(termPageEntry, os);
+		}
+		pushing = null;
+		os.close();
+		bucket.setReadOnly();
+		return bucket;
+	}
+
 	private void innerSend(Bucket bucket) {
 		SimpleFieldSet sfs = new SimpleFieldSet(true);
 		sfs.putSingle("command", "pushBuffer");

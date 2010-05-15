@@ -16,7 +16,7 @@ import freenet.support.SortedIntSet;
 ** {@link FreenetURI} that satisfies the term.
 ** 
 ** NOTE: This is different to the code in Library! Most notably it is modifiable.
-**
+** 
 ** @author infinity0
 */
 public class TermPageEntry extends TermEntry {
