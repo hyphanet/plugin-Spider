@@ -14,6 +14,8 @@ import freenet.support.SortedIntSet;
 /**
 ** A {@link TermEntry} that associates a subject term with a final target
 ** {@link FreenetURI} that satisfies the term.
+** 
+** NOTE: This is different to the code in Library! Most notably it is modifiable.
 **
 ** @author infinity0
 */
