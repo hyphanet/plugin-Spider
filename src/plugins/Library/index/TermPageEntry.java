@@ -3,16 +3,13 @@
  * http://www.gnu.org/ for further details of the GPL. */
 package plugins.Library.index;
 
-import plugins.Library.index.TermEntry.EntryType;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 
 import freenet.keys.FreenetURI;
 import freenet.support.SortedIntSet;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
 
 /**
 ** A {@link TermEntry} that associates a subject term with a final target
@@ -74,7 +71,7 @@ public class TermPageEntry extends TermEntry {
 			posFragments = null;
 			positions = null;
 		} else {
-			posFragments = Collections.unmodifiableMap(p);
+			posFragments = p;
 			int[] pos = new int[p.size()];
 			int x = 0;
 			for(Integer i : p.keySet())
