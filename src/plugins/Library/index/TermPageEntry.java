@@ -1,19 +1,20 @@
-package plugins.Library.index;
-
 /* This code is part of Freenet. It is distributed under the GNU General
  * Public License, version 2 (or at your option any later version). See
  * http://www.gnu.org/ for further details of the GPL. */
-
+package plugins.Library.index;
 
 import plugins.Library.index.TermEntry.EntryType;
 
 import freenet.keys.FreenetURI;
+import freenet.support.SortedIntSet;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Elements have been changed in this so it is not the same as that in Library, eg this is not immutable
- *
 ** A {@link TermEntry} that associates a subject term with a final target
 ** {@link FreenetURI} that satisfies the term.
 **
@@ -26,15 +27,16 @@ public class TermPageEntry extends TermEntry {
 	*/
 	final public FreenetURI page;
 
+	/** Positions where the term occurs. May be null if we don't have that data. */
+	final public SortedIntSet positions;
+	
 	/**
-	** Positions in the document where the term occurs, and an optional
-	** fragment of text surrounding this.
+	** Map from positions in the text to a fragment of text around where it occurs.
+	** Only non-null if we have the fragments of text (we may have positions but not details), 
+	** to save memory.
 	*/
-	final public Map<Integer, String> pos;
+	final public Map<Integer, String> posFragments;
 
-	/**
-	** Here for backwards-compatibility with the old URIWrapper class.
-	*/
 	public String title;
 
 	/**
@@ -47,7 +49,7 @@ public class TermPageEntry extends TermEntry {
 	**          surrounding it).
 	*/
 	public TermPageEntry(String s, float r, FreenetURI u, Map<Integer, String> p) {
-		this(s, r, u, null, p);
+		this(s, r, u, (String)null, p);
 	}
 
 	/**
@@ -66,9 +68,34 @@ public class TermPageEntry extends TermEntry {
 		if (u == null) {
 			throw new IllegalArgumentException("can't have a null page");
 		}
-		page = u; // OPTIMISE make the translator use the same URI object as from the URI table?
-		title = t;
-		pos = p;
+		page = u.intern(); // OPT LOW make the translator use the same URI object as from the URI table?
+		title = t == null ? null : t.intern();
+		if(p == null) {
+			posFragments = null;
+			positions = null;
+		} else {
+			posFragments = Collections.unmodifiableMap(p);
+			int[] pos = new int[p.size()];
+			int x = 0;
+			for(Integer i : p.keySet())
+				pos[x++] = i;
+			Arrays.sort(pos);
+			positions = new SortedIntSet(pos);
+		}
+	}
+
+	/**
+	** For serialisation.
+	*/
+	public TermPageEntry(String s, float r, FreenetURI u, SortedIntSet pos, Map<Integer, String> frags) {
+		super(s, r);
+		if (u == null) {
+			throw new IllegalArgumentException("can't have a null page");
+		}
+		page = u.intern(); // OPT LOW make the translator use the same URI object as from the URI table?
+		title = null;
+		this.positions = pos;
+		this.posFragments = frags;
 	}
 
 	/*========================================================================
@@ -85,24 +112,76 @@ public class TermPageEntry extends TermEntry {
 	@Override public int compareTo(TermEntry o) {
 		int a = super.compareTo(o);
 		if (a != 0) { return a; }
-		// OPTIMISE find a more efficient way than this
+		// OPT NORM make a more efficient way of comparing these
 		return page.toString().compareTo(((TermPageEntry)o).page.toString());
 	}
 
 	@Override public boolean equals(Object o) {
-		return super.equals(o) && page.equals(((TermPageEntry)o).page);
+		return o == this || super.equals(o) && page.equals(((TermPageEntry)o).page);
+	}
+
+	@Override public boolean equalsTarget(TermEntry entry) {
+		return entry == this || (entry instanceof TermPageEntry) && page.equals(((TermPageEntry)entry).page);
 	}
 
 	@Override public int hashCode() {
 		return super.hashCode() ^ page.hashCode();
 	}
-
+	
 	public int sizeEstimate() {
 		int s = 0;
 		s += page.toString().length();
 		s += (title==null)?0:title.length();
 		s += (subj==null)?0:subj.length();
-		s += (pos==null)?0:pos.size() * 4;
+		s += (positions==null)?0:positions.size() * 4;
 		return s;
 	}
+
+	/** Do we have term positions? Just because we do doesn't necessarily mean we have fragments. */
+	public boolean hasPositions() {
+		return positions != null;
+	}
+
+	/** Get the positions to fragments map. If we don't have fragments, create this from the positions list. */
+	public Map<Integer, String> positionsMap() {
+		if(positions == null) return null;
+		if(posFragments != null) return posFragments;
+		HashMap<Integer, String> ret = new HashMap<Integer, String>(positions.size());
+		int[] array = positions.toArrayRaw();
+		for(int x : array)
+			ret.put(x, null);
+		return ret;
+	}
+
+	public boolean hasPosition(int i) {
+		return positions.contains(i);
+	}
+
+	public ArrayList<Integer> positions() {
+		int[] array = positions.toArrayRaw();
+		ArrayList<Integer> pos = new ArrayList<Integer>(array.length);
+		for(int x : array)
+			pos.add(x);
+		return pos;
+	}
+
+	public int[] positionsRaw() {
+		return positions.toArrayRaw();
+	}
+
+	public int positionsSize() {
+		if(positions == null) return 0;
+		return positions.size();
+	}
+
+	public boolean hasFragments() {
+		return posFragments != null;
+	}
+
+	public void putPosition(int position) {
+		positions.add(position);
+		if(posFragments != null)
+			posFragments.put(position, null);
+	}
+
 }

@@ -1,15 +1,10 @@
-package plugins.Library.index;
-
 /* This code is part of Freenet. It is distributed under the GNU General
  * Public License, version 2 (or at your option any later version). See
  * http://www.gnu.org/ for further details of the GPL. */
-
+package plugins.Library.index;
 
 /**
-** This is a modified version of the TermEntry in Library, equals has been changed
-**
-** Represents data indexed by a {@link Token} and associated with a given
-** subject {@link String} term.
+** Represents data associated with a given subject {@link String} term.
 **
 ** Subclasses '''must''' override the following methods to use information
 ** specific to that subclass:
@@ -18,9 +13,6 @@ package plugins.Library.index;
 ** * {@link #compareTo(TermEntry)}
 ** * {@link #equals(Object)}
 ** * {@link #hashCode()}
-**
-** TODO better way to compare FreenetURIs than toString().compareTo() (this
-** applies for TermIndexEntry, TokenPageEntry)
 **
 ** @author infinity0
 */
@@ -63,22 +55,6 @@ abstract public class TermEntry implements Comparable<TermEntry> {
 	/**
 	** {@inheritDoc}
 	**
-	** This implementation tests whether the run-time classes of the argument
-	** is identical to the run-time class of this object. If they are, then
-	** it tests the relevance and subject fields.
-	**
-	** Subclasses '''must overridde this method'' to also use information
-	** specific to the subclass.
-	*/
-	@Override public boolean equals(Object o) {
-		if (getClass() != o.getClass()) { return false; }
-		TermEntry en = (TermEntry)o;
-		return subj.equals(en.subj);
-	}
-
-	/**
-	** {@inheritDoc}
-	**
 	** Compares two entries, based on how useful they might be to the end user.
 	**
 	** This implementation sorts by order of descending relevance, then by
@@ -98,6 +74,30 @@ abstract public class TermEntry implements Comparable<TermEntry> {
 		EntryType a = entryType(), b = o.entryType();
 		return a.compareTo(b);
 	}
+
+	/**
+	** {@inheritDoc}
+	**
+	** This implementation tests whether the run-time classes of the argument
+	** is identical to the run-time class of this object. If they are, then
+	** it tests the relevance and subject fields.
+	**
+	** Subclasses '''must overridde this method'' to also use information
+	** specific to the subclass.
+	*/
+	@Override public boolean equals(Object o) {
+		if (o == null || getClass() != o.getClass()) { return false; }
+		TermEntry en = (TermEntry)o;
+		return rel == en.rel && subj.equals(en.subj);
+	}
+
+	/**
+	** Returns whether the parts of this TermEntry other than the subject are equal
+	**
+	** Subclasses '''must overridde this method'' to use information
+	** specific to the subclass.
+	*/
+	public abstract boolean equalsTarget(TermEntry entry);
 
 	/**
 	** {@inheritDoc}
