@@ -4,6 +4,7 @@ import java.lang.Character.UnicodeBlock;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Locale;
+
 import static plugins.XMLSpider.SearchUtil.*;
 
 /**
@@ -19,7 +20,7 @@ class SearchTokenizer implements Iterable<String>, Iterator<String> {
 	private ArrayList<String> segments;
 	private int nextPos;
 	private final boolean returnPairs;
-	static final boolean KEEP_NON_LETTER = false;
+	static final int KEEP_NON_LETTER_MIN_CHARS = 3;
 
 	private Iterator<String> cjkTokenizer;
 
@@ -68,7 +69,7 @@ class SearchTokenizer implements Iterable<String>, Iterator<String> {
 				sb.append(Character.toChars(codepoint));
 			} else if (sb.length() != 0) {
 				// last code point is not 0, add a separator
-				if(KEEP_NON_LETTER || curMode != Mode.UNDEF) {
+				if(curMode != Mode.UNDEF || sb.length() >= KEEP_NON_LETTER_MIN_CHARS) {
 					segments.add(sb.toString());
 					mode.add(curMode);
 				}
