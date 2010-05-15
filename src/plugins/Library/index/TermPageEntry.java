@@ -25,14 +25,14 @@ public class TermPageEntry extends TermEntry {
 	final public FreenetURI page;
 
 	/** Positions where the term occurs. May be null if we don't have that data. */
-	final public SortedIntSet positions;
+	private SortedIntSet positions;
 	
 	/**
 	** Map from positions in the text to a fragment of text around where it occurs.
 	** Only non-null if we have the fragments of text (we may have positions but not details), 
 	** to save memory.
 	*/
-	final public Map<Integer, String> posFragments;
+	private Map<Integer, String> posFragments;
 
 	public String title;
 
@@ -176,6 +176,7 @@ public class TermPageEntry extends TermEntry {
 	}
 
 	public void putPosition(int position) {
+		if(positions == null) positions = new SortedIntSet();
 		positions.add(position);
 		if(posFragments != null)
 			posFragments.put(position, null);
