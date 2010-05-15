@@ -795,7 +795,7 @@ public class XMLSpider implements FredPlugin, FredPluginThreadless,
 		 */
 		private TermPageEntry getEntry(String word) {
 			TermPageEntry tp = tpes.get(word);
-			if (tp == null) tp = new TermPageEntry(word, 0, uri, new HashMap());
+			if (tp == null) tp = new TermPageEntry(word, 0, uri, null);
 			return tp;
 		}
 	}
