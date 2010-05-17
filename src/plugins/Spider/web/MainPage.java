@@ -98,9 +98,7 @@ class MainPage implements WebPage {
 		statusContent.addChild("br");
 		statusContent.addChild("#", "Failed: " + failedStatus.count);
 		statusContent.addChild("br");
-		statusContent.addChild("br");
 		statusContent.addChild("#", "Queued Event: " + xmlSpider.callbackExecutor.getQueue().size());
-		statusContent.addChild("br");
 		statusContent.addChild("br");
 		statusContent.addChild("#", "Library buffer size: "+xmlSpider.getLibraryBufferSize());
 		long tStalled = xmlSpider.getStalledTime();
