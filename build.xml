@@ -11,7 +11,7 @@
 	<property name="build-test" location="build-test/"/>
 	<property name="dist" location="dist/"/>
 	<property name="junit.location" value="/usr/share/java/junit.jar"/>
-	<available file="src/plugins/XMLSpider/Version.java" property="version.present"/>
+	<available file="src/plugins/Spider/Version.java" property="version.present"/>
 	<available file="${junit.location}" property="junit.present"/>
 
 	<target name="mkdir">
@@ -24,7 +24,7 @@
 	
 	<target name="setver" if="version.present">
 		<!-- Update the Version file -->
-		<replace file="src/plugins/XMLSpider/Version.java">
+		<replace file="src/plugins/Spider/Version.java">
 			<replacefilter token="@custom@" value="${svn.revision}"/>
 		</replace>
 	</target>
@@ -88,7 +88,7 @@
 		description="generate the distribution" >
 		<jar jarfile="${dist}/Spider.jar" duplicate="fail">
 			<manifest>
-				<attribute name="Plugin-Main-Class" value="plugins.XMLSpider.XMLSpider"/>
+				<attribute name="Plugin-Main-Class" value="plugins.Spider.Spider"/>
 			</manifest>
 			<fileset dir="src/" casesensitive="no">
 				<include name="*.txt"/>
