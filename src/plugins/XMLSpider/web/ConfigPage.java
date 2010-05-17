@@ -192,7 +192,7 @@ class ConfigPage implements WebPage {
 		        new String[] { "false", "true" }, //
 		        Boolean.toString(config.isDebug()));
 		addConfig(indexConfig, //
-		        "Buffer size for new format indexes (MB, 0 = disable)", "In-memory buffer size for new format indexes. 0 means only write old format indexes. Probably a good idea for this to be fairly big, although we will use more memory than the limit given.", // 
+		        "Buffer size for new format indexes (MB)", "In-memory buffer size for new format indexes. Probably a good idea for this to be fairly big, although we will use more memory than the limit given.", // 
 		        "newFormatBufferSize", //
 		        new String[] { "0", "1", "2", "4", "8", "16", "32", "64", "128" }, //
 		        Integer.toString(config.getNewFormatIndexBufferLimit()));		

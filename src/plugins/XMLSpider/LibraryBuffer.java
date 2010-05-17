@@ -34,7 +34,6 @@ public class LibraryBuffer implements FredPluginTalker {
 	private long timeNotStalled = 0;
 	private long timeLastNotStalled = System.currentTimeMillis();
 	private boolean shutdown;
-	private boolean enabled;
 
 	private TreeMap<TermPageEntry, TermPageEntry> termPageBuffer = new TreeMap();
 	// Garbage collection behaving perversely. Lets try moving stuff into instance members.
@@ -49,11 +48,7 @@ public class LibraryBuffer implements FredPluginTalker {
 	private XMLSpider spider;
 
 	synchronized void setBufferSize(int maxSize) {
-		if(maxSize == 0 && enabled) {
-			termPageBuffer.clear();
-			bufferUsageEstimate = 0;
-		}
-		enabled = (maxSize != 0);
+		if(bufferMax <= 0) throw new IllegalArgumentException();
 		bufferMax = maxSize;
 	}
 
@@ -132,7 +127,6 @@ public class LibraryBuffer implements FredPluginTalker {
 	 * @param s
 	 */
 	synchronized void setTitle(TermPageEntry termPageEntry, String s) {
-		if(!enabled) return;
 		get(termPageEntry).title = s;
 	}
 
@@ -142,7 +136,6 @@ public class LibraryBuffer implements FredPluginTalker {
 	 * @param position
 	 */
 	synchronized void addPos(TermPageEntry tp, int position) {
-		if(!enabled) return;
 		//Logger.normal(this, "length : "+bufferUsageEstimate+", adding to "+tp);
 		get(tp).putPosition(position);
 		//Logger.normal(this, "length : "+bufferUsageEstimate+", increasing length "+tp);
