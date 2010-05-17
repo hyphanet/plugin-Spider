@@ -43,7 +43,7 @@ public class Config extends Persistent implements Cloneable {
 		indexMaxEntries = 4000;
 		indexSubindexMaxSize = 4 * 1024 * 1024;
 
-		indexTitle = "XMLSpider index";
+		indexTitle = "Spider index";
 		indexOwner = "Freenet";
 		indexOwnerEmail = "(nil)";
 

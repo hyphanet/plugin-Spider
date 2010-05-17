@@ -4,7 +4,7 @@
  */
 package plugins.Spider.web;
 
-import plugins.Spider.XMLSpider;
+import plugins.Spider.Spider;
 import plugins.Spider.db.Config;
 import freenet.clients.http.PageMaker;
 import freenet.pluginmanager.PluginRespirator;
@@ -12,12 +12,12 @@ import freenet.support.HTMLNode;
 import freenet.support.api.HTTPRequest;
 
 class ConfigPage implements WebPage {
-	private final XMLSpider xmlSpider;
+	private final Spider xmlSpider;
 	private final PageMaker pageMaker;
 	private final PluginRespirator pr;
 	private Config config;
 
-	ConfigPage(XMLSpider xmlSpider) {
+	ConfigPage(Spider xmlSpider) {
 		this.xmlSpider = xmlSpider;
 		pageMaker = xmlSpider.getPageMaker();
 		pr = xmlSpider.getPluginRespirator();

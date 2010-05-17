@@ -5,14 +5,14 @@
  */
 package plugins.Spider.web;
 
-import plugins.Spider.XMLSpider;
+import plugins.Spider.Spider;
 import freenet.client.HighLevelSimpleClient;
 import freenet.clients.http.PageMaker;
 import freenet.clients.http.ToadletContainer;
 import freenet.node.NodeClientCore;
 
 public class WebInterface {
-	private final XMLSpider xmlSpider;
+	private final Spider xmlSpider;
 	private PageMaker pageMaker;
 	private ConfigPageToadlet configToadlet;
 	private MainPageToadlet mainToadlet;
@@ -24,7 +24,7 @@ public class WebInterface {
 	 * @param spider
 	 * @param client 
 	 */
-	public WebInterface(XMLSpider spider, HighLevelSimpleClient client, ToadletContainer container, NodeClientCore core) {
+	public WebInterface(Spider spider, HighLevelSimpleClient client, ToadletContainer container, NodeClientCore core) {
 		xmlSpider = spider;
 
 		pageMaker = xmlSpider.getPageMaker();
@@ -34,16 +34,16 @@ public class WebInterface {
 	}
 	
 	public void load() {
-		pageMaker.addNavigationCategory("/xmlspider/", "XMLSpider", "XMLSpider", xmlSpider);
+		pageMaker.addNavigationCategory("/xmlspider/", "Spider", "Spider", xmlSpider);
 		
-		toadletContainer.register(mainToadlet = new MainPageToadlet(client, xmlSpider, core), "XMLSpider", "/xmlspider/", true, "XMLSpider", "XMLSpider", true, null);
-		toadletContainer.register(configToadlet = new ConfigPageToadlet(client, xmlSpider, core), "XMLSpider", "/xmlspider/config", true, "Configure XMLSpider", "Configure XMLSpider", true, null);
+		toadletContainer.register(mainToadlet = new MainPageToadlet(client, xmlSpider, core), "Spider", "/xmlspider/", true, "Spider", "Spider", true, null);
+		toadletContainer.register(configToadlet = new ConfigPageToadlet(client, xmlSpider, core), "Spider", "/xmlspider/config", true, "Configure Spider", "Configure Spider", true, null);
 	}
 
 	
 	public void unload() {
 		toadletContainer.unregister(configToadlet);
 		toadletContainer.unregister(mainToadlet);
-		pageMaker.removeNavigationCategory("XMLSpider");
+		pageMaker.removeNavigationCategory("Spider");
 	}
 }

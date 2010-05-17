@@ -3,7 +3,7 @@ package plugins.Spider.web;
 import java.io.IOException;
 import java.net.URI;
 
-import plugins.Spider.XMLSpider;
+import plugins.Spider.Spider;
 
 import freenet.client.HighLevelSimpleClient;
 import freenet.clients.http.PageNode;
@@ -18,10 +18,10 @@ import freenet.support.api.HTTPRequest;
 
 public class MainPageToadlet extends Toadlet {
 
-	final XMLSpider spider;
+	final Spider spider;
 	private NodeClientCore core;
 	
-	protected MainPageToadlet(HighLevelSimpleClient client, XMLSpider spider, NodeClientCore core) {
+	protected MainPageToadlet(HighLevelSimpleClient client, Spider spider, NodeClientCore core) {
 		super(client);
 		this.spider = spider;
 		this.core = core;
@@ -35,10 +35,10 @@ public class MainPageToadlet extends Toadlet {
 	public void handleMethodGET(URI uri, final HTTPRequest request, final ToadletContext ctx) 
 	throws ToadletContextClosedException, IOException, RedirectException {
 		ClassLoader origClassLoader = Thread.currentThread().getContextClassLoader();
-		Thread.currentThread().setContextClassLoader(XMLSpider.class.getClassLoader());
+		Thread.currentThread().setContextClassLoader(Spider.class.getClassLoader());
 		try {
 			MainPage page = new MainPage(spider);
-			PageNode p = ctx.getPageMaker().getPageNode(XMLSpider.pluginName, ctx);
+			PageNode p = ctx.getPageMaker().getPageNode(Spider.pluginName, ctx);
 			HTMLNode pageNode = p.outer;
 			HTMLNode contentNode = p.content;
 			page.writeContent(request, contentNode);
@@ -50,7 +50,7 @@ public class MainPageToadlet extends Toadlet {
 
 	public void handleMethodPOST(URI uri, HTTPRequest request, final ToadletContext ctx) throws ToadletContextClosedException, IOException, RedirectException {
 		ClassLoader origClassLoader = Thread.currentThread().getContextClassLoader();
-		Thread.currentThread().setContextClassLoader(XMLSpider.class.getClassLoader());
+		Thread.currentThread().setContextClassLoader(Spider.class.getClassLoader());
 
 		String formPassword = request.getPartAsString("formPassword", 32);
 		if((formPassword == null) || !formPassword.equals(core.formPassword)) {
@@ -61,7 +61,7 @@ public class MainPageToadlet extends Toadlet {
 		}
 
 		try {
-			PageNode p = ctx.getPageMaker().getPageNode(XMLSpider.pluginName, ctx);
+			PageNode p = ctx.getPageMaker().getPageNode(Spider.pluginName, ctx);
 			HTMLNode pageNode = p.outer;
 			HTMLNode contentNode = p.content;
 	

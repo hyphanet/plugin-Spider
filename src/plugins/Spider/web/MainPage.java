@@ -9,7 +9,7 @@ import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 
-import plugins.Spider.XMLSpider;
+import plugins.Spider.Spider;
 import plugins.Spider.db.Config;
 import plugins.Spider.db.Page;
 import plugins.Spider.db.PerstRoot;
@@ -34,11 +34,11 @@ class MainPage implements WebPage {
 		}
 	}
 
-	private final XMLSpider xmlSpider;
+	private final Spider xmlSpider;
 	private final PageMaker pageMaker;
 	private final PluginRespirator pr;
 
-	MainPage(XMLSpider xmlSpider) {
+	MainPage(Spider xmlSpider) {
 		this.xmlSpider = xmlSpider;
 		pageMaker = xmlSpider.getPageMaker();
 		pr = xmlSpider.getPluginRespirator();
@@ -113,13 +113,13 @@ class MainPage implements WebPage {
 		// Column 2
 		nextTableCell = overviewTableRow.addChild("td", "class", "second");
 		HTMLNode mainContent = pageMaker.getInfobox("#", "Main", nextTableCell);
-		HTMLNode addForm = pr.addFormChild(mainContent, "plugins.Spider.XMLSpider", "addForm");
+		HTMLNode addForm = pr.addFormChild(mainContent, "plugins.Spider.Spider", "addForm");
 		addForm.addChild("label", "for", "addURI", "Add URI:");
 		addForm.addChild("input", new String[] { "name", "style" }, new String[] { "addURI", "width: 20em;" });
 		addForm.addChild("input", "type", "submit");
 
 		HTMLNode indexContent = pageMaker.getInfobox("#", "Create Index", nextTableCell);
-		HTMLNode indexForm = pr.addFormChild(indexContent, "plugins.Spider.XMLSpider", "indexForm");
+		HTMLNode indexForm = pr.addFormChild(indexContent, "plugins.Spider.Spider", "indexForm");
 		indexForm.addChild("input", //
 		        new String[] { "name", "type", "value" },//
 		        new String[] { "createIndex", "hidden", "createIndex" });

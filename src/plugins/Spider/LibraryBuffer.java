@@ -45,7 +45,7 @@ public class LibraryBuffer implements FredPluginTalker {
 	static final File SAVE_FILE = new File("xmlspider.saved.data");
 	
 	/** For resetPages */
-	private XMLSpider spider;
+	private Spider spider;
 
 	synchronized void setBufferSize(int maxSize) {
 		if(bufferMax <= 0) throw new IllegalArgumentException();
@@ -83,7 +83,7 @@ public class LibraryBuffer implements FredPluginTalker {
 	}
 	
 
-	LibraryBuffer(PluginRespirator pr, XMLSpider spider) {
+	LibraryBuffer(PluginRespirator pr, Spider spider) {
 		this.pr = pr;
 		this.spider = spider;
 	}
