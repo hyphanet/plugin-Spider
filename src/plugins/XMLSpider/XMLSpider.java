@@ -30,8 +30,6 @@ import plugins.XMLSpider.db.Config;
 import plugins.XMLSpider.db.Page;
 import plugins.XMLSpider.db.PerstRoot;
 import plugins.XMLSpider.db.Status;
-import plugins.XMLSpider.db.Term;
-import plugins.XMLSpider.db.TermPosition;
 import plugins.XMLSpider.org.garret.perst.Storage;
 import plugins.XMLSpider.org.garret.perst.StorageFactory;
 import plugins.XMLSpider.web.WebInterface;
@@ -121,34 +119,12 @@ public class XMLSpider implements FredPlugin, FredPluginThreadless,
 		return librarybuffer.getTimeNotStalled();
 	}
 
-	public synchronized boolean cancelWrite() {
-		if(writingIndex) {
-			return false;
-		}
-		writeIndexScheduled = false;
-		return true;
-	}
-
 	public Config getConfig() {
 		return getRoot().getConfig();
 	}
 
-	public String getIndexWriterStatus() {
-		return indexWriter.getCurrentSubindexPrefix();
-	}
-
 	public boolean isGarbageCollecting() {
 		return garbageCollecting;
-	}
-
-	public synchronized boolean pauseWrite() {
-		if(!writingIndex) {
-			return false;
-		}
-		indexWriter.pause();
-		writingIndex = false;
-		writeIndexScheduled = false;
-		return true;
 	}
 
 	// Set config asynchronously
@@ -338,49 +314,6 @@ public class XMLSpider implements FredPlugin, FredPluginThreadless,
 	}
 
 	/**
-	 * Start a thread to make an index
-	 */
-	public synchronized void scheduleMakeIndex() {
-		if (writeIndexScheduled || writingIndex) return;
-
-		callbackExecutor.execute(new MakeIndexCallback());
-		writeIndexScheduled = true;
-	}
-
-	protected class MakeIndexCallback implements Runnable {
-		public void run() {
-			synchronized (this) {
-				if (!writeIndexScheduled) return;
-				writeIndexScheduled=false;
-			}
-			try {
-				Logger.normal(this, "Making index");
-				synchronized (this) {
-					writingIndex = true;
-				}
-
-				garbageCollecting = true;
-				db.gc();
-				garbageCollecting = false;
-				indexWriter.makeIndex(getRoot());
-
-				synchronized (this) {
-					writingIndex = false;
-					writeIndexScheduled = false;
-				}				
-			} catch (Exception e) {
-				Logger.error(this, "Could not generate index: "+e, e);
-			} finally {
-				synchronized (this) {
-					writingIndex = false;
-					writeIndexScheduled = false;
-					notifyAll();
-				}
-			}
-		}
-	}
-
-	/**
 	 * Set config asynchronously
 	 */
 	protected class SetConfigCallback implements Runnable {
@@ -422,8 +355,6 @@ public class XMLSpider implements FredPlugin, FredPluginThreadless,
 		private int getPriority(Runnable r) {
 			if (r instanceof SetConfigCallback) {
 				return 0;
-			} else if (r instanceof MakeIndexCallback) {
-				return 1;
 			} else if (r instanceof OnFailureCallback) {
 				return 2;
 			} else if (r instanceof OnSuccessCallback) {
@@ -585,15 +516,7 @@ public class XMLSpider implements FredPlugin, FredPluginThreadless,
 		startSomeRequests();
 	} 
 
-	private boolean writingIndex;
-	private boolean writeIndexScheduled;
 	private boolean garbageCollecting = false;
-
-	protected IndexWriter indexWriter;
-
-	public IndexWriter getIndexWriter() {
-		return indexWriter;
-	}
 
 	/**
 	 * Stop the plugin, pausing any writing which is happening
@@ -665,7 +588,6 @@ public class XMLSpider implements FredPlugin, FredPluginThreadless,
 		// Initial Database
 		db = initDB();
 
-		indexWriter = new IndexWriter(getConfig());
 		webInterface = new WebInterface(this, pr.getHLSimpleClient(), pr.getToadletContainer(), pr.getNode().clientCore);
 		webInterface.load();
 
@@ -702,7 +624,6 @@ public class XMLSpider implements FredPlugin, FredPluginThreadless,
 				Logger.error(this, "Error creating uri from '"+page.getURI()+"'", ex);
 			}
 			//Logger.normal(this, "Parsing "+page.getURI());
-			page.clearTermPosition();
 		}
 
 		public void foundURI(FreenetURI uri) {
@@ -781,9 +702,6 @@ public class XMLSpider implements FredPlugin, FredPluginThreadless,
 
 			// Skip word if it is a stop word
 			if (isStopWord(word)) return;
-			Term term = getTermByWord(word, true);
-			TermPosition termPos = page.getTermPosition(term, true);
-			termPos.addPositions(position);
 
 			// Add to Library buffer
 			TermPageEntry tp = getEntry(word);
@@ -838,7 +756,7 @@ public class XMLSpider implements FredPlugin, FredPluginThreadless,
 		db.setProperty("perst.string.encoding", "UTF-8");
 		db.setProperty("perst.concurrent.iterator", true);
 
-		db.open("XMLSpider-" + dbVersion + ".dbs");
+		db.open("Spider-" + dbVersion + ".dbs");
 
 		PerstRoot root = (PerstRoot) db.getRoot();
 		if (root == null) PerstRoot.createRoot(db);
@@ -858,10 +776,6 @@ public class XMLSpider implements FredPlugin, FredPluginThreadless,
 	// language for I10N
 	private LANGUAGE language;
 
-	protected Term getTermByWord(String word, boolean create) {
-		return getRoot().getTermByWord(word, create);
-	}
-
 	public String getString(String key) {
 		// TODO return a translated string
 		return key;
@@ -879,14 +793,6 @@ public class XMLSpider implements FredPlugin, FredPluginThreadless,
 		synchronized (runningFetch) {
 			return new ArrayList<Page>(runningFetch.keySet());
 		}
-	}
-
-	public boolean isWriteIndexScheduled() {
-		return writeIndexScheduled;
-	}
-
-	public boolean isWritingIndex() {
-		return writingIndex;
 	}
 
 	public PluginRespirator getPluginRespirator() {

@@ -86,7 +86,7 @@
 	<!-- ================================================== -->
 	<target name="dist" depends="clean,compile,junit"
 		description="generate the distribution" >
-		<jar jarfile="${dist}/XMLSpider.jar" duplicate="fail">
+		<jar jarfile="${dist}/Spider.jar" duplicate="fail">
 			<manifest>
 				<attribute name="Plugin-Main-Class" value="plugins.XMLSpider.XMLSpider"/>
 			</manifest>

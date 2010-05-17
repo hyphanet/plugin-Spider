@@ -11,8 +11,6 @@ import plugins.XMLSpider.org.garret.perst.Storage;
 import freenet.keys.FreenetURI;
 
 public class PerstRoot extends Persistent {
-	protected FieldIndex<Term> md5Term;
-	protected FieldIndex<Term> wordTerm;
 
 	protected FieldIndex<Page> idPage;
 	protected FieldIndex<Page> uriPage;
@@ -28,9 +26,6 @@ public class PerstRoot extends Persistent {
 
 	public static PerstRoot createRoot(Storage storage) {
 		PerstRoot root = new PerstRoot();
-
-		root.md5Term = storage.createFieldIndex(Term.class, "md5", true);
-		root.wordTerm = storage.createFieldIndex(Term.class, "word", true);
 
 		root.idPage = storage.createFieldIndex(Page.class, "id", true);
 		root.uriPage = storage.createFieldIndex(Page.class, "uri", true);
@@ -56,53 +51,6 @@ public class PerstRoot extends Persistent {
 		}
 	}
 	
-	public Term getTermByWord(String word, boolean create) {
-		md5Term.exclusiveLock();
-		wordTerm.exclusiveLock();
-		try {
-			Term term = wordTerm.get(new Key(word));
-
-			if (create && term == null) {
-				word = new String(word); // force a new instance, prevent referring to the old char[]			
-				term = new Term(word, getStorage());
-				md5Term.put(term);
-				wordTerm.put(term);
-			}
-
-			return term;
-		} finally {
-			wordTerm.unlock();
-			md5Term.unlock();
-		}
-	}
-
-	public IterableIterator<Term> getTermIterator(String from, String till) {
-		md5Term.sharedLock();
-		try {
-			return md5Term.iterator(from, till, 0);
-		} finally {
-			md5Term.unlock();
-		}
-	}
-
-	public List<Term> getTermList() {
-		md5Term.sharedLock();
-		try {
-			return md5Term.getList(null, null);
-		} finally {
-			md5Term.unlock();
-		}
-	}
-
-	public int getTermCount() {
-		md5Term.sharedLock();
-		try {
-			return md5Term.size();
-		} finally {
-			md5Term.unlock();
-		}
-	}
-
 	public Page getPageByURI(FreenetURI uri, boolean create, String comment) {
 		idPage.exclusiveLock();
 		uriPage.exclusiveLock();

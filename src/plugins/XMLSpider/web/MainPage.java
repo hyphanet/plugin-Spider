@@ -51,31 +51,6 @@ class MainPage implements WebPage {
 	 * freenet.support.HTMLNode)
 	 */
 	public void processPostRequest(HTTPRequest request, HTMLNode contentNode) {
-		// Create Index
-		if (request.isPartSet("createIndex")) {
-			synchronized (this) {
-				xmlSpider.scheduleMakeIndex();
-
-				pageMaker.getInfobox("infobox infobox-success", "Scheduled Creating Index", contentNode).
-					addChild("#", "Index will start create soon.");
-			}
-		}
-		if (request.isPartSet("pausewrite")) {
-			if(xmlSpider.pauseWrite()) {
-				pageMaker.getInfobox("infobox infobox-success", "Writing task paused", contentNode)
-						.addChild("#", "Schedule writing to the same directory to continue");
-			} else {
-				pageMaker.getInfobox("infobox infobox-error", "Write task could not be paused", contentNode);
-			}
-		}
-		if (request.isPartSet("cancelwrite")) {
-			if(xmlSpider.cancelWrite()) {
-				pageMaker.getInfobox("infobox infobox-success", "Writing task cancelled", contentNode);
-			} else {
-				pageMaker.getInfobox("infobox infobox-error", "Write task could not be cancelled, it has already started", contentNode);
-			}
-		}
-
 		// Queue URI
 		String addURI = request.getPartAsString("addURI", 512);
 		if (addURI != null && addURI.length() != 0) {
@@ -126,33 +101,8 @@ class MainPage implements WebPage {
 		statusContent.addChild("br");
 		statusContent.addChild("#", "Queued Event: " + xmlSpider.callbackExecutor.getQueue().size());
 		statusContent.addChild("br");
-		statusContent.addChild("#", "Index Writer: ");
-		synchronized (this) {
-			if (xmlSpider.isWritingIndex()) {
-				statusContent.addChild("span", "style", "color: red; font-weight: bold;", xmlSpider.getIndexWriterStatus() );
-				HTMLNode pauseform = pr.addFormChild(statusContent, "/xmlspider/", "pauseform");
-				pauseform.addChild("input", //
-						new String[] { "name", "type", "value" },//
-						new String[] { "pausewrite", "hidden", "pausewrite" });
-				pauseform.addChild("input", new String[]{"type", "value"}, new String[]{"submit", "Pause write"});
-			} else if (xmlSpider.isWriteIndexScheduled()) {
-				statusContent.addChild("span", "style", "color: blue; font-weight: bold;", xmlSpider.isGarbageCollecting() ? "GARBAGE COLLECTING" : "SCHEDULED" );
-				HTMLNode cancelform = pr.addFormChild(statusContent, "/xmlspider/", "cancelform");
-				cancelform.addChild("input", //
-						new String[] { "name", "type", "value" },//
-						new String[] { "cancelwrite", "hidden", "cancelwrite" });
-				cancelform.addChild("input", new String[]{"type", "value"}, new String[]{"submit", "Cancel write"});
-			} else {
-				statusContent.addChild("span", "style", "color: green; font-weight: bold;", "IDLE");
-			}
-		}
 		statusContent.addChild("br");
 		statusContent.addChild("#", "Library buffer size: "+xmlSpider.getLibraryBufferSize());
-		statusContent.addChild("br");
-		statusContent.addChild("#", "Last Written: "
-		        + (xmlSpider.getIndexWriter().tProducedIndex == 0 ? "NEVER" : new Date(
-		                xmlSpider.getIndexWriter().tProducedIndex).toString()));
-		
 		long tStalled = xmlSpider.getStalledTime();
 		long tNotStalled = xmlSpider.getNotStalledTime();
 		statusContent.addChild("br");

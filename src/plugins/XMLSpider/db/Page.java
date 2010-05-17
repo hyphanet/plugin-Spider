@@ -23,8 +23,6 @@ public class Page extends Persistent implements Comparable<Page> {
 	protected long lastChange;
 	/** Comment, for debugging */
 	protected String comment;
-	/** term.md5 -> TermPosition */
-	protected IPersistentMap<String, TermPosition> termPosMap;
 
 	public Page() {
 	}
@@ -76,27 +74,6 @@ public class Page extends Persistent implements Comparable<Page> {
 		return pageTitle;
 	}
 
-	public synchronized TermPosition getTermPosition(Term term, boolean create) {
-		if (termPosMap == null) {
-			termPosMap = getStorage().createMap(String.class);
-			modify();
-		}
-
-		TermPosition tp = termPosMap.get(term.md5);
-		if (tp == null && create) {
-			tp = new TermPosition(getStorage());
-			termPosMap.put(term.md5, tp);
-			term.pageSet.add(this);
-		}
-
-		return tp;
-	}
-	
-	public synchronized void clearTermPosition() {
-		termPosMap = null;
-		modify();
-	}
-	
 	@Override
 	public int hashCode() {
 		return (int) (id ^ (id >>> 32));
