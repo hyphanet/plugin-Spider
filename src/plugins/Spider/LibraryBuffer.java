@@ -42,7 +42,7 @@ public class LibraryBuffer implements FredPluginTalker {
 	private int bufferUsageEstimate = 0;
 	private int bufferMax;
 
-	static final File SAVE_FILE = new File("xmlspider.saved.data");
+	static final File SAVE_FILE = new File("spider.saved.data");
 	
 	/** For resetPages */
 	private Spider spider;
