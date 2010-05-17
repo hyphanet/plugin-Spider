@@ -537,7 +537,9 @@ public class XMLSpider implements FredPlugin, FredPluginThreadless,
 					Logger.minor(this, "rollback transaction", new Exception("debug"));
 					db.rollbackThreadTransaction();
 					db.beginThreadTransaction(Storage.EXCLUSIVE_TRANSACTION);
-					page.setStatus(Status.FAILED);
+					// page is now invalidated.
+					page = getRoot().getPageByURI(uri, false, "");
+					if(page != null) page.setStatus(Status.FAILED);
 					db.endThreadTransaction();
 				}
 			}
