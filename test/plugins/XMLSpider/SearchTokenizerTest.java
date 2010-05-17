@@ -1,4 +1,4 @@
-package plugins.XMLSpider;
+package plugins.Spider;
 
 import junit.framework.TestCase;
 
