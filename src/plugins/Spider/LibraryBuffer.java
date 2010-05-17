@@ -48,7 +48,7 @@ public class LibraryBuffer implements FredPluginTalker {
 	private Spider spider;
 
 	synchronized void setBufferSize(int maxSize) {
-		if(bufferMax <= 0) throw new IllegalArgumentException();
+		if(maxSize <= 0) throw new IllegalArgumentException();
 		bufferMax = maxSize;
 	}
 
