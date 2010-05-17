@@ -67,6 +67,8 @@ public class Config extends Persistent implements Cloneable {
 		badlistedKeywords = new String[] {}; // No excluded keywords by default.
 
 		requestPriority = RequestStarter.IMMEDIATE_SPLITFILE_PRIORITY_CLASS;
+		
+		newFormatIndexBufferLimit = 16;
 
 		storage.makePersistent(this);
 	}
