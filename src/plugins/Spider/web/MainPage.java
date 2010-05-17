@@ -114,7 +114,7 @@ class MainPage implements WebPage {
 		HTMLNode addForm = pr.addFormChild(mainContent, "plugins.Spider.Spider", "addForm");
 		addForm.addChild("label", "for", "addURI", "Add URI:");
 		addForm.addChild("input", new String[] { "name", "style" }, new String[] { "addURI", "width: 20em;" });
-		addForm.addChild("input", "type", "submit");
+		addForm.addChild("input", new String[] { "type", "value" }, new String[] { "submit", "Add" });
 
 		HTMLNode indexContent = pageMaker.getInfobox("#", "Create Index", nextTableCell);
 		HTMLNode indexForm = pr.addFormChild(indexContent, "plugins.Spider.Spider", "indexForm");
