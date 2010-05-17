@@ -423,6 +423,7 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 						pageCallBack.onText(line, mimeType, uri.toURI("http://127.0.0.1:8888/"));
 					}
 				}
+				pageCallBack.finish();
 				librarybuffer.maybeSend();
 
 			} catch (UnsafeContentTypeException e) {
@@ -613,6 +614,7 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 	public class PageCallBack implements FoundURICallback{
 		protected final Page page;
 		private FreenetURI uri;
+		private String title;
 
 		protected final boolean logDEBUG = Logger.shouldLog(Logger.DEBUG, this); // per instance, allow changing on the fly
 
@@ -658,9 +660,7 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 				 * title of the page 
 				 */
 				page.setPageTitle(s);
-				for (TermPageEntry termPageEntry : tpes.values()) {
-					librarybuffer.setTitle(termPageEntry, s);
-				}
+				title = s;
 				type = "title";
 			} else {
 				type = null;
@@ -686,6 +686,14 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 
 			if (type == null) {
 				lastPosition = lastPosition + i;
+			}
+		}
+		
+		void finish() {
+			if(title != null) {
+				for (TermPageEntry termPageEntry : tpes.values()) {
+					librarybuffer.setTitle(termPageEntry, title);
+				}
 			}
 		}
 
