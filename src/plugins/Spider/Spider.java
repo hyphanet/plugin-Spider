@@ -66,14 +66,14 @@ import freenet.support.io.NativeThread;
 import freenet.support.io.NullBucketFactory;
 
 /**
- * XMLSpider. Produces xml index for searching words. 
+ * Spider. Produces xml index for searching words. 
  * In case the size of the index grows up a specific threshold the index is split into several subindices.
  * The indexing key is the md5 hash of the word.
  * 
  *  @author swati goyal
  *  
  */
-public class XMLSpider implements FredPlugin, FredPluginThreadless,
+public class Spider implements FredPlugin, FredPluginThreadless,
 		FredPluginVersioned, FredPluginRealVersioned, FredPluginL10n, USKCallback, RequestClient {
 
 	/** Document ID of fetching documents */
@@ -87,7 +87,7 @@ public class XMLSpider implements FredPlugin, FredPluginThreadless,
 	static int dbVersion = 37;
 	static int version = 44;
 
-	public static final String pluginName = "XML spider " + version;
+	public static final String pluginName = "Spider " + version;
 
 	public String getVersion() {
 		return version + "(" + dbVersion + ") r" + Version.getSvnRevision();
@@ -374,9 +374,9 @@ public class XMLSpider implements FredPlugin, FredPluginThreadless,
 	        new PriorityBlockingQueue<Runnable>(5, new CallbackPrioritizer()), //
 	        new ThreadFactory() {
 		        public Thread newThread(Runnable r) {
-			        Thread t = new NativeThread(r, "XMLSpider", NativeThread.NORM_PRIORITY - 1, true);
+			        Thread t = new NativeThread(r, "Spider", NativeThread.NORM_PRIORITY - 1, true);
 			        t.setDaemon(true);
-			        t.setContextClassLoader(XMLSpider.this.getClass().getClassLoader());
+			        t.setContextClassLoader(Spider.this.getClass().getClassLoader());
 			        return t;
 		        }
 	        });
@@ -522,7 +522,7 @@ public class XMLSpider implements FredPlugin, FredPluginThreadless,
 	 * Stop the plugin, pausing any writing which is happening
 	 */
 	public void terminate(){
-		Logger.normal(this, "XMLSpider terminating");
+		Logger.normal(this, "Spider terminating");
 
 		synchronized (this) {
 			try {
@@ -547,12 +547,12 @@ public class XMLSpider implements FredPlugin, FredPluginThreadless,
 		
 		librarybuffer.terminate();
 
-		Logger.normal(this, "XMLSpider terminated");
+		Logger.normal(this, "Spider terminated");
 	}
 
 	public class ExitHook implements Runnable {
 		public void run() {
-			Logger.normal(this, "XMLSpider exit hook called");
+			Logger.normal(this, "Spider exit hook called");
 			terminate();
 		}
 	}
