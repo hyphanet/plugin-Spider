@@ -50,14 +50,6 @@ class ConfigPage implements WebPage {
 			int v = request.getIntPart("endWorkingPeriod", config.getEndWorkingPeriod());
 			config.setEndWorkingPeriod(v);
 		}
-		if (request.isPartSet("indexMaxEntries")) {
-			int v = request.getIntPart("indexMaxEntries", config.getIndexMaxEntries());
-			config.setIndexMaxEntries(v);
-		}
-		if (request.isPartSet("indexSubindexMaxSize")) {
-			int v = request.getIntPart("indexSubindexMaxSize", config.getIndexSubindexMaxSize() / 1024 / 1024);
-			config.setIndexSubindexMaxSize(v * 1024 * 1024);
-		}
 		if (request.isPartSet("badListedExtensions")) {
 			String v = request.getPartAsString("badListedExtensions", 32768);
 			String[] v0 = v.split(",");
@@ -85,10 +77,6 @@ class ConfigPage implements WebPage {
 			} else {
 				config.setBadlistedKeywords(new String[0]);
 			}
-		}
-		if (request.isPartSet("indexDir")) {
-			String v = request.getPartAsString("indexDir", 256);
-			config.setIndexDir(v);
 		}
 		if (request.isPartSet("indexTitle")) {
 			String v = request.getPartAsString("indexTitle", 256);
@@ -165,9 +153,6 @@ class ConfigPage implements WebPage {
 		
 		HTMLNode indexConfig = configForm.addChild("ul", "class", "config");
 		addConfig(indexConfig, //
-		        "Index Directory", "Directory where the index should be written to.", // 
-		        "indexDir", config.getIndexDir());
-		addConfig(indexConfig, //
 		        "Index Title", "Index Title", // 
 		        "indexTitle", config.getIndexTitle());
 		addConfig(indexConfig, //
@@ -176,16 +161,6 @@ class ConfigPage implements WebPage {
 		addConfig(indexConfig, //
 		        "Index Owner Email", "Index Owner Email", // 
 		        "indexOwnerEmail", config.getIndexOwnerEmail());
-		addConfig(indexConfig, //
-		        "Maximum Subindex Entries", "Maximum number of entries in each index.", // 
-		        "indexMaxEntries", //
-		        new String[] { "500", "1000", "2000", "4000", "8000", "12000", "16000" }, //
-		        Integer.toString(config.getIndexMaxEntries()));
-		addConfig(indexConfig, //
-		        "Maximum Subindex Size", "Maximum size of a subindex (MiB).", // 
-		        "indexSubindexMaxSize", //
-		        new String[] { "1", "2", "4", "8", "16", "20", "24", "28", "32", "40", "48" }, //
-		        Integer.toString(config.getIndexSubindexMaxSize() / 1024 / 1024));
 		addConfig(indexConfig, //
 		        "Write debug info", "Write debug info", // 
 		        "debug", //

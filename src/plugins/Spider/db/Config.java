@@ -11,12 +11,6 @@ import freenet.support.Logger;
 import java.util.Calendar;
 
 public class Config extends Persistent implements Cloneable {
-	/**
-	 * Directory where the generated indices are stored
-	 */
-	private String indexDir;
-	private int indexMaxEntries;
-	private int indexSubindexMaxSize;
 
 	private String indexTitle;
 	private String indexOwner;
@@ -39,9 +33,6 @@ public class Config extends Persistent implements Cloneable {
 	}
 
 	public Config(Storage storage) {
-		indexDir = "myindex7/";
-		indexMaxEntries = 4000;
-		indexSubindexMaxSize = 4 * 1024 * 1024;
 
 		indexTitle = "Spider index";
 		indexOwner = "Freenet";
@@ -82,33 +73,6 @@ public class Config extends Persistent implements Cloneable {
 			Logger.error(this, "Impossible exception", e);
 			throw new RuntimeException(e);
 		}
-	}
-
-	public synchronized void setIndexDir(String indexDir) {
-		assert !isPersistent();
-		this.indexDir = indexDir;
-	}
-
-	public synchronized String getIndexDir() {
-		return indexDir;
-	}
-
-	public synchronized void setIndexMaxEntries(int indexMaxEntries) {
-		assert !isPersistent();
-		this.indexMaxEntries = indexMaxEntries;
-	}
-
-	public synchronized int getIndexMaxEntries() {
-		return indexMaxEntries;
-	}
-
-	public synchronized void setIndexSubindexMaxSize(int indexSubindexMaxSize) {
-		assert !isPersistent();
-		this.indexSubindexMaxSize = indexSubindexMaxSize;
-	}
-
-	public synchronized int getIndexSubindexMaxSize() {
-		return indexSubindexMaxSize;
 	}
 
 	public synchronized void setIndexTitle(String indexTitle) {
