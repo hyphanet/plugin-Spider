@@ -3,10 +3,12 @@
  */
 package plugins.XMLSpider.db;
 
+import freenet.support.Logger;
 import plugins.XMLSpider.org.garret.perst.FieldIndex;
 import plugins.XMLSpider.org.garret.perst.IPersistentMap;
 import plugins.XMLSpider.org.garret.perst.Persistent;
 import plugins.XMLSpider.org.garret.perst.Storage;
+import plugins.XMLSpider.org.garret.perst.StorageError;
 
 public class Page extends Persistent implements Comparable<Page> {
 	/** Page Id */
@@ -132,6 +134,14 @@ public class Page extends Persistent implements Comparable<Page> {
 			coll.exclusiveLock();
 			try {
 				coll.remove(this);
+			} catch (StorageError e) {
+				if(e.getErrorCode() == StorageError.KEY_NOT_FOUND) {
+					// No serious consequences, so just log it, rather than killing the whole thing.
+					Logger.error(this, "Page: Key not found in index: "+this, e);
+					System.err.println("Page: Key not found in index: "+this);
+					e.printStackTrace();
+				} else
+					throw e;
 			} finally {
 				coll.unlock();
 			}
