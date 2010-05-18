@@ -4,7 +4,6 @@ import java.lang.Character.UnicodeBlock;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Locale;
-
 import static plugins.Spider.SearchUtil.*;
 
 /**
@@ -15,12 +14,14 @@ import static plugins.Spider.SearchUtil.*;
  * 
  * @author SDiZ <sdiz+freenet@gmail.com>
  */
-class SearchTokenizer implements Iterable<String>, Iterator<String> {
+public class SearchTokenizer implements Iterable<String>, Iterator<String> {
 	private ArrayList<Mode> mode;
 	private ArrayList<String> segments;
 	private int nextPos;
 	private final boolean returnPairs;
 	static final int KEEP_NON_LETTER_MIN_CHARS = 3;
+	static final String allowedMidWord = "'";
+	static final String discardIfEndWord = "'";
 
 	private Iterator<String> cjkTokenizer;
 
@@ -28,7 +29,7 @@ class SearchTokenizer implements Iterable<String>, Iterator<String> {
 		UNDEF, LATIN, CJK
 	};
 
-	SearchTokenizer(String text, boolean returnPairs) {
+	public SearchTokenizer(String text, boolean returnPairs) {
 		this.returnPairs = returnPairs;
 		// normalize
 		text = normalize(text);
@@ -43,7 +44,8 @@ class SearchTokenizer implements Iterable<String>, Iterator<String> {
 		StringBuilder sb = new StringBuilder();
 		for (int offset = 0; offset < length;) {
 			final int codepoint = text.codePointAt(offset);
-			offset += Character.charCount(codepoint);
+			int charCount = Character.charCount(codepoint);
+			offset += charCount;
 
 			if (Character.isLetterOrDigit(codepoint)) {
 				boolean isCJK = isCJK(codepoint);
@@ -68,19 +70,42 @@ class SearchTokenizer implements Iterable<String>, Iterator<String> {
 
 				sb.append(Character.toChars(codepoint));
 			} else if (sb.length() != 0) {
-				// last code point is not 0, add a separator
-				if(curMode != Mode.UNDEF || sb.length() >= KEEP_NON_LETTER_MIN_CHARS) {
-					segments.add(sb.toString());
-					mode.add(curMode);
+				boolean passed = false;
+				if(charCount == 1) {
+					// Allow apostrophes mid-word.
+					char c = text.charAt(offset-1);
+					if(allowedMidWord.indexOf(c) != -1) {
+						sb.append(c);
+						passed = true;
+					}
 				}
-				curMode = Mode.UNDEF;
-				sb = new StringBuilder();
+				if(!passed) {
+					// last code point is not 0, add a separator
+					if(curMode != Mode.UNDEF || sb.length() >= KEEP_NON_LETTER_MIN_CHARS) {
+						// Words can't end in an apostrophe.
+						while(sb.length() > 0 && discardIfEndWord.indexOf(sb.charAt(sb.length()-1)) != -1) {
+							sb.setLength(sb.length()-1);
+						}
+						if(sb.length() > 0) {
+							segments.add(sb.toString());
+							mode.add(curMode);
+						}
+					}
+					curMode = Mode.UNDEF;
+					sb = new StringBuilder();
+				}
 			}
 		}
 
 		if (sb.length() != 0) {
-			segments.add(sb.toString());
-			mode.add(curMode);
+			// Words can't end in an apostrophe.
+			while(sb.length() > 0 && discardIfEndWord.indexOf(sb.charAt(sb.length()-1)) != -1) {
+				sb.setLength(sb.length()-1);
+			}
+			if(sb.length() > 0) {
+				segments.add(sb.toString());
+				mode.add(curMode);
+			}
 		}
 	}
 
