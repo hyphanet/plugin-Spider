@@ -538,13 +538,13 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 			runningFetch.clear();
 			callbackExecutor.shutdownNow();
 		}
+		librarybuffer.terminate();
+
 		try { callbackExecutor.awaitTermination(30, TimeUnit.SECONDS); } catch (InterruptedException e) {}
 		try { db.close(); } catch (Exception e) {}
 		
 		webInterface.unload();
 		
-		librarybuffer.terminate();
-
 		Logger.normal(this, "Spider terminated");
 	}
 
