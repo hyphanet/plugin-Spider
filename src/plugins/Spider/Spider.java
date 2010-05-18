@@ -725,7 +725,10 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 		 */
 		private TermPageEntry getEntry(String word) {
 			TermPageEntry tp = tpes.get(word);
-			if (tp == null) tp = new TermPageEntry(word, 0, uri, null);
+			if (tp == null) {
+				tp = new TermPageEntry(word, 0, uri, null);
+				tpes.put(word, tp);
+			}
 			return tp;
 		}
 	}
