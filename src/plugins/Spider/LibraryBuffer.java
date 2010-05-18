@@ -155,7 +155,8 @@ public class LibraryBuffer implements FredPluginTalker {
 		long tStart = System.currentTimeMillis();
 		try {
 			Logger.normal(this, "Sending buffer of estimated size "+bufferUsageEstimate+" bytes to Library");
-			Bucket bucket = writeToPush();
+			long totalPagesIndexed = spider.getRoot().getPageCount(Status.INDEXED);
+			Bucket bucket = writeToPush(totalPagesIndexed);
 			innerSend(bucket);
 			Logger.normal(this, "Buffer successfully sent to Library, size = "+bucket.size());
 			// Not a separate transaction, commit with the index updates.
@@ -178,9 +179,21 @@ public class LibraryBuffer implements FredPluginTalker {
 		}
 	}
 	
-	private synchronized Bucket writeToPush() throws IOException {
+	private synchronized Bucket writeToPush(long totalPagesIndexed) throws IOException {
 		Bucket bucket = pr.getNode().clientCore.tempBucketFactory.makeBucket(3000000);
 		OutputStream os = bucket.getOutputStream();
+		SimpleFieldSet meta = new SimpleFieldSet(true); // Stored with data to make things easier.
+		String indexTitle = spider.getConfig().getIndexTitle();
+		String indexOwner = spider.getConfig().getIndexOwner();
+		String indexOwnerEmail = spider.getConfig().getIndexOwnerEmail();
+		if(indexTitle != null)
+			meta.putSingle("index.title", indexTitle);
+		if(indexOwner != null)
+			meta.putSingle("index.owner.name", indexOwner);
+		if(indexOwnerEmail != null)
+			meta.putSingle("index.owner.email", indexOwnerEmail);
+		meta.put("totalPages", totalPagesIndexed);
+		meta.writeTo(os);
 		for (TermPageEntry termPageEntry : pushing) {
 			TermEntryWriter.getInstance().writeObject(termPageEntry, os);
 		}
@@ -193,17 +206,6 @@ public class LibraryBuffer implements FredPluginTalker {
 	private void innerSend(Bucket bucket) {
 		SimpleFieldSet sfs = new SimpleFieldSet(true);
 		sfs.putSingle("command", "pushBuffer");
-		String indexTitle = spider.getConfig().getIndexTitle();
-		String indexOwner = spider.getConfig().getIndexOwner();
-		String indexOwnerEmail = spider.getConfig().getIndexOwnerEmail();
-		long totalPagesIndexed = spider.getRoot().getPageCount(Status.INDEXED);
-		if(indexTitle != null)
-			sfs.putSingle("index.title", indexTitle);
-		if(indexOwner != null)
-			sfs.putSingle("index.owner.name", indexOwner);
-		if(indexOwnerEmail != null)
-			sfs.putSingle("index.owner.email", indexOwnerEmail);
-		sfs.put("totalPages", totalPagesIndexed);
 		PluginTalker libraryTalker;
 		try {
 			libraryTalker = pr.getPluginTalker(this, "plugins.Library.Main", "SpiderBuffer");
