@@ -43,23 +43,6 @@ public class PerstRoot extends Persistent {
 		return root;
 	}
 	
-	public void onStart(Storage db) {
-		if(notPushedPages == null) {
-			db.beginThreadTransaction(Storage.EXCLUSIVE_TRANSACTION);
-			System.err.println("Upgrading database: adding field index for NOT_PUSHED");
-			notPushedPages = db.createFieldIndex(Page.class, "lastChange", false);
-			modify();
-			db.endThreadTransaction();
-		}
-		if(indexedPages == null) {
-			db.beginThreadTransaction(Storage.EXCLUSIVE_TRANSACTION);
-			System.err.println("Upgrading database: adding field index for INDEXED");
-			indexedPages = db.createFieldIndex(Page.class, "lastChange", false);
-			modify();
-			db.endThreadTransaction();
-		}
-	}
-	
 	public Page getPageByURI(FreenetURI uri, boolean create, String comment) {
 		idPage.exclusiveLock();
 		uriPage.exclusiveLock();

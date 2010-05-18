@@ -84,8 +84,8 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 	 */
 	protected Set<String> allowedMIMETypes;
 
-	static int dbVersion = 37;
-	static int version = 44;
+	static int dbVersion = 45;
+	static int version = 45;
 
 	public static final String pluginName = "Spider " + version;
 
@@ -771,7 +771,6 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 
 		PerstRoot root = (PerstRoot) db.getRoot();
 		if (root == null) PerstRoot.createRoot(db);
-		else root.onStart(db);
 
 		return db;
 	}
