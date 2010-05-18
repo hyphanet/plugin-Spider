@@ -689,14 +689,13 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 		}
 		
 		void finish() {
-			if(title != null) {
-				for (TermPageEntry termPageEntry : tpes.values()) {
+			for (TermPageEntry termPageEntry : tpes.values()) {
+				if(title != null)
 					librarybuffer.setTitle(termPageEntry, title);
-					// Crude first approximation to relevance calculation.
-					// Client should multiply by log ( total count of files / count of files with this word in )
-					// Which is equal to log ( total count of files ) - log ( count of files with this word in )
-					librarybuffer.setRelevance(termPageEntry, ((float)termPageEntry.positionsSize()) / ((float)totalWords));
-				}
+				// Crude first approximation to relevance calculation.
+				// Client should multiply by log ( total count of files / count of files with this word in )
+				// Which is equal to log ( total count of files ) - log ( count of files with this word in )
+				librarybuffer.setRelevance(termPageEntry, ((float)termPageEntry.positionsSize()) / ((float)totalWords));
 			}
 		}
 
