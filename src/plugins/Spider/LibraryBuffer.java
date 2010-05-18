@@ -243,8 +243,4 @@ public class LibraryBuffer implements FredPluginTalker {
 		}
 	}
 
-	public synchronized boolean isEnabled() {
-		return bufferMax != 0;
-	}
-
 }

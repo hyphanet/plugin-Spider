@@ -444,10 +444,7 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 				return;
 			}
 
-			if(librarybuffer.isEnabled())
-				page.setStatus(Status.NOT_PUSHED);
-			else
-				page.setStatus(Status.INDEXED);
+			page.setStatus(Status.INDEXED);
 			db.endThreadTransaction();
 			dbTransactionEnded  = true;
 
