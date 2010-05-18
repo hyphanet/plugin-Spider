@@ -15,8 +15,8 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Collection;
 import java.util.TreeMap;
-import plugins.Library.index.TermEntryWriter;
-import plugins.Library.index.TermPageEntry;
+import plugins.Spider.index.TermEntryWriter;
+import plugins.Spider.index.TermPageEntry;
 import plugins.Spider.db.Status;
 import plugins.Spider.org.garret.perst.Storage;
 

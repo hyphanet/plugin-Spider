@@ -1,4 +1,4 @@
-package plugins.Library.index;
+package plugins.Spider.index;
 
 /* This code is part of Freenet. It is distributed under the GNU General
  * Public License, version 2 (or at your option any later version). See

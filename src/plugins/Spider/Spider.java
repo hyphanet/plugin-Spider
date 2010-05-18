@@ -25,7 +25,7 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-import plugins.Library.index.TermPageEntry;
+import plugins.Spider.index.TermPageEntry;
 import plugins.Spider.db.Config;
 import plugins.Spider.db.Page;
 import plugins.Spider.db.PerstRoot;
