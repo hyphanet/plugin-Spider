@@ -33,7 +33,7 @@ abstract public class TermEntry implements Comparable<TermEntry> {
 	** Relevance rating. Must be in the half-closed interval (0,1].
 	** a relevance of 0 indicates that the relevance is unset
 	*/
-	final public float rel;
+	public float rel;
 
 	public TermEntry(String s, float r) {
 		if (s == null) {

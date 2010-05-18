@@ -129,6 +129,10 @@ public class LibraryBuffer implements FredPluginTalker {
 	synchronized void setTitle(TermPageEntry termPageEntry, String s) {
 		get(termPageEntry).title = s;
 	}
+	
+	synchronized void setRelevance(TermPageEntry termPageEntry, float f) {
+		get(termPageEntry).rel = f;
+	}
 
 	/**
 	 * Puts a term position in the TermPageEntry and increments the bufferUsageEstimate

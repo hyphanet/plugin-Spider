@@ -615,6 +615,7 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 		protected final Page page;
 		private FreenetURI uri;
 		private String title;
+		private int totalWords;
 
 		protected final boolean logDEBUG = Logger.shouldLog(Logger.DEBUG, this); // per instance, allow changing on the fly
 
@@ -672,6 +673,7 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 			if(lastPosition == null) lastPosition = 1; 
 			int i = 0;
 			for (String word: tok) {
+				totalWords++;
 				try {
 					if(type == null)
 						addWord(word, lastPosition + i);
@@ -693,6 +695,10 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 			if(title != null) {
 				for (TermPageEntry termPageEntry : tpes.values()) {
 					librarybuffer.setTitle(termPageEntry, title);
+					// Crude first approximation to relevance calculation.
+					// Client should multiply by log ( total count of files / count of files with this word in )
+					// Which is equal to log ( total count of files ) - log ( count of files with this word in )
+					librarybuffer.setRelevance(termPageEntry, ((float)termPageEntry.positionsSize()) / ((float)totalWords));
 				}
 			}
 		}
