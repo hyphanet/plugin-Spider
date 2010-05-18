@@ -193,6 +193,17 @@ public class LibraryBuffer implements FredPluginTalker {
 	private void innerSend(Bucket bucket) {
 		SimpleFieldSet sfs = new SimpleFieldSet(true);
 		sfs.putSingle("command", "pushBuffer");
+		String indexTitle = spider.getConfig().getIndexTitle();
+		String indexOwner = spider.getConfig().getIndexOwner();
+		String indexOwnerEmail = spider.getConfig().getIndexOwnerEmail();
+		long totalPagesIndexed = spider.getRoot().getPageCount(Status.INDEXED);
+		if(indexTitle != null)
+			sfs.putSingle("index.title", indexTitle);
+		if(indexOwner != null)
+			sfs.putSingle("index.owner.name", indexOwner);
+		if(indexOwnerEmail != null)
+			sfs.putSingle("index.owner.email", indexOwnerEmail);
+		sfs.put("totalPages", totalPagesIndexed);
 		PluginTalker libraryTalker;
 		try {
 			libraryTalker = pr.getPluginTalker(this, "plugins.Library.Main", "SpiderBuffer");
