@@ -156,7 +156,8 @@ public class LibraryBuffer implements FredPluginTalker {
 		try {
 			Logger.normal(this, "Sending buffer of estimated size "+bufferUsageEstimate+" bytes to Library");
 			long totalPagesIndexed = spider.getRoot().getPageCount(Status.INDEXED);
-			Bucket bucket = writeToPush(totalPagesIndexed);
+			Bucket bucket = pr.getNode().clientCore.tempBucketFactory.makeBucket(3000000);
+			writeToPush(totalPagesIndexed, bucket);
 			innerSend(bucket);
 			Logger.normal(this, "Buffer successfully sent to Library, size = "+bucket.size());
 			// Not a separate transaction, commit with the index updates.
@@ -179,8 +180,7 @@ public class LibraryBuffer implements FredPluginTalker {
 		}
 	}
 	
-	private synchronized Bucket writeToPush(long totalPagesIndexed) throws IOException {
-		Bucket bucket = pr.getNode().clientCore.tempBucketFactory.makeBucket(3000000);
+	private synchronized Bucket writeToPush(long totalPagesIndexed, Bucket bucket) throws IOException {
 		OutputStream os = bucket.getOutputStream();
 		SimpleFieldSet meta = new SimpleFieldSet(true); // Stored with data to make things easier.
 		String indexTitle = spider.getConfig().getIndexTitle();
@@ -230,27 +230,20 @@ public class LibraryBuffer implements FredPluginTalker {
 	}
 
 	public void terminate() {
-		Collection<TermPageEntry> buffer2;
 		synchronized(this) {
 			if(shutdown) {
 				Logger.error(this, "Shutdown called twice", new Exception("error"));
 				return;
 			}
 			shutdown = true;
-			buffer2 = termPageBuffer.values();
+			pushing = termPageBuffer.values();
 			termPageBuffer = new TreeMap();
 			bufferUsageEstimate = 0;
 		}
 		FileBucket bucket = new FileBucket(SAVE_FILE, false, false, false, false, false);
-		OutputStream os;
+		long totalPagesIndexed = spider.getRoot().getPageCount(Status.INDEXED);
 		try {
-			os = bucket.getOutputStream();
-			for (TermPageEntry termPageEntry : buffer2) {
-				TermEntryWriter.getInstance().writeObject(termPageEntry, os);
-			}
-			os.close();
-			bucket.setReadOnly();
-			System.out.println("Stored remaining data on shutdown to "+SAVE_FILE);
+			writeToPush(totalPagesIndexed, bucket);
 		} catch (IOException e) {
 			// Ignore
 		}
