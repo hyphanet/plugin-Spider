@@ -159,7 +159,7 @@ public class LibraryBuffer implements FredPluginTalker {
 			innerSend(bucket);
 			Logger.normal(this, "Buffer successfully sent to Library, size = "+bucket.size());
 			// Not a separate transaction, commit with the index updates.
-			spider.resetPages(Status.NOT_PUSHED, Status.SUCCEEDED);
+			spider.resetPages(Status.NOT_PUSHED, Status.INDEXED);
 		} catch (IOException ex) {
 			Logger.error(this, "Could not make bucket to transfer buffer", ex);
 		}

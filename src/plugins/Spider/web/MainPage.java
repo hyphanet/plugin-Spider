@@ -80,8 +80,10 @@ class MainPage implements WebPage {
 		HTMLNode overviewTableRow = overviewTable.addChild("tr");
 
 		PageStatus queuedStatus = getPageStatus(Status.QUEUED);
+		PageStatus indexedStatus = getPageStatus(Status.INDEXED);
 		PageStatus succeededStatus = getPageStatus(Status.SUCCEEDED);
 		PageStatus failedStatus = getPageStatus(Status.FAILED);
+		PageStatus notPushedStatus = getPageStatus(Status.NOT_PUSHED);
 
 		List<Page> runningFetch = xmlSpider.getRunningFetch();
 		Config config = xmlSpider.getConfig();
@@ -94,7 +96,11 @@ class MainPage implements WebPage {
 		statusContent.addChild("br");
 		statusContent.addChild("#", "Queued: " + queuedStatus.count);
 		statusContent.addChild("br");
+		statusContent.addChild("#", "Indexed: " + indexedStatus.count);
+		statusContent.addChild("br");
 		statusContent.addChild("#", "Succeeded: " + succeededStatus.count);
+		statusContent.addChild("br");
+		statusContent.addChild("#", "Not pushed: " + notPushedStatus.count);
 		statusContent.addChild("br");
 		statusContent.addChild("#", "Failed: " + failedStatus.count);
 		statusContent.addChild("br");
@@ -152,12 +158,26 @@ class MainPage implements WebPage {
 		listPages(queuedStatus, queuedContent);
 		contentNode.addChild(queuedBox);
 
+		InfoboxNode indexed = pageMaker.getInfobox("Indexed URI");
+		HTMLNode indexedBox = indexed.outer;
+		indexedBox.addAttribute("style", "right: 0;");
+		HTMLNode indexedContent = indexed.content;
+		listPages(indexedStatus, indexedContent);
+		contentNode.addChild(indexedBox);
+
 		InfoboxNode succeeded = pageMaker.getInfobox("Succeeded URI");
 		HTMLNode succeededBox = succeeded.outer;
 		succeededBox.addAttribute("style", "right: 0;");
 		HTMLNode succeededContent = succeeded.content;
 		listPages(succeededStatus, succeededContent);
 		contentNode.addChild(succeededBox);
+
+		InfoboxNode notPushed = pageMaker.getInfobox("Not pushed URI");
+		HTMLNode notPushedBox = notPushed.outer;
+		notPushedBox.addAttribute("style", "right: 0;");
+		HTMLNode notPushedContent = succeeded.content;
+		listPages(notPushedStatus, notPushedContent);
+		contentNode.addChild(notPushedBox);
 
 		InfoboxNode failed = pageMaker.getInfobox("Failed URI");
 		HTMLNode failedBox = failed.outer;

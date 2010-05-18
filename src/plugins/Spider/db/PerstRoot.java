@@ -18,6 +18,7 @@ public class PerstRoot extends Persistent {
 	protected FieldIndex<Page> failedPages;
 	protected FieldIndex<Page> succeededPages;
 	protected FieldIndex<Page> notPushedPages;
+	protected FieldIndex<Page> indexedPages;
 
 	private Config config;
 
@@ -33,6 +34,7 @@ public class PerstRoot extends Persistent {
 		root.failedPages = storage.createFieldIndex(Page.class, "lastChange", false);
 		root.succeededPages = storage.createFieldIndex(Page.class, "lastChange", false);
 		root.notPushedPages = storage.createFieldIndex(Page.class, "lastChange", false);
+		root.indexedPages = storage.createFieldIndex(Page.class, "lastChange", false);
 
 		root.config = new Config(storage);
 
@@ -46,6 +48,13 @@ public class PerstRoot extends Persistent {
 			db.beginThreadTransaction(Storage.EXCLUSIVE_TRANSACTION);
 			System.err.println("Upgrading database: adding field index for NOT_PUSHED");
 			notPushedPages = db.createFieldIndex(Page.class, "lastChange", false);
+			modify();
+			db.endThreadTransaction();
+		}
+		if(indexedPages == null) {
+			db.beginThreadTransaction(Storage.EXCLUSIVE_TRANSACTION);
+			System.err.println("Upgrading database: adding field index for INDEXED");
+			indexedPages = db.createFieldIndex(Page.class, "lastChange", false);
 			modify();
 			db.endThreadTransaction();
 		}
@@ -94,6 +103,8 @@ public class PerstRoot extends Persistent {
 			return succeededPages;
 		case NOT_PUSHED:
 			return notPushedPages;
+		case INDEXED:
+			return indexedPages;
 		default:
 			return null;
 		}
