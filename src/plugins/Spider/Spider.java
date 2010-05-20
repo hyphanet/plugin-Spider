@@ -523,11 +523,6 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 		Logger.normal(this, "Spider terminating");
 
 		synchronized (this) {
-			try {
-				Runtime.getRuntime().removeShutdownHook(exitHook);
-			} catch (IllegalStateException e) {
-				// shutting down, ignore
-			}
 			stopped = true;
 
 			for (Map.Entry<Page, ClientGetter> me : runningFetch.entrySet()) {
@@ -548,15 +543,6 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 		Logger.normal(this, "Spider terminated");
 	}
 
-	public class ExitHook implements Runnable {
-		public void run() {
-			Logger.normal(this, "Spider exit hook called");
-			terminate();
-		}
-	}
-
-	private Thread exitHook = new Thread(new ExitHook());
-
 	/**
 	 * Start plugin
 	 * @param pr
@@ -565,8 +551,6 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 		this.core = pr.getNode().clientCore;
 		this.pr = pr;
 		pageMaker = pr.getPageMaker();
-
-		Runtime.getRuntime().addShutdownHook(exitHook);
 
 		/* Initialize Fetch Context */
 		this.ctx = pr.getHLSimpleClient().getFetchContext();
