@@ -249,7 +249,7 @@ public class LibraryBuffer implements FredPluginTalker {
 		} catch (Throwable t) {
 			totalPagesIndexed = -1;
 			// FIXME I don't understand why this (ClassNotFoundException) happens, we have not closed the class loader yet.
-			System.err.println("Failed to write pending data: "+t);
+			System.err.println("Failed to determine page size during writing data to "+SAVE_FILE+": "+t);
 			t.printStackTrace();
 		}
 		try {
