@@ -243,7 +243,15 @@ public class LibraryBuffer implements FredPluginTalker {
 		}
 		System.out.println("Writing pending data to "+SAVE_FILE);
 		FileBucket bucket = new FileBucket(SAVE_FILE, false, false, false, false, false);
-		long totalPagesIndexed = spider.getRoot().getPageCount(Status.INDEXED);
+		long totalPagesIndexed;
+		try {
+			totalPagesIndexed = spider.getRoot().getPageCount(Status.INDEXED);
+		} catch (Throwable t) {
+			totalPagesIndexed = -1;
+			// I don't understand why this happens, we have not closed the class loader yet.
+			System.err.println("Failed to write pending data: "+t);
+			t.printStackTrace();
+		}
 		try {
 			writeToPush(totalPagesIndexed, bucket);
 		} catch (IOException e) {
