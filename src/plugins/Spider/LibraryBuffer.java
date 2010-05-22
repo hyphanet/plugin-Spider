@@ -249,6 +249,7 @@ public class LibraryBuffer implements FredPluginTalker {
 			System.err.println("Failed to write pending data: "+e);
 			e.printStackTrace();
 		}
+		System.out.println("Written pending data to "+SAVE_FILE);
 	}
 
 }
