@@ -170,6 +170,7 @@ public class LibraryBuffer implements FredPluginTalker {
 			timeNotStalled += (tStart - timeLastNotStalled);
 			timeLastNotStalled = tEnd;
 			timeStalled += (tEnd - tStart);
+			if(shutdown) return;
 		}
 		// Robustness: Send SAVE_FILE *after* sending new data, because *it is already on disk*, whereas the new data is not.
 		if(SAVE_FILE.exists()) {
