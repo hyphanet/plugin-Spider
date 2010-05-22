@@ -248,7 +248,7 @@ public class LibraryBuffer implements FredPluginTalker {
 			totalPagesIndexed = spider.getRoot().getPageCount(Status.INDEXED);
 		} catch (Throwable t) {
 			totalPagesIndexed = -1;
-			// I don't understand why this happens, we have not closed the class loader yet.
+			// FIXME I don't understand why this (ClassNotFoundException) happens, we have not closed the class loader yet.
 			System.err.println("Failed to write pending data: "+t);
 			t.printStackTrace();
 		}
