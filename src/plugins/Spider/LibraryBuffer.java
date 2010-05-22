@@ -255,7 +255,7 @@ public class LibraryBuffer implements FredPluginTalker {
 		try {
 			writeToPush(totalPagesIndexed, bucket);
 		} catch (IOException e) {
-			System.err.println("Failed to write pending data: "+e);
+			System.err.println("Failed to write pending data: "+e); // Hopefully no data loss due to NOT_PUSHED vs INDEXED.
 			e.printStackTrace();
 		}
 		System.out.println("Written pending data to "+SAVE_FILE);
