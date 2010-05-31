@@ -59,7 +59,7 @@ public class Config extends Persistent implements Cloneable {
 
 		requestPriority = RequestStarter.IMMEDIATE_SPLITFILE_PRIORITY_CLASS;
 		
-		newFormatIndexBufferLimit = 16;
+		newFormatIndexBufferLimit = 1;
 
 		storage.makePersistent(this);
 	}
