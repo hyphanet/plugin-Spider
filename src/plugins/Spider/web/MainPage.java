@@ -175,7 +175,7 @@ class MainPage implements WebPage {
 		InfoboxNode notPushed = pageMaker.getInfobox("Not pushed URI");
 		HTMLNode notPushedBox = notPushed.outer;
 		notPushedBox.addAttribute("style", "right: 0;");
-		HTMLNode notPushedContent = succeeded.content;
+		HTMLNode notPushedContent = notPushed.content;
 		listPages(notPushedStatus, notPushedContent);
 		contentNode.addChild(notPushedBox);
 
