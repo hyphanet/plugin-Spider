@@ -12,17 +12,17 @@ import freenet.support.HTMLNode;
 import freenet.support.api.HTTPRequest;
 
 class ConfigPage implements WebPage {
-	private final Spider xmlSpider;
+	private final Spider spider;
 	private final PageMaker pageMaker;
 	private final PluginRespirator pr;
 	private Config config;
 
-	ConfigPage(Spider xmlSpider) {
-		this.xmlSpider = xmlSpider;
-		pageMaker = xmlSpider.getPageMaker();
-		pr = xmlSpider.getPluginRespirator();
+	ConfigPage(Spider spider) {
+		this.spider = spider;
+		pageMaker = spider.getPageMaker();
+		pr = spider.getPluginRespirator();
 
-		config = xmlSpider.getConfig();
+		config = spider.getConfig();
 	}
 
 	/*
@@ -32,7 +32,7 @@ class ConfigPage implements WebPage {
 	 * freenet.support.HTMLNode)
 	 */
 	public synchronized void processPostRequest(HTTPRequest request, HTMLNode contentNode) {
-		config = xmlSpider.getConfig().clone();
+		config = spider.getConfig().clone();
 		
 		if (request.isPartSet("maxParallelRequestsWorking")) {
 			int v = request.getIntPart("maxParallelRequestsWorking", config.getMaxParallelRequestsWorking());
@@ -99,7 +99,7 @@ class ConfigPage implements WebPage {
 			config.setNewFormatIndexBufferLimit(Integer.valueOf(v));
 		}
 		
-		xmlSpider.setConfig(config);
+		spider.setConfig(config);
 	}
 
 	/*

@@ -34,14 +34,14 @@ class MainPage implements WebPage {
 		}
 	}
 
-	private final Spider xmlSpider;
+	private final Spider spider;
 	private final PageMaker pageMaker;
 	private final PluginRespirator pr;
 
-	MainPage(Spider xmlSpider) {
-		this.xmlSpider = xmlSpider;
-		pageMaker = xmlSpider.getPageMaker();
-		pr = xmlSpider.getPluginRespirator();
+	MainPage(Spider spider) {
+		this.spider = spider;
+		pageMaker = spider.getPageMaker();
+		pr = spider.getPluginRespirator();
 	}
 
 	/*
@@ -56,7 +56,7 @@ class MainPage implements WebPage {
 		if (addURI != null && addURI.length() != 0) {
 			try {
 				FreenetURI uri = new FreenetURI(addURI);
-				xmlSpider.queueURI(uri, "manually", true);
+				spider.queueURI(uri, "manually", true);
 
 				pageMaker.getInfobox("infobox infobox-success", "URI Added", contentNode).
 					addChild("#", "Added " + uri);
@@ -65,7 +65,7 @@ class MainPage implements WebPage {
 					addChild("#", e.getMessage());
 				Logger.normal(this, "Manual added URI cause exception", e);
 			}
-			xmlSpider.startSomeRequests();
+			spider.startSomeRequests();
 		}
 	}
 
@@ -85,8 +85,8 @@ class MainPage implements WebPage {
 		PageStatus failedStatus = getPageStatus(Status.FAILED);
 		PageStatus notPushedStatus = getPageStatus(Status.NOT_PUSHED);
 
-		List<Page> runningFetch = xmlSpider.getRunningFetch();
-		Config config = xmlSpider.getConfig();
+		List<Page> runningFetch = spider.getRunningFetch();
+		Config config = spider.getConfig();
 
 		// Column 1
 		HTMLNode nextTableCell = overviewTableRow.addChild("td", "class", "first");
@@ -104,11 +104,11 @@ class MainPage implements WebPage {
 		statusContent.addChild("br");
 		statusContent.addChild("#", "Failed: " + failedStatus.count);
 		statusContent.addChild("br");
-		statusContent.addChild("#", "Queued Event: " + xmlSpider.callbackExecutor.getQueue().size());
+		statusContent.addChild("#", "Queued Event: " + spider.callbackExecutor.getQueue().size());
 		statusContent.addChild("br");
-		statusContent.addChild("#", "Library buffer size: "+xmlSpider.getLibraryBufferSize());
-		long tStalled = xmlSpider.getStalledTime();
-		long tNotStalled = xmlSpider.getNotStalledTime();
+		statusContent.addChild("#", "Library buffer size: "+spider.getLibraryBufferSize());
+		long tStalled = spider.getStalledTime();
+		long tNotStalled = spider.getNotStalledTime();
 		statusContent.addChild("br");
 		statusContent.addChild("#", "Time stalled: "+TimeUtil.formatTime(tStalled));
 		statusContent.addChild("br");
@@ -189,12 +189,12 @@ class MainPage implements WebPage {
 
 	//-- Utilities
 	private PageStatus getPageStatus(Status status) {
-		PerstRoot root = xmlSpider.getRoot();
+		PerstRoot root = spider.getRoot();
 		synchronized (root) {
 			int count = root.getPageCount(status);
 			Iterator<Page> it = root.getPages(status);
 
-			int showURI = xmlSpider.getConfig().getMaxShownURIs();
+			int showURI = spider.getConfig().getMaxShownURIs();
 			List<Page> page = new ArrayList();
 			while (page.size() < showURI && it.hasNext()) {
 				page.add(it.next());

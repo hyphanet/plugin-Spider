@@ -12,7 +12,7 @@ import freenet.clients.http.ToadletContainer;
 import freenet.node.NodeClientCore;
 
 public class WebInterface {
-	private final Spider xmlSpider;
+	private final Spider spider;
 	private PageMaker pageMaker;
 	private ConfigPageToadlet configToadlet;
 	private MainPageToadlet mainToadlet;
@@ -25,19 +25,19 @@ public class WebInterface {
 	 * @param client 
 	 */
 	public WebInterface(Spider spider, HighLevelSimpleClient client, ToadletContainer container, NodeClientCore core) {
-		xmlSpider = spider;
+		this.spider = spider;
 
-		pageMaker = xmlSpider.getPageMaker();
+		pageMaker = spider.getPageMaker();
 		this.toadletContainer = container;
 		this.client = client;
 		this.core = core;
 	}
 	
 	public void load() {
-		pageMaker.addNavigationCategory("/spider/", "Spider", "Spider", xmlSpider);
+		pageMaker.addNavigationCategory("/spider/", "Spider", "Spider", spider);
 		
-		toadletContainer.register(mainToadlet = new MainPageToadlet(client, xmlSpider, core), "Spider", "/spider/", true, "Spider", "Spider", true, null);
-		toadletContainer.register(configToadlet = new ConfigPageToadlet(client, xmlSpider, core), "Spider", "/spider/config", true, "Configure Spider", "Configure Spider", true, null);
+		toadletContainer.register(mainToadlet = new MainPageToadlet(client, spider, core), "Spider", "/spider/", true, "Spider", "Spider", true, null);
+		toadletContainer.register(configToadlet = new ConfigPageToadlet(client, spider, core), "Spider", "/spider/config", true, "Configure Spider", "Configure Spider", true, null);
 	}
 
 	
