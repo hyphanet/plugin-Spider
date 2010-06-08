@@ -29,7 +29,7 @@ public class ConfigPageToadlet extends Toadlet {
 
 	@Override
 	public String path() {
-		return "/xmlspider/config";
+		return "/spider/config";
 	}
 
 	public void handleMethodGET(URI uri, final HTTPRequest request, final ToadletContext ctx) 
@@ -55,7 +55,7 @@ public class ConfigPageToadlet extends Toadlet {
 		String formPassword = request.getPartAsString("formPassword", 32);
 		if((formPassword == null) || !formPassword.equals(core.formPassword)) {
 			MultiValueTable<String,String> headers = new MultiValueTable<String,String>();
-			headers.put("Location", "/xmlspider/config");
+			headers.put("Location", "/spider/config");
 			ctx.sendReplyHeaders(302, "Found", headers, null, 0);
 			return;
 		}

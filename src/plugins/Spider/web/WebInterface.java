@@ -34,10 +34,10 @@ public class WebInterface {
 	}
 	
 	public void load() {
-		pageMaker.addNavigationCategory("/xmlspider/", "Spider", "Spider", xmlSpider);
+		pageMaker.addNavigationCategory("/spider/", "Spider", "Spider", xmlSpider);
 		
-		toadletContainer.register(mainToadlet = new MainPageToadlet(client, xmlSpider, core), "Spider", "/xmlspider/", true, "Spider", "Spider", true, null);
-		toadletContainer.register(configToadlet = new ConfigPageToadlet(client, xmlSpider, core), "Spider", "/xmlspider/config", true, "Configure Spider", "Configure Spider", true, null);
+		toadletContainer.register(mainToadlet = new MainPageToadlet(client, xmlSpider, core), "Spider", "/spider/", true, "Spider", "Spider", true, null);
+		toadletContainer.register(configToadlet = new ConfigPageToadlet(client, xmlSpider, core), "Spider", "/spider/config", true, "Configure Spider", "Configure Spider", true, null);
 	}
 
 	

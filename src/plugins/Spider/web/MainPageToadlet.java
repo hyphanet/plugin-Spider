@@ -29,7 +29,7 @@ public class MainPageToadlet extends Toadlet {
 
 	@Override
 	public String path() {
-		return "/xmlspider/";
+		return "/spider/";
 	}
 
 	public void handleMethodGET(URI uri, final HTTPRequest request, final ToadletContext ctx) 
