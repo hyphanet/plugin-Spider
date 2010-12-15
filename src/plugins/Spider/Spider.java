@@ -826,7 +826,6 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 		System.out.println("Reset "+count+" pages status from "+from+" to "+to);
 	}
 
-	@Override
 	public boolean realTimeFlag() {
 		return false; // We definitely want throughput here.
 	}
