@@ -89,7 +89,7 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 	protected Set<String> allowedMIMETypes;
 
 	static int dbVersion = 45;
-	static int version = 47;
+	static int version = 48;
 
 	public static final String pluginName = "Spider " + version;
 
