@@ -278,7 +278,7 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 	private ClientGetter makeGetter(Page page) throws MalformedURLException {
 		ClientGetter getter = new ClientGetter(new ClientGetterCallback(page),
 				new FreenetURI(page.getURI()), ctx,
-				getPollingPriorityProgress(), this, null, null);
+				getPollingPriorityProgress(), this, null, null, null);
 		return getter;
 	}
 
