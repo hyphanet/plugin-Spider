@@ -728,6 +728,11 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 			}
 			return tp;
 		}
+
+		@Override
+		public void onFinishedPage() {
+			// Ignore
+		}
 	}
 
 	public void onFoundEdition(long l, USK key, ObjectContainer container, ClientContext context, boolean metadata,
