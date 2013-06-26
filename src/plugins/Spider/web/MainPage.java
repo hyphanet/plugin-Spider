@@ -113,6 +113,18 @@ class MainPage implements WebPage {
 		statusContent.addChild("#", "Time stalled: "+TimeUtil.formatTime(tStalled));
 		statusContent.addChild("br");
 		statusContent.addChild("#", "Time not stalled: "+TimeUtil.formatTime(tNotStalled)+" ("+(tNotStalled * 100.0) / (tStalled + tNotStalled)+"%)");
+		FreenetURI uri = spider.getURI();
+		statusContent.addChild("br");
+		if(uri != null && uri.getSuggestedEdition() >= 0) {
+			statusContent.addChild("#", "Key: ");
+			statusContent.addChild(HTMLNode.link("/"+uri.toString(false, false))).addChild("#", uri.toShortString());
+		} else if(uri != null) {
+			statusContent.addChild("#", "Key will be: ");
+			uri = uri.setSuggestedEdition(uri.getSuggestedEdition()+1);
+			statusContent.addChild(HTMLNode.link("/"+uri.toString(false, false))).addChild("#", uri.toShortString());
+		} else {
+			statusContent.addChild("#", "Key: Unknown");
+		}
 		
 		// Column 2
 		nextTableCell = overviewTableRow.addChild("td", "class", "second");

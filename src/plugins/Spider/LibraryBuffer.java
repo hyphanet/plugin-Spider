@@ -37,6 +37,7 @@ public class LibraryBuffer implements FredPluginTalker {
 	private long timeLastNotStalled = System.currentTimeMillis();
 	private boolean shutdown;
 	private FreenetURI lastURI;
+	private boolean badURI;
 
 	private TreeMap<TermPageEntry, TermPageEntry> termPageBuffer = new TreeMap();
 	// Garbage collection behaving perversely. Lets try moving stuff into instance members.
@@ -238,11 +239,16 @@ public class LibraryBuffer implements FredPluginTalker {
 					FreenetURI uri = new FreenetURI(s);
 					synchronized(this) {
 						lastURI = uri;
+						notifyAll();
 					}
 					return;
 				} catch (MalformedURLException e) {
 					Logger.error(this, "Got bogus URI: "+s, new Exception("error"));
 				}
+			}
+			synchronized(this) {
+				badURI = true;
+				notifyAll();
 			}
 		}
 		Logger.error(this, "Ignoring message "+reply);
@@ -290,6 +296,14 @@ public class LibraryBuffer implements FredPluginTalker {
 			Logger.error(this, "Couldn't connect buffer to Library", e);
 		}
 		synchronized(this) {
+			if(lastURI == null) {
+				if(badURI) return null;
+				try {
+					wait(1000);
+				} catch (InterruptedException e) {
+					// Ignore.
+				}
+			}
 			return lastURI;
 		}
 	}

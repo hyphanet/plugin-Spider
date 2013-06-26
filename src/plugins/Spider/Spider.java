@@ -834,4 +834,8 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 	public boolean realTimeFlag() {
 		return false; // We definitely want throughput here.
 	}
+
+	public FreenetURI getURI() {
+		return librarybuffer.getURI();
+	}
 }
