@@ -1,6 +1,7 @@
 
 package plugins.Spider;
 
+import freenet.keys.FreenetURI;
 import freenet.pluginmanager.FredPluginTalker;
 import freenet.pluginmanager.PluginNotFoundException;
 import freenet.pluginmanager.PluginRespirator;
@@ -13,6 +14,7 @@ import freenet.support.io.FileBucket;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.net.MalformedURLException;
 import java.util.Collection;
 import java.util.TreeMap;
 import plugins.Spider.index.TermEntryWriter;
@@ -34,6 +36,7 @@ public class LibraryBuffer implements FredPluginTalker {
 	private long timeNotStalled = 0;
 	private long timeLastNotStalled = System.currentTimeMillis();
 	private boolean shutdown;
+	private FreenetURI lastURI;
 
 	private TreeMap<TermPageEntry, TermPageEntry> termPageBuffer = new TreeMap();
 	// Garbage collection behaving perversely. Lets try moving stuff into instance members.
@@ -227,7 +230,22 @@ public class LibraryBuffer implements FredPluginTalker {
 	}
 
 	public void onReply(String pluginname, String indentifier, SimpleFieldSet params, Bucket data) {
-		// TODO maybe
+		String reply = params.get("reply");
+		if("getSpiderURI".equals(reply)) {
+			String s = params.get("publicUSK");
+			if(s != null) {
+				try {
+					FreenetURI uri = new FreenetURI(s);
+					synchronized(this) {
+						lastURI = uri;
+					}
+					return;
+				} catch (MalformedURLException e) {
+					Logger.error(this, "Got bogus URI: "+s, new Exception("error"));
+				}
+			}
+		}
+		Logger.error(this, "Ignoring message "+reply);
 	}
 
 	public void terminate() {
@@ -261,4 +279,19 @@ public class LibraryBuffer implements FredPluginTalker {
 		System.out.println("Written pending data to "+SAVE_FILE);
 	}
 
+	public FreenetURI getURI() {
+		SimpleFieldSet sfs = new SimpleFieldSet(true);
+		sfs.putSingle("command", "getSpiderURI");
+		PluginTalker libraryTalker;
+		try {
+			libraryTalker = pr.getPluginTalker(this, "plugins.Library.Main", "SpiderBuffer.getURI");
+			libraryTalker.sendSyncInternalOnly(sfs, null);
+		} catch (PluginNotFoundException e) {
+			Logger.error(this, "Couldn't connect buffer to Library", e);
+		}
+		synchronized(this) {
+			return lastURI;
+		}
+	}
+	
 }
