@@ -6,16 +6,16 @@ import java.io.*;
 public class MultiFile implements IFile 
 { 
     public static class MultiFileSegment { 
-	IFile  f;
-	long   size;
+    IFile  f;
+    long   size;
     }
 
    long seek(long pos) {
-	currSeg = 0;
-	while (pos >= segment[currSeg].size) { 
-	    pos -= segment[currSeg].size;
-	    currSeg += 1;
-	}
+    currSeg = 0;
+    while (pos >= segment[currSeg].size) { 
+        pos -= segment[currSeg].size;
+        currSeg += 1;
+    }
         return pos;
     }
 

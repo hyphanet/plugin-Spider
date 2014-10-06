@@ -1283,7 +1283,7 @@ class BinOpNode extends Node {
             return left.evaluateStr(t).compareTo(right.evaluateStr(t)) >= 0;
 
           case opDateEq: 
-            return left.evaluateDate(t).equals(right.evaluateDate(t));			
+            return left.evaluateDate(t).equals(right.evaluateDate(t));            
           case opDateNe: 
             return !left.evaluateDate(t).equals(right.evaluateDate(t));            
           case opDateLt: 
@@ -1294,7 +1294,7 @@ class BinOpNode extends Node {
             return left.evaluateDate(t).compareTo(right.evaluateDate(t)) > 0;          
           case opDateGe: 
             return left.evaluateDate(t).compareTo(right.evaluateDate(t)) >= 0;
-				
+                
           case opBoolEq:
             return left.evaluateBool(t) == right.evaluateBool(t);
           case opBoolNe:
@@ -3057,7 +3057,7 @@ public class QueryImpl<T> implements Query<T>
         }
         return new UnaryOpNode(Node.tpDate, Node.opStrToDate, expr);
     }
-		
+        
     final int compare(Node expr, BinOpNode list)
     {
         int n = 1;

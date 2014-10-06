@@ -10,8 +10,8 @@ import freenet.support.api.HTTPRequest;
  */
 interface WebPage {
 
-	public abstract void processPostRequest(HTTPRequest request, HTMLNode contentNode);
+    public abstract void processPostRequest(HTTPRequest request, HTMLNode contentNode);
 
-	public abstract void writeContent(HTTPRequest request, HTMLNode contentNode);
+    public abstract void writeContent(HTTPRequest request, HTMLNode contentNode);
 
 }

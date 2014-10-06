@@ -1345,13 +1345,13 @@ public class StorageImpl implements Storage {
             throw new StorageError(StorageError.STORAGE_NOT_OPENED);
         }
         objectCache.invalidate();
-		synchronized (objectCache){
+        synchronized (objectCache){
         if (!modified) { 
             return;
         }
         rollback0();
         modified = false;
-		}
+        }
     }
 
     private final void rollback0() {
@@ -2519,7 +2519,7 @@ public class StorageImpl implements Storage {
                             freeId(oid);
                         }
                         obj.invalidate();
-						objectCache.clearDirty(obj);
+                        objectCache.clearDirty(obj);
                     }
                 }
             }
@@ -3444,8 +3444,8 @@ public class StorageImpl implements Storage {
                         for (int j = 0; j < len; j++) { 
                             int index = Bytes.unpack4(body, offs);
                             if (index >= 0) {
-				arr[j] = enumConstants[index];
-			    }
+                arr[j] = enumConstants[index];
+                }
                             offs += 4;
                         }
                         f.set(obj, arr);
@@ -3801,7 +3801,7 @@ public class StorageImpl implements Storage {
                     offs += 8;
                     continue;
                 case ClassDescriptor.tpEnum:
-		{
+        {
                     Enum e = (Enum)f.get(obj);
                     buf.extend(offs + 4);
                     if (e == null) {
@@ -3811,7 +3811,7 @@ public class StorageImpl implements Storage {
                     }
                     offs += 4;
                     continue;
-		}
+        }
                 case ClassDescriptor.tpDate:
                 {
                     buf.extend(offs + 8);

@@ -202,15 +202,15 @@ public class Rtree<T extends IPersistent> extends PersistentCollection<T> implem
         RtreePage pg;
         int       pos;
 
-	public Rectangle getKey() {
-	    return pg.b[pos];
-	}
+    public Rectangle getKey() {
+        return pg.b[pos];
+    }
 
-	public T getValue() {
-	    return (T)pg.branch.get(pos);
-	}
+    public T getValue() {
+        return (T)pg.branch.get(pos);
+    }
 
-  	public T setValue(T value) {
+      public T setValue(T value) {
             throw new UnsupportedOperationException();
         }
 

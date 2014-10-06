@@ -431,23 +431,23 @@ class Btree<T extends IPersistent> extends PersistentCollection<T> implements In
             throw new UnsupportedOperationException();
         }
 
-	public boolean equals(Object o) {
-	    if (!(o instanceof Map.Entry)) {
-		return false;
+    public boolean equals(Object o) {
+        if (!(o instanceof Map.Entry)) {
+        return false;
             }
-	    Map.Entry e = (Map.Entry)o;
-	    return (getKey() == null ? e.getKey() == null : getKey().equals(e.getKey())) 
+        Map.Entry e = (Map.Entry)o;
+        return (getKey() == null ? e.getKey() == null : getKey().equals(e.getKey())) 
                 && (getValue() == null ? e.getValue() == null : getValue().equals(e.getValue())); 
-	}
+    }
 
-	public int hashCode() {
-	    return ((getKey() == null) ? 0 : getKey().hashCode()) ^
+    public int hashCode() {
+        return ((getKey() == null) ? 0 : getKey().hashCode()) ^
                 ((getValue() == null) ? 0 : getValue().hashCode());
-	}
+    }
 
-	public String toString() {
-	    return getKey() + "=" + getValue();
-	}
+    public String toString() {
+        return getKey() + "=" + getValue();
+    }
 
         BtreeEntry(StorageImpl db, Object key, int oid) {
             this.db = db;

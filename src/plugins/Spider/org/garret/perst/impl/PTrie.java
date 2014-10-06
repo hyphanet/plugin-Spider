@@ -258,7 +258,7 @@ class PTrie<T extends IPersistent> extends PersistentCollection<T> implements Pa
             }
             return obj;
         }
-				
+                
         T findExactMatch(long key, int keyLength) 
         {             
             if (keyLength >= this.keyLength) { 
@@ -284,7 +284,7 @@ class PTrie<T extends IPersistent> extends PersistentCollection<T> implements Pa
                 }
             }
             return null;
-        }		
+        }        
 
         boolean isNotUsed() { 
             return obj == null && childOne == null && childZero == null;
@@ -331,7 +331,7 @@ class PTrie<T extends IPersistent> extends PersistentCollection<T> implements Pa
                 }
             }
             return null;
-        }		
+        }        
 
         public void deallocate() 
         {

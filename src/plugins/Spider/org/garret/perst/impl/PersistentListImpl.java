@@ -378,21 +378,21 @@ class PersistentListImpl<E extends IPersistent> extends PersistentCollection<E> 
     }
 
     public boolean contains(Object o) {         
-	Iterator e = iterator();
-	if (o==null) {
-	    while (e.hasNext()) { 
-		if (e.next()==null) {
-		    return true;
+    Iterator e = iterator();
+    if (o==null) {
+        while (e.hasNext()) { 
+        if (e.next()==null) {
+            return true;
                 }
             }
-	} else {
-	    while (e.hasNext()) {
-		if (o.equals(e.next())) {
-		    return true;
+    } else {
+        while (e.hasNext()) {
+        if (o.equals(e.next())) {
+            return true;
                 }
             }
-	}
-	return false;
+    }
+    return false;
     }
 
     public boolean add(E o) {
@@ -444,140 +444,140 @@ class PersistentListImpl<E extends IPersistent> extends PersistentCollection<E> 
     }        
     
     public int indexOf(Object o) {
-	ListIterator<E> e = listIterator();
-	if (o==null) {
-	    while (e.hasNext())
-		if (e.next()==null)
-		    return e.previousIndex();
-	} else {
-	    while (e.hasNext())
-		if (o.equals(e.next()))
-		    return e.previousIndex();
-	}
-	return -1;
+    ListIterator<E> e = listIterator();
+    if (o==null) {
+        while (e.hasNext())
+        if (e.next()==null)
+            return e.previousIndex();
+    } else {
+        while (e.hasNext())
+        if (o.equals(e.next()))
+            return e.previousIndex();
+    }
+    return -1;
     }
 
     public int lastIndexOf(Object o) {
-	ListIterator<E> e = listIterator(size());
-	if (o==null) {
-	    while (e.hasPrevious())
-		if (e.previous()==null)
-		    return e.nextIndex();
-	} else {
-	    while (e.hasPrevious())
-		if (o.equals(e.previous()))
-		    return e.nextIndex();
-	}
-	return -1;
+    ListIterator<E> e = listIterator(size());
+    if (o==null) {
+        while (e.hasPrevious())
+        if (e.previous()==null)
+            return e.nextIndex();
+    } else {
+        while (e.hasPrevious())
+        if (o.equals(e.previous()))
+            return e.nextIndex();
+    }
+    return -1;
     }
 
     public boolean addAll(int index, Collection<? extends E> c) {
-	boolean modified = false;
-	Iterator<? extends E> e = c.iterator();
-	while (e.hasNext()) {
-	    add(index++, e.next());
-	    modified = true;
-	}
-	return modified;
+    boolean modified = false;
+    Iterator<? extends E> e = c.iterator();
+    while (e.hasNext()) {
+        add(index++, e.next());
+        modified = true;
+    }
+    return modified;
     }
 
     public Iterator<E> iterator() {
-	return new Itr();
+    return new Itr();
     }
 
     public ListIterator<E> listIterator() {
-	return listIterator(0);
+    return listIterator(0);
     }
 
     public ListIterator<E> listIterator(int index) {
-	if (index<0 || index>size())
-	  throw new IndexOutOfBoundsException("Index: "+index);
+    if (index<0 || index>size())
+      throw new IndexOutOfBoundsException("Index: "+index);
 
-	return new ListItr(index);
+    return new ListItr(index);
     }
 
     private class Itr extends TreePosition implements  PersistentIterator, Iterator<E> {
-	/**
-	 * Index of element to be returned by subsequent call to next.
-	 */
-	int cursor = 0;
+    /**
+     * Index of element to be returned by subsequent call to next.
+     */
+    int cursor = 0;
 
-	/**
-	 * Index of element returned by most recent call to next or
-	 * previous.  Reset to -1 if this element is deleted by a call
-	 * to remove.
-	 */
-	int lastRet = -1;
+    /**
+     * Index of element returned by most recent call to next or
+     * previous.  Reset to -1 if this element is deleted by a call
+     * to remove.
+     */
+    int lastRet = -1;
 
-	/**
-	 * The modCount value that the iterator believes that the backing
-	 * List should have.  If this expectation is violated, the iterator
-	 * has detected concurrent modification.
-	 */
-	int expectedModCount = modCount;
+    /**
+     * The modCount value that the iterator believes that the backing
+     * List should have.  If this expectation is violated, the iterator
+     * has detected concurrent modification.
+     */
+    int expectedModCount = modCount;
 
-	public boolean hasNext() {
+    public boolean hasNext() {
             return cursor != size();
-	}
+    }
 
         public int nextOid() {
             checkForComodification();
-	    try {
-		int oid = getRawPosition(this, cursor).getOid();
-		lastRet = cursor++;
-		return oid;
-	    } catch(IndexOutOfBoundsException e) {
-		checkForComodification();
-		throw new NoSuchElementException();
-	    }
+        try {
+        int oid = getRawPosition(this, cursor).getOid();
+        lastRet = cursor++;
+        return oid;
+        } catch(IndexOutOfBoundsException e) {
+        checkForComodification();
+        throw new NoSuchElementException();
+        }
         }
 
-	public E next() {
+    public E next() {
             checkForComodification();
-	    try {
-		E next = getPosition(this, cursor);
-		lastRet = cursor++;
-		return next;
-	    } catch(IndexOutOfBoundsException e) {
-		checkForComodification();
-		throw new NoSuchElementException();
-	    }
-	}
+        try {
+        E next = getPosition(this, cursor);
+        lastRet = cursor++;
+        return next;
+        } catch(IndexOutOfBoundsException e) {
+        checkForComodification();
+        throw new NoSuchElementException();
+        }
+    }
 
-	public void remove() {
-	    if (lastRet == -1) {
-		throw new IllegalStateException();
+    public void remove() {
+        if (lastRet == -1) {
+        throw new IllegalStateException();
             }
             checkForComodification();
 
-	    try {
-		PersistentListImpl.this.remove(lastRet);
-		if (lastRet < cursor) {
-		    cursor--;
+        try {
+        PersistentListImpl.this.remove(lastRet);
+        if (lastRet < cursor) {
+            cursor--;
                 }
                 page = null;
-		lastRet = -1;
-		expectedModCount = modCount;
-	    } catch(IndexOutOfBoundsException e) {
-		throw new ConcurrentModificationException();
-	    }
-	}
+        lastRet = -1;
+        expectedModCount = modCount;
+        } catch(IndexOutOfBoundsException e) {
+        throw new ConcurrentModificationException();
+        }
+    }
 
-	final void checkForComodification() {
-	    if (modCount != expectedModCount) {
-		throw new ConcurrentModificationException();
+    final void checkForComodification() {
+        if (modCount != expectedModCount) {
+        throw new ConcurrentModificationException();
             }
-	}
+    }
     }
 
     private class ListItr extends Itr implements ListIterator<E> {
-	ListItr(int index) {
-	    cursor = index;
-	}
+    ListItr(int index) {
+        cursor = index;
+    }
 
-	public boolean hasPrevious() {
-	    return cursor != 0;
-	}
+    public boolean hasPrevious() {
+        return cursor != 0;
+    }
 
         public E previous() {
             checkForComodification();
@@ -592,40 +592,40 @@ class PersistentListImpl<E extends IPersistent> extends PersistentCollection<E> 
             }
         }
 
-	public int nextIndex() {
-	    return cursor;
-	}
+    public int nextIndex() {
+        return cursor;
+    }
 
-	public int previousIndex() {
-	    return cursor-1;
-	}
+    public int previousIndex() {
+        return cursor-1;
+    }
 
-	public void set(E o) {
-	    if (lastRet == -1) {
-		throw new IllegalStateException();
+    public void set(E o) {
+        if (lastRet == -1) {
+        throw new IllegalStateException();
             }
             checkForComodification();
 
-	    try {
-		PersistentListImpl.this.set(lastRet, o);
-		expectedModCount = modCount;
-	    } catch(IndexOutOfBoundsException e) {
-		throw new ConcurrentModificationException();
-	    }
-	}
+        try {
+        PersistentListImpl.this.set(lastRet, o);
+        expectedModCount = modCount;
+        } catch(IndexOutOfBoundsException e) {
+        throw new ConcurrentModificationException();
+        }
+    }
 
-	public void add(E o) {
+    public void add(E o) {
             checkForComodification();
 
-	    try {
-		PersistentListImpl.this.add(cursor++, o);
-		lastRet = -1;
+        try {
+        PersistentListImpl.this.add(cursor++, o);
+        lastRet = -1;
                 page = null;
-		expectedModCount = modCount;
-	    } catch(IndexOutOfBoundsException e) {
-		throw new ConcurrentModificationException();
-	    }
-	}
+        expectedModCount = modCount;
+        } catch(IndexOutOfBoundsException e) {
+        throw new ConcurrentModificationException();
+        }
+    }
     }
 
     public List<E> subList(int fromIndex, int toIndex) {

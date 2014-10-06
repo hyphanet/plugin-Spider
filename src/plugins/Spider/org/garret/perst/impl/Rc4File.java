@@ -75,17 +75,17 @@ public class Rc4File implements IFile
 
     private void setKey(byte[] key)
     {
-	for (int counter = 0; counter < 256; ++counter) { 
-	    initState[counter] = (byte)counter;
+    for (int counter = 0; counter < 256; ++counter) { 
+        initState[counter] = (byte)counter;
         }
-	int index1 = 0;
-	int index2 = 0;
-	for (int counter = 0; counter < 256; ++counter) {
-	    index2 = (key[index1] + initState[counter] + index2) & 0xff;
-	    byte temp = initState[counter];
-	    initState[counter] = initState[index2];
-	    initState[index2] = temp;
-	    index1 = (index1 + 1) % key.length;
+    int index1 = 0;
+    int index2 = 0;
+    for (int counter = 0; counter < 256; ++counter) {
+        index2 = (key[index1] + initState[counter] + index2) & 0xff;
+        byte temp = initState[counter];
+        initState[counter] = initState[index2];
+        initState[index2] = temp;
+        index1 = (index1 + 1) % key.length;
         }
     }
 
@@ -93,9 +93,9 @@ public class Rc4File implements IFile
     {
         x = y = 0;
         System.arraycopy(initState, 0, state, 0, state.length);
-	for (int i = 0; i < len; i++) {
-	    cipherText[cipherOff + i] =
-		(byte)(clearText[clearOff + i] ^ state[nextState()]);
+    for (int i = 0; i < len; i++) {
+        cipherText[cipherOff + i] =
+        (byte)(clearText[clearOff + i] ^ state[nextState()]);
         }
     }
 
@@ -103,20 +103,20 @@ public class Rc4File implements IFile
     {
         x = y = 0;
         System.arraycopy(initState, 0, state, 0, state.length);
-	for (int i = 0; i < len; i++) {
-	    clearText[clearOff + i] =
-		(byte)(cipherText[cipherOff + i] ^ state[nextState()]);
-	}
+    for (int i = 0; i < len; i++) {
+        clearText[clearOff + i] =
+        (byte)(cipherText[cipherOff + i] ^ state[nextState()]);
+    }
     }
 
     private final int nextState()
     {
-	x = (x + 1) & 0xff;
-	y = (y + state[x]) & 0xff;
-	byte temp = state[x];
-	state[x] = state[y];
-	state[y] = temp;
-	return (state[x] + state[y]) & 0xff;
+    x = (x + 1) & 0xff;
+    y = (y + state[x]) & 0xff;
+    byte temp = state[x];
+    state[x] = state[y];
+    state[y] = temp;
+    return (state[x] + state[y]) & 0xff;
     }
 
     public void close() { 

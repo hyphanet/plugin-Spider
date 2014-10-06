@@ -96,25 +96,25 @@ class PersistentMapImpl<K extends Comparable, V extends IPersistent> extends Per
     }
 
     public boolean isEmpty() {
-	return size() == 0;
+    return size() == 0;
     }
 
     public boolean containsValue(Object value) {
-	Iterator<Entry<K,V>> i = entrySet().iterator();
-	if (value==null) {
-	    while (i.hasNext()) {
-		Entry<K,V> e = i.next();
-		if (e.getValue()==null)
-		    return true;
-	    }
-	} else {
-	    while (i.hasNext()) {
-		Entry<K,V> e = i.next();
-		if (value.equals(e.getValue()))
-		    return true;
-	    }
-	}
-	return false;
+    Iterator<Entry<K,V>> i = entrySet().iterator();
+    if (value==null) {
+        while (i.hasNext()) {
+        Entry<K,V> e = i.next();
+        if (e.getValue()==null)
+            return true;
+        }
+    } else {
+        while (i.hasNext()) {
+        Entry<K,V> e = i.next();
+        if (value.equals(e.getValue()))
+            return true;
+        }
+    }
+    return false;
     }
 
     private int binarySearch(Object key) {
@@ -280,11 +280,11 @@ class PersistentMapImpl<K extends Comparable, V extends IPersistent> extends Per
     }
 
     public void putAll(Map<? extends K, ? extends V> t) {
-	Iterator<? extends Entry<? extends K, ? extends V>> i = t.entrySet().iterator();
-	while (i.hasNext()) {
-	    Entry<? extends K, ? extends V> e = i.next();
-	    put(e.getKey(), e.getValue());
-	}
+    Iterator<? extends Entry<? extends K, ? extends V>> i = t.entrySet().iterator();
+    while (i.hasNext()) {
+        Entry<? extends K, ? extends V> e = i.next();
+        put(e.getKey(), e.getValue());
+    }
     }
 
     public void clear() {
@@ -297,69 +297,69 @@ class PersistentMapImpl<K extends Comparable, V extends IPersistent> extends Per
     }
 
     public Set<K> keySet() {
-	if (keySet == null) {
-	    keySet = new AbstractSet<K>() {
-		public Iterator<K> iterator() {
-		    return new Iterator<K>() {
-			private Iterator<Entry<K,V>> i = entrySet().iterator();
+    if (keySet == null) {
+        keySet = new AbstractSet<K>() {
+        public Iterator<K> iterator() {
+            return new Iterator<K>() {
+            private Iterator<Entry<K,V>> i = entrySet().iterator();
 
-			public boolean hasNext() {
-			    return i.hasNext();
-			}
+            public boolean hasNext() {
+                return i.hasNext();
+            }
 
-			public K next() {
-			    return i.next().getKey();
-			}
+            public K next() {
+                return i.next().getKey();
+            }
 
-			public void remove() {
-			    i.remove();
-			}
+            public void remove() {
+                i.remove();
+            }
                     };
-		}
+        }
 
-		public int size() {
-		    return PersistentMapImpl.this.size();
-		}
+        public int size() {
+            return PersistentMapImpl.this.size();
+        }
 
-		public boolean contains(Object k) {
-		    return PersistentMapImpl.this.containsKey(k);
-		}
-	    };
-	}
-	return keySet;
+        public boolean contains(Object k) {
+            return PersistentMapImpl.this.containsKey(k);
+        }
+        };
+    }
+    return keySet;
     }
 
     public Collection<V> values() {
-	if (valuesCol == null) {
-	    valuesCol = new AbstractCollection<V>() {
-		public Iterator<V> iterator() {
-		    return new Iterator<V>() {
-			private Iterator<Entry<K,V>> i = entrySet().iterator();
+    if (valuesCol == null) {
+        valuesCol = new AbstractCollection<V>() {
+        public Iterator<V> iterator() {
+            return new Iterator<V>() {
+            private Iterator<Entry<K,V>> i = entrySet().iterator();
 
-			public boolean hasNext() {
-			    return i.hasNext();
-			}
+            public boolean hasNext() {
+                return i.hasNext();
+            }
 
-			public V next() {
-			    return i.next().getValue();
-			}
+            public V next() {
+                return i.next().getValue();
+            }
 
-			public void remove() {
-			    i.remove();
-			}
+            public void remove() {
+                i.remove();
+            }
                     };
                 }
 
-		public int size() {
-		    return PersistentMapImpl.this.size();
-		}
+        public int size() {
+            return PersistentMapImpl.this.size();
+        }
 
-		public boolean contains(Object v) {
-		    return PersistentMapImpl.this.containsValue(v);
-		}
-	    };
-	}
-	return valuesCol;
+        public boolean contains(Object v) {
+            return PersistentMapImpl.this.containsValue(v);
+        }
+        };
+    }
+    return valuesCol;
     }
 
     protected Iterator<Entry<K,V>> entryIterator() {
@@ -449,15 +449,15 @@ class PersistentMapImpl<K extends Comparable, V extends IPersistent> extends Per
     }
 
     public Set<Entry<K,V>> entrySet() {
-	if (entrySet == null) {
-	    entrySet = new AbstractSet<Entry<K,V>>() {
-		public Iterator<Entry<K,V>> iterator() {
-		    return entryIterator();
-		}
+    if (entrySet == null) {
+        entrySet = new AbstractSet<Entry<K,V>>() {
+        public Iterator<Entry<K,V>> iterator() {
+            return entryIterator();
+        }
 
-		public int size() {
-		    return PersistentMapImpl.this.size();
-		}
+        public int size() {
+            return PersistentMapImpl.this.size();
+        }
 
                 public boolean remove(Object o) {
                     if (!(o instanceof Map.Entry)) {
@@ -483,7 +483,7 @@ class PersistentMapImpl<K extends Comparable, V extends IPersistent> extends Per
                     return false;
                 }
                 
-		public boolean contains(Object k) {
+        public boolean contains(Object k) {
                     Entry<K,V> e = (Entry<K,V>)k;
                     if (e.getValue() != null) { 
                         return e.getValue().equals(PersistentMapImpl.this.get(e.getKey()));
@@ -491,30 +491,30 @@ class PersistentMapImpl<K extends Comparable, V extends IPersistent> extends Per
                         return PersistentMapImpl.this.containsKey(e.getKey()) 
                             && PersistentMapImpl.this.get(e.getKey()) == null;
                     }
-		}
-	    };
-	}
-	return entrySet;
+        }
+        };
+    }
+    return entrySet;
     }   
 
      
     public boolean equals(Object o) {
-	if (o == this) {
-	    return true;
+    if (o == this) {
+        return true;
         }
-	if (!(o instanceof Map)) {
-	    return false;
+    if (!(o instanceof Map)) {
+        return false;
         }
-	Map<K,V> t = (Map<K,V>) o;
-	if (t.size() != size()) {
-	    return false;
+    Map<K,V> t = (Map<K,V>) o;
+    if (t.size() != size()) {
+        return false;
         }
 
         try {
             Iterator<Entry<K,V>> i = entrySet().iterator();
             while (i.hasNext()) {
                 Entry<K,V> e = i.next();
-		K key = e.getKey();
+        K key = e.getKey();
                 V value = e.getValue();
                 if (value == null) {
                     if (!(t.get(key)==null && t.containsKey(key))) {
@@ -532,38 +532,38 @@ class PersistentMapImpl<K extends Comparable, V extends IPersistent> extends Per
             return false;
         }
 
-	return true;
+    return true;
     }
 
     public int hashCode() {
-	int h = 0;
-	Iterator<Entry<K,V>> i = entrySet().iterator();
-	while (i.hasNext()) {
-	    h += i.next().hashCode();
+    int h = 0;
+    Iterator<Entry<K,V>> i = entrySet().iterator();
+    while (i.hasNext()) {
+        h += i.next().hashCode();
         }
-	return h;
+    return h;
     }
 
     public String toString() {
-	StringBuffer buf = new StringBuffer();
-	buf.append("{");
+    StringBuffer buf = new StringBuffer();
+    buf.append("{");
 
-	Iterator<Entry<K,V>> i = entrySet().iterator();
+    Iterator<Entry<K,V>> i = entrySet().iterator();
         boolean hasNext = i.hasNext();
         while (hasNext) {
-	    Entry<K,V> e = i.next();
-	    K key = e.getKey();
+        Entry<K,V> e = i.next();
+        K key = e.getKey();
             V value = e.getValue();
-	    if (key == this) {
-		buf.append("(this Map)");
+        if (key == this) {
+        buf.append("(this Map)");
             } else {
-		buf.append(key);
+        buf.append(key);
             }
-	    buf.append("=");
-	    if (value == this) {
-		buf.append("(this Map)");
+        buf.append("=");
+        if (value == this) {
+        buf.append("(this Map)");
             } else {
-		buf.append(value);
+        buf.append(value);
             }
             hasNext = i.hasNext();
             if (hasNext) {
@@ -571,8 +571,8 @@ class PersistentMapImpl<K extends Comparable, V extends IPersistent> extends Per
             }
         }
 
-	buf.append("}");
-	return buf.toString();
+    buf.append("}");
+    return buf.toString();
     }
 
     final Key generateKey(Object key) {

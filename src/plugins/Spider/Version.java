@@ -7,9 +7,9 @@ package plugins.Spider;
  * Necessary to be able to use pluginmanager's versions
  */
 public class Version {
-	private static final String svnRevision = "@custom@";
+    private static final String svnRevision = "@custom@";
 
-	static String getSvnRevision() {
-		return svnRevision;
-	}
+    static String getSvnRevision() {
+        return svnRevision;
+    }
 }

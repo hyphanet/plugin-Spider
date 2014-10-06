@@ -94,13 +94,13 @@ class ScalableList<E extends IPersistent> extends PersistentCollection<E> implem
     }
 
     public boolean addAll(int index, Collection<? extends E> c) {
-	boolean modified = false;
-	Iterator<? extends E> e = c.iterator();
-	while (e.hasNext()) {
-	    add(index++, e.next());
-	    modified = true;
-	}
-	return modified;
+    boolean modified = false;
+    Iterator<? extends E> e = c.iterator();
+    while (e.hasNext()) {
+        add(index++, e.next());
+        modified = true;
+    }
+    return modified;
     }    
             
     public Iterator<E> iterator() {
@@ -108,7 +108,7 @@ class ScalableList<E extends IPersistent> extends PersistentCollection<E> implem
     }
     
     public ListIterator<E> listIterator() {
-	return listIterator(0);
+    return listIterator(0);
     }
 
     public ListIterator<E> listIterator(int index) {

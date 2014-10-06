@@ -78,764 +78,764 @@ import freenet.support.io.NullBucketFactory;
  *  
  */
 public class Spider implements FredPlugin, FredPluginThreadless,
-		FredPluginVersioned, FredPluginRealVersioned, FredPluginL10n, USKCallback, RequestClient {
-
-	/** Document ID of fetching documents */
-	protected Map<Page, ClientGetter> runningFetch = Collections.synchronizedMap(new HashMap<Page, ClientGetter>());
-
-	/**
-	 * Lists the allowed mime types of the fetched page. 
-	 */
-	protected Set<String> allowedMIMETypes;
-
-	static int dbVersion = 45;
-	static int version = 51;
-
-	public static final String pluginName = "Spider " + version;
-
-	public String getVersion() {
-		return version + "(" + dbVersion + ") r" + Version.getSvnRevision();
-	}
-	
-	public long getRealVersion() {
-		return version;
-	}
-
-	private FetchContext ctx;
-	private ClientContext clientContext;
-	private boolean stopped = true;
-
-	private NodeClientCore core;
-	private PageMaker pageMaker;	
-	private PluginRespirator pr;
-
-	private LibraryBuffer librarybuffer;
-	
-	public int getLibraryBufferSize() {
-		return librarybuffer.bufferUsageEstimate();
-	}
-	
-	public long getStalledTime() {
-		return librarybuffer.getTimeStalled();
-	}
-	
-	public long getNotStalledTime() {
-		return librarybuffer.getTimeNotStalled();
-	}
-
-	public Config getConfig() {
-		return getRoot().getConfig();
-	}
-
-	public boolean isGarbageCollecting() {
-		return garbageCollecting;
-	}
-
-	// Set config asynchronously
-	public void setConfig(Config config) {
-		getRoot().setConfig(config); // hack -- may cause race condition. but this is more user friendly
-		callbackExecutor.execute(new SetConfigCallback(config));
-	}
-	
-	/**
-	 * Adds the found uri to the list of to-be-retrieved uris. <p>Every usk uri added as ssk.
-	 * @param uri the new uri that needs to be fetched for further indexing
-	 */
-	public void queueURI(FreenetURI uri, String comment, boolean force) {
-		String sURI = uri.toString();
-		String lowerCaseURI = sURI.toLowerCase(Locale.US);
-		for (String ext : getRoot().getConfig().getBadlistedExtensions()) {
-			if (lowerCaseURI.endsWith(ext)) {
-				return; // be smart
-			}
-		}
-		
-		for(String keyword : getRoot().getConfig().getBadlistedKeywords()) {
-			if(lowerCaseURI.indexOf(keyword.toLowerCase()) != -1) {
-				return; // Fascist keyword exclusion feature. Off by default!
-			}
-		}
-
-		if (uri.isUSK()) {
-			if (uri.getSuggestedEdition() < 0) {
-				uri = uri.setSuggestedEdition((-1) * uri.getSuggestedEdition());
-			}
-			try {
-				uri = ((USK.create(uri)).getSSK()).getURI();
-				(clientContext.uskManager).subscribe(USK.create(uri), this, false, this);
-			} catch (Exception e) {
-			}
-		}
-
-		db.beginThreadTransaction(Storage.EXCLUSIVE_TRANSACTION);
-		boolean dbTransactionEnded = false;
-		try {
-			Page page = getRoot().getPageByURI(uri, true, comment);
-			if (force && page.getStatus() != Status.QUEUED) {
-				page.setStatus(Status.QUEUED);
-				page.setComment(comment);
-			}
-
-			db.endThreadTransaction();
-			dbTransactionEnded = true;
-		} catch (RuntimeException e) {
-			Logger.error(this, "Runtime Exception: " + e, e);		
-			throw e;
-		} finally {
-			if (!dbTransactionEnded) {
-				Logger.minor(this, "rollback transaction", new Exception("debug"));
-				db.rollbackThreadTransaction();
-			}
-		}
-	}
-
-	/**
-	 * Start requests from the queue if less than 80% of the max requests are running until the max requests are running.
-	 */
-	public void startSomeRequests() {
-		ArrayList<ClientGetter> toStart = null;
-		synchronized (this) {
-			if (stopped) return;
-
-			synchronized (runningFetch) {
-				int running = runningFetch.size();
-				int maxParallelRequests = getRoot().getConfig().getMaxParallelRequests();
-
-				if (running >= maxParallelRequests * 0.8) return;
-
-				// Prepare to start
-				toStart = new ArrayList<ClientGetter>(maxParallelRequests - running);
-				db.beginThreadTransaction(Storage.COOPERATIVE_TRANSACTION);
-				getRoot().sharedLockPages(Status.QUEUED);
-				try {
-					Iterator<Page> it = getRoot().getPages(Status.QUEUED);
-
-					while (running + toStart.size() < maxParallelRequests && it.hasNext()) {
-						Page page = it.next();
-						// Skip if getting this page already
-						if (runningFetch.containsKey(page)) continue;
-						
-						try {
-							ClientGetter getter = makeGetter(page);
-
-							Logger.minor(this, "Starting " + getter + " " + page);
-							toStart.add(getter);
-							runningFetch.put(page, getter);
-						} catch (MalformedURLException e) {
-							Logger.error(this, "IMPOSSIBLE-Malformed URI: " + page, e);
-							page.setStatus(Status.FAILED);
-						}
-					}
-				} finally {
-					getRoot().unlockPages(Status.QUEUED);
-					db.endThreadTransaction();
-				}
-			}
-		}
-
-		for (ClientGetter g : toStart) {
-			try {
-				g.start(null, clientContext);
-				Logger.minor(this, g + " started");
-			} catch (FetchException e) {
-				g.getClientCallback().onFailure(e, g, null);
-			}
-		}
-	}
-
-	/**
-	 * Callback for fetching the pages
-	 */
-	private class ClientGetterCallback implements ClientGetCallback {
-		final Page page;
-
-		public ClientGetterCallback(Page page) {
-			this.page = page;
-		}
-
-		public void onFailure(FetchException e, ClientGetter state, ObjectContainer container) {
-			if (stopped) return;
-
-			callbackExecutor.execute(new OnFailureCallback(e, state, page));
-			Logger.minor(this, "Queued OnFailure: " + page + " (q:" + callbackExecutor.getQueue().size() + ")");
-		}
-
-		public void onSuccess(final FetchResult result, final ClientGetter state, ObjectContainer container) {
-			if (stopped) return;
-
-			callbackExecutor.execute(new OnSuccessCallback(result, state, page));
-			Logger.minor(this, "Queued OnSuccess: " + page + " (q:" + callbackExecutor.getQueue().size() + ")");
-		}
-
-		public String toString() {
-			return super.toString() + ":" + page;
-		}
-
-		public void onMajorProgress(ObjectContainer container) {
-		}
-	}
-
-	private ClientGetter makeGetter(Page page) throws MalformedURLException {
-		ClientGetter getter = new ClientGetter(new ClientGetterCallback(page),
-				new FreenetURI(page.getURI()), ctx,
-				getPollingPriorityProgress(), this, null, null, null);
-		return getter;
-	}
-
-	protected class OnFailureCallback implements Runnable {
-		private FetchException e;
-		private ClientGetter state;
-		private Page page;
-
-		OnFailureCallback(FetchException e, ClientGetter state, Page page) {
-			this.e = e;
-			this.state = state;
-			this.page = page;
-		}
-
-		public void run() {
-			onFailure(e, state, page);
-		}
-	}
-
-	/**
-	 * Callback for asyncronous handling of a success
-	 */
-	protected class OnSuccessCallback implements Runnable {
-		private FetchResult result;
-		private ClientGetter state;
-		private Page page;
-
-		OnSuccessCallback(FetchResult result, ClientGetter state, Page page) {
-			this.result = result;
-			this.state = state;
-			this.page = page;
-		}
-
-		public void run() {
-			onSuccess(result, state, page);
-		}
-	}
-
-	/**
-	 * Set config asynchronously
-	 */
-	protected class SetConfigCallback implements Runnable {
-		private Config config;
-
-		SetConfigCallback(Config config) {
-			this.config = config;
-		}
-
-		public void run() {
-			synchronized (getRoot()) {
-				getRoot().setConfig(config);
-				startSomeRequests();
-			}
-		}
-	}
-
-	protected class StartSomeRequestsCallback implements Runnable {
-		StartSomeRequestsCallback() {
-		}
-
-		public void run() {
-			try {
-				Thread.sleep(30000);
-			} catch (InterruptedException e) {
-				// ignore
-			}
-			startSomeRequests();
-		}
-	}
-
-	protected static class CallbackPrioritizer implements Comparator<Runnable> {
-		public int compare(Runnable o1, Runnable o2) {
-			if (o1.getClass() == o2.getClass()) return 0;
-
-			return getPriority(o1) - getPriority(o2);
-		}
-
-		private int getPriority(Runnable r) {
-			if (r instanceof SetConfigCallback) {
-				return 0;
-			} else if (r instanceof OnFailureCallback) {
-				return 2;
-			} else if (r instanceof OnSuccessCallback) {
-				return 3;
-			} else if (r instanceof StartSomeRequestsCallback) {
-				return 4;
-			}
-
-			return -1;
-		}
-	}
-
-	// this is java.util.concurrent.Executor, not freenet.support.Executor
-	// always run with one thread --> more thread cause contention and slower!
-	public ThreadPoolExecutor callbackExecutor = new ThreadPoolExecutor( //
-			1, 1, 600, TimeUnit.SECONDS, //
-	        new PriorityBlockingQueue<Runnable>(5, new CallbackPrioritizer()), //
-	        new ThreadFactory() {
-		        public Thread newThread(Runnable r) {
-			        Thread t = new NativeThread(r, "Spider", NativeThread.NORM_PRIORITY - 1, true);
-			        t.setDaemon(true);
-			        t.setContextClassLoader(Spider.this.getClass().getClassLoader());
-			        return t;
-		        }
-	        });
-
-	/**
-	 * Processes the successfully fetched uri for further outlinks.
-	 * 
-	 * @param result
-	 * @param state
-	 * @param page
-	 */
-	// single threaded
-	protected void onSuccess(FetchResult result, ClientGetter state, Page page) {
-		synchronized (this) {
-			if (stopped) return;    				
-		}
-		
-		FreenetURI uri = state.getURI();
-		ClientMetadata cm = result.getMetadata();
-		Bucket data = result.asBucket();
-		String mimeType = cm.getMIMEType();
-
-		boolean dbTransactionEnded = false;
-		db.beginThreadTransaction(Storage.EXCLUSIVE_TRANSACTION);
-		try {
-			librarybuffer.setBufferSize(getConfig().getNewFormatIndexBufferLimit()*1024*1024);
-			/*
-			 * instead of passing the current object, the pagecallback object for every page is
-			 * passed to the content filter this has many benefits to efficiency, and allows us to
-			 * identify trivially which page is being indexed. (we CANNOT rely on the base href
-			 * provided).
-			 */
-			PageCallBack pageCallBack = new PageCallBack(page);
-			Logger.minor(this, "Successful: " + uri + " : " + page.getId());
-
-			InputStream filterInput = null;
-			OutputStream filterOutput = null;
-			try {
-				if (!"text/plain".equals(mimeType)) {
-					filterInput = data.getInputStream();
-					filterOutput = new NullBucket().getOutputStream();
-					ContentFilter.filter(filterInput, filterOutput, mimeType,
-							uri.toURI("http://127.0.0.1:8888/"), pageCallBack, null, null);
-					filterInput.close();
-					filterOutput.close();
-				} else {
-					BufferedReader br = new BufferedReader(new InputStreamReader(data.getInputStream()));
-					String line;
-					while((line = br.readLine())!=null) {
-						pageCallBack.onText(line, mimeType, uri.toURI("http://127.0.0.1:8888/"));
-					}
-				}
-				pageCallBack.finish();
-				librarybuffer.maybeSend();
-
-			} catch (UnsafeContentTypeException e) {
-				// wrong mime type
-				page.setStatus(Status.SUCCEEDED);
-				db.endThreadTransaction();
-				dbTransactionEnded = true;
-
-				Logger.minor(this, "UnsafeContentTypeException " + uri + " : " + page.getId(), e);
-				return; // Ignore
-			} catch (IOException e) {
-				// ugh?
-				Logger.error(this, "Bucket error?: " + e, e);
-				return;
-			} catch (Exception e) {
-				// we have lots of invalid html on net - just normal, not error
-				Logger.normal(this, "exception on content filter for " + page, e);
-				return;
-			} finally {
-				Closer.close(filterInput);
-				Closer.close(filterOutput);
-			}
-
-			page.setStatus(Status.NOT_PUSHED);
-			db.endThreadTransaction();
-			dbTransactionEnded  = true;
-
-			Logger.minor(this, "Filtered " + uri + " : " + page.getId());
-		} catch (RuntimeException e) {
-			// other runtime exceptions
-			Logger.error(this, "Runtime Exception: " + e, e);		
-			throw e;
-		} finally {
-			try {
-				data.free();
-
-				synchronized (this) {
-					runningFetch.remove(page);
-				}
-				if (!stopped) startSomeRequests();
-			} finally {
-				if (!dbTransactionEnded) {
-					Logger.minor(this, "rollback transaction", new Exception("debug"));
-					db.rollbackThreadTransaction();
-					db.beginThreadTransaction(Storage.EXCLUSIVE_TRANSACTION);
-					// page is now invalidated.
-					page = getRoot().getPageByURI(uri, false, "");
-					if(page != null) page.setStatus(Status.FAILED);
-					db.endThreadTransaction();
-				}
-			}
-		}
-	}
-
-	protected void onFailure(FetchException fe, ClientGetter state, Page page) {
-		Logger.minor(this, "Failed: " + page + " : " + state, fe);
-
-		synchronized (this) {
-			if (stopped) return;
-		}
-
-		boolean dbTransactionEnded = false;
-		db.beginThreadTransaction(Storage.EXCLUSIVE_TRANSACTION);
-		try {
-			synchronized (page) {
-				if (fe.newURI != null) {
-					// redirect, mark as succeeded
-					queueURI(fe.newURI, "redirect from " + state.getURI(), false);
-					page.setStatus(Status.SUCCEEDED);
-				} else if (fe.isFatal()) {
-					// too many tries or fatal, mark as failed
-					page.setStatus(Status.FAILED);
-				} else {
-					// requeue at back
-					page.setStatus(Status.QUEUED);
-				}
-			}
-			db.endThreadTransaction();
-			dbTransactionEnded = true;
-		} catch (Exception e) {
-			Logger.error(this, "Unexcepected exception in onFailure(): " + e, e);
-			throw new RuntimeException("Unexcepected exception in onFailure()", e);
-		} finally {
-			runningFetch.remove(page);
-			if (!dbTransactionEnded) {
-				Logger.minor(this, "rollback transaction", new Exception("debug"));
-				db.rollbackThreadTransaction();
-			}
-		}
-
-		startSomeRequests();
-	} 
-
-	private boolean garbageCollecting = false;
-
-	/**
-	 * Stop the plugin, pausing any writing which is happening
-	 */
-	public void terminate(){
-		Logger.normal(this, "Spider terminating");
-
-		synchronized (this) {
-			stopped = true;
-
-			for (Map.Entry<Page, ClientGetter> me : runningFetch.entrySet()) {
-				ClientGetter getter = me.getValue();
-				Logger.minor(this, "Canceling request" + getter);
-				getter.cancel(null, clientContext);
-			}
-			runningFetch.clear();
-			callbackExecutor.shutdownNow();
-		}
-		librarybuffer.terminate();
-
-		try { callbackExecutor.awaitTermination(30, TimeUnit.SECONDS); } catch (InterruptedException e) {}
-		try { db.close(); } catch (Exception e) {}
-		
-		webInterface.unload();
-		
-		Logger.normal(this, "Spider terminated");
-	}
-
-	/**
-	 * Start plugin
-	 * @param pr
-	 */
-	public synchronized void runPlugin(PluginRespirator pr) {
-		this.core = pr.getNode().clientCore;
-		this.pr = pr;
-		pageMaker = pr.getPageMaker();
-
-		/* Initialize Fetch Context */
-		this.ctx = pr.getHLSimpleClient().getFetchContext();
-		ctx.maxSplitfileBlockRetries = 1;
-		ctx.maxNonSplitfileRetries = 1;
-		ctx.maxTempLength = 2 * 1024 * 1024;
-		ctx.maxOutputLength = 2 * 1024 * 1024;
-		allowedMIMETypes = new HashSet<String>();
-		allowedMIMETypes.add("text/html");
-		allowedMIMETypes.add("text/plain");
-		allowedMIMETypes.add("application/xhtml+xml");
-		ctx.allowedMIMETypes = new HashSet<String>(allowedMIMETypes);
-		clientContext = pr.getNode().clientCore.clientContext;
-
-		stopped = false;
-
-		// Initial Database
-		db = initDB();
-
-		webInterface = new WebInterface(this, pr.getHLSimpleClient(), pr.getToadletContainer(), pr.getNode().clientCore);
-		webInterface.load();
-
-		FreenetURI[] initialURIs = core.getBookmarkURIs();
-		for (int i = 0; i < initialURIs.length; i++) {
-			queueURI(initialURIs[i], "bookmark", false);
-		}
-
-		librarybuffer = new LibraryBuffer(pr, this);
-		librarybuffer.start();
-
-		callbackExecutor.execute(new StartSomeRequestsCallback());
-	}
-
-	private WebInterface webInterface;
-
-	/**
-	 * creates the callback object for each page.
-	 *<p>Used to create inlinks and outlinks for each page separately.
-	 * @author swati
-	 *
-	 */
-	public class PageCallBack implements FoundURICallback{
-		protected final Page page;
-		private FreenetURI uri;
-		private String title;
-		private int totalWords;
-
-		protected final boolean logDEBUG = Logger.shouldLog(Logger.DEBUG, this); // per instance, allow changing on the fly
-
-		PageCallBack(Page page) {
-			this.page = page;
-			try {
-				this.uri = new FreenetURI(page.getURI());
-			} catch (MalformedURLException ex) {
-				Logger.error(this, "Error creating uri from '"+page.getURI()+"'", ex);
-			}
-			//Logger.normal(this, "Parsing "+page.getURI());
-		}
-
-		public void foundURI(FreenetURI uri) {
-			// Ignore
-		}
-
-		/**
-		 * When a link is found in html
-		 * @param uri
-		 * @param inline
-		 */
-		public void foundURI(FreenetURI uri, boolean inline) {
-			if (stopped) throw new RuntimeException("plugin stopping");
-			if (logDEBUG) Logger.debug(this, "foundURI " + uri + " on " + page);
-			queueURI(uri, "Added from " + page.getURI(), false);
-		}
-
-		protected Integer lastPosition = null;
-
-		/**
-		 * When text is found
-		 * @param s
-		 * @param type
-		 * @param baseURI
-		 */
-		public void onText(String s, String type, URI baseURI){
-			if (stopped) throw new RuntimeException("plugin stopping");
-			if (logDEBUG) Logger.debug(this, "onText on " + page.getId() + " (" + baseURI + ")");
-
-			if ("title".equalsIgnoreCase(type) && (s != null) && (s.length() != 0) && (s.indexOf('\n') < 0)) {
-				/*
-				 * title of the page 
-				 */
-				page.setPageTitle(s);
-				title = s;
-				type = "title";
-			} else {
-				type = null;
-			}
-			// Tokenise. Do not use the pairs-of-CJK-chars option because we need
-			// accurate word index numbers.
-			SearchTokenizer tok = new SearchTokenizer(s, false);
-
-			if(lastPosition == null) lastPosition = 1; 
-			int i = 0;
-			for (String word: tok) {
-				totalWords++;
-				try {
-					if(type == null)
-						addWord(word, lastPosition + i);
-					else
-						addWord(word, Integer.MIN_VALUE + i); // Put title words in the right order starting at Min_Value
-				} catch (Exception e) {
-					// If a word fails continue
-					Logger.error(this, "Word failed: "+e, e);
-				} 
-				i++;
-			}
-
-			if (type == null) {
-				lastPosition = lastPosition + i;
-			}
-		}
-		
-		void finish() {
-			for (TermPageEntry termPageEntry : tpes.values()) {
-				if(title != null)
-					librarybuffer.setTitle(termPageEntry, title);
-				// Crude first approximation to relevance calculation.
-				// Client should multiply by log ( total count of files / count of files with this word in )
-				// Which is equal to log ( total count of files ) - log ( count of files with this word in )
-				librarybuffer.setRelevance(termPageEntry, ((float)termPageEntry.positionsSize()) / ((float)totalWords));
-			}
-		}
-
-		HashMap<String, TermPageEntry> tpes = new HashMap();
-
-		/**
-		 * Add a word to the database for this page
-		 * @param word
-		 * @param position
-		 * @throws java.lang.Exception
-		 */
-		private void addWord(String word, int position) {
-			if (logDEBUG) Logger.debug(this, "addWord on " + page.getId() + " (" + word + "," + position + ")");
-
-			// Skip word if it is a stop word
-			if (isStopWord(word)) return;
-
-			// Add to Library buffer
-			TermPageEntry tp = getEntry(word);
-			librarybuffer.addPos(tp, position);
-		}
-
-		/**
-		 * Makes a TermPageEntry for this term
-		 * @param word
-		 * @return
-		 */
-		private TermPageEntry getEntry(String word) {
-			TermPageEntry tp = tpes.get(word);
-			if (tp == null) {
-				tp = new TermPageEntry(word, 0, uri, null);
-				tpes.put(word, tp);
-			}
-			return tp;
-		}
-
-		@Override
-		public void onFinishedPage() {
-			// Ignore
-		}
-	}
-
-	public void onFoundEdition(long l, USK key, ObjectContainer container, ClientContext context, boolean metadata,
+        FredPluginVersioned, FredPluginRealVersioned, FredPluginL10n, USKCallback, RequestClient {
+
+    /** Document ID of fetching documents */
+    protected Map<Page, ClientGetter> runningFetch = Collections.synchronizedMap(new HashMap<Page, ClientGetter>());
+
+    /**
+     * Lists the allowed mime types of the fetched page. 
+     */
+    protected Set<String> allowedMIMETypes;
+
+    static int dbVersion = 45;
+    static int version = 51;
+
+    public static final String pluginName = "Spider " + version;
+
+    public String getVersion() {
+        return version + "(" + dbVersion + ") r" + Version.getSvnRevision();
+    }
+    
+    public long getRealVersion() {
+        return version;
+    }
+
+    private FetchContext ctx;
+    private ClientContext clientContext;
+    private boolean stopped = true;
+
+    private NodeClientCore core;
+    private PageMaker pageMaker;    
+    private PluginRespirator pr;
+
+    private LibraryBuffer librarybuffer;
+    
+    public int getLibraryBufferSize() {
+        return librarybuffer.bufferUsageEstimate();
+    }
+    
+    public long getStalledTime() {
+        return librarybuffer.getTimeStalled();
+    }
+    
+    public long getNotStalledTime() {
+        return librarybuffer.getTimeNotStalled();
+    }
+
+    public Config getConfig() {
+        return getRoot().getConfig();
+    }
+
+    public boolean isGarbageCollecting() {
+        return garbageCollecting;
+    }
+
+    // Set config asynchronously
+    public void setConfig(Config config) {
+        getRoot().setConfig(config); // hack -- may cause race condition. but this is more user friendly
+        callbackExecutor.execute(new SetConfigCallback(config));
+    }
+    
+    /**
+     * Adds the found uri to the list of to-be-retrieved uris. <p>Every usk uri added as ssk.
+     * @param uri the new uri that needs to be fetched for further indexing
+     */
+    public void queueURI(FreenetURI uri, String comment, boolean force) {
+        String sURI = uri.toString();
+        String lowerCaseURI = sURI.toLowerCase(Locale.US);
+        for (String ext : getRoot().getConfig().getBadlistedExtensions()) {
+            if (lowerCaseURI.endsWith(ext)) {
+                return; // be smart
+            }
+        }
+        
+        for(String keyword : getRoot().getConfig().getBadlistedKeywords()) {
+            if(lowerCaseURI.indexOf(keyword.toLowerCase()) != -1) {
+                return; // Fascist keyword exclusion feature. Off by default!
+            }
+        }
+
+        if (uri.isUSK()) {
+            if (uri.getSuggestedEdition() < 0) {
+                uri = uri.setSuggestedEdition((-1) * uri.getSuggestedEdition());
+            }
+            try {
+                uri = ((USK.create(uri)).getSSK()).getURI();
+                (clientContext.uskManager).subscribe(USK.create(uri), this, false, this);
+            } catch (Exception e) {
+            }
+        }
+
+        db.beginThreadTransaction(Storage.EXCLUSIVE_TRANSACTION);
+        boolean dbTransactionEnded = false;
+        try {
+            Page page = getRoot().getPageByURI(uri, true, comment);
+            if (force && page.getStatus() != Status.QUEUED) {
+                page.setStatus(Status.QUEUED);
+                page.setComment(comment);
+            }
+
+            db.endThreadTransaction();
+            dbTransactionEnded = true;
+        } catch (RuntimeException e) {
+            Logger.error(this, "Runtime Exception: " + e, e);        
+            throw e;
+        } finally {
+            if (!dbTransactionEnded) {
+                Logger.minor(this, "rollback transaction", new Exception("debug"));
+                db.rollbackThreadTransaction();
+            }
+        }
+    }
+
+    /**
+     * Start requests from the queue if less than 80% of the max requests are running until the max requests are running.
+     */
+    public void startSomeRequests() {
+        ArrayList<ClientGetter> toStart = null;
+        synchronized (this) {
+            if (stopped) return;
+
+            synchronized (runningFetch) {
+                int running = runningFetch.size();
+                int maxParallelRequests = getRoot().getConfig().getMaxParallelRequests();
+
+                if (running >= maxParallelRequests * 0.8) return;
+
+                // Prepare to start
+                toStart = new ArrayList<ClientGetter>(maxParallelRequests - running);
+                db.beginThreadTransaction(Storage.COOPERATIVE_TRANSACTION);
+                getRoot().sharedLockPages(Status.QUEUED);
+                try {
+                    Iterator<Page> it = getRoot().getPages(Status.QUEUED);
+
+                    while (running + toStart.size() < maxParallelRequests && it.hasNext()) {
+                        Page page = it.next();
+                        // Skip if getting this page already
+                        if (runningFetch.containsKey(page)) continue;
+                        
+                        try {
+                            ClientGetter getter = makeGetter(page);
+
+                            Logger.minor(this, "Starting " + getter + " " + page);
+                            toStart.add(getter);
+                            runningFetch.put(page, getter);
+                        } catch (MalformedURLException e) {
+                            Logger.error(this, "IMPOSSIBLE-Malformed URI: " + page, e);
+                            page.setStatus(Status.FAILED);
+                        }
+                    }
+                } finally {
+                    getRoot().unlockPages(Status.QUEUED);
+                    db.endThreadTransaction();
+                }
+            }
+        }
+
+        for (ClientGetter g : toStart) {
+            try {
+                g.start(null, clientContext);
+                Logger.minor(this, g + " started");
+            } catch (FetchException e) {
+                g.getClientCallback().onFailure(e, g, null);
+            }
+        }
+    }
+
+    /**
+     * Callback for fetching the pages
+     */
+    private class ClientGetterCallback implements ClientGetCallback {
+        final Page page;
+
+        public ClientGetterCallback(Page page) {
+            this.page = page;
+        }
+
+        public void onFailure(FetchException e, ClientGetter state, ObjectContainer container) {
+            if (stopped) return;
+
+            callbackExecutor.execute(new OnFailureCallback(e, state, page));
+            Logger.minor(this, "Queued OnFailure: " + page + " (q:" + callbackExecutor.getQueue().size() + ")");
+        }
+
+        public void onSuccess(final FetchResult result, final ClientGetter state, ObjectContainer container) {
+            if (stopped) return;
+
+            callbackExecutor.execute(new OnSuccessCallback(result, state, page));
+            Logger.minor(this, "Queued OnSuccess: " + page + " (q:" + callbackExecutor.getQueue().size() + ")");
+        }
+
+        public String toString() {
+            return super.toString() + ":" + page;
+        }
+
+        public void onMajorProgress(ObjectContainer container) {
+        }
+    }
+
+    private ClientGetter makeGetter(Page page) throws MalformedURLException {
+        ClientGetter getter = new ClientGetter(new ClientGetterCallback(page),
+                new FreenetURI(page.getURI()), ctx,
+                getPollingPriorityProgress(), this, null, null, null);
+        return getter;
+    }
+
+    protected class OnFailureCallback implements Runnable {
+        private FetchException e;
+        private ClientGetter state;
+        private Page page;
+
+        OnFailureCallback(FetchException e, ClientGetter state, Page page) {
+            this.e = e;
+            this.state = state;
+            this.page = page;
+        }
+
+        public void run() {
+            onFailure(e, state, page);
+        }
+    }
+
+    /**
+     * Callback for asyncronous handling of a success
+     */
+    protected class OnSuccessCallback implements Runnable {
+        private FetchResult result;
+        private ClientGetter state;
+        private Page page;
+
+        OnSuccessCallback(FetchResult result, ClientGetter state, Page page) {
+            this.result = result;
+            this.state = state;
+            this.page = page;
+        }
+
+        public void run() {
+            onSuccess(result, state, page);
+        }
+    }
+
+    /**
+     * Set config asynchronously
+     */
+    protected class SetConfigCallback implements Runnable {
+        private Config config;
+
+        SetConfigCallback(Config config) {
+            this.config = config;
+        }
+
+        public void run() {
+            synchronized (getRoot()) {
+                getRoot().setConfig(config);
+                startSomeRequests();
+            }
+        }
+    }
+
+    protected class StartSomeRequestsCallback implements Runnable {
+        StartSomeRequestsCallback() {
+        }
+
+        public void run() {
+            try {
+                Thread.sleep(30000);
+            } catch (InterruptedException e) {
+                // ignore
+            }
+            startSomeRequests();
+        }
+    }
+
+    protected static class CallbackPrioritizer implements Comparator<Runnable> {
+        public int compare(Runnable o1, Runnable o2) {
+            if (o1.getClass() == o2.getClass()) return 0;
+
+            return getPriority(o1) - getPriority(o2);
+        }
+
+        private int getPriority(Runnable r) {
+            if (r instanceof SetConfigCallback) {
+                return 0;
+            } else if (r instanceof OnFailureCallback) {
+                return 2;
+            } else if (r instanceof OnSuccessCallback) {
+                return 3;
+            } else if (r instanceof StartSomeRequestsCallback) {
+                return 4;
+            }
+
+            return -1;
+        }
+    }
+
+    // this is java.util.concurrent.Executor, not freenet.support.Executor
+    // always run with one thread --> more thread cause contention and slower!
+    public ThreadPoolExecutor callbackExecutor = new ThreadPoolExecutor( //
+            1, 1, 600, TimeUnit.SECONDS, //
+            new PriorityBlockingQueue<Runnable>(5, new CallbackPrioritizer()), //
+            new ThreadFactory() {
+                public Thread newThread(Runnable r) {
+                    Thread t = new NativeThread(r, "Spider", NativeThread.NORM_PRIORITY - 1, true);
+                    t.setDaemon(true);
+                    t.setContextClassLoader(Spider.this.getClass().getClassLoader());
+                    return t;
+                }
+            });
+
+    /**
+     * Processes the successfully fetched uri for further outlinks.
+     * 
+     * @param result
+     * @param state
+     * @param page
+     */
+    // single threaded
+    protected void onSuccess(FetchResult result, ClientGetter state, Page page) {
+        synchronized (this) {
+            if (stopped) return;                    
+        }
+        
+        FreenetURI uri = state.getURI();
+        ClientMetadata cm = result.getMetadata();
+        Bucket data = result.asBucket();
+        String mimeType = cm.getMIMEType();
+
+        boolean dbTransactionEnded = false;
+        db.beginThreadTransaction(Storage.EXCLUSIVE_TRANSACTION);
+        try {
+            librarybuffer.setBufferSize(getConfig().getNewFormatIndexBufferLimit()*1024*1024);
+            /*
+             * instead of passing the current object, the pagecallback object for every page is
+             * passed to the content filter this has many benefits to efficiency, and allows us to
+             * identify trivially which page is being indexed. (we CANNOT rely on the base href
+             * provided).
+             */
+            PageCallBack pageCallBack = new PageCallBack(page);
+            Logger.minor(this, "Successful: " + uri + " : " + page.getId());
+
+            InputStream filterInput = null;
+            OutputStream filterOutput = null;
+            try {
+                if (!"text/plain".equals(mimeType)) {
+                    filterInput = data.getInputStream();
+                    filterOutput = new NullBucket().getOutputStream();
+                    ContentFilter.filter(filterInput, filterOutput, mimeType,
+                            uri.toURI("http://127.0.0.1:8888/"), pageCallBack, null, null);
+                    filterInput.close();
+                    filterOutput.close();
+                } else {
+                    BufferedReader br = new BufferedReader(new InputStreamReader(data.getInputStream()));
+                    String line;
+                    while((line = br.readLine())!=null) {
+                        pageCallBack.onText(line, mimeType, uri.toURI("http://127.0.0.1:8888/"));
+                    }
+                }
+                pageCallBack.finish();
+                librarybuffer.maybeSend();
+
+            } catch (UnsafeContentTypeException e) {
+                // wrong mime type
+                page.setStatus(Status.SUCCEEDED);
+                db.endThreadTransaction();
+                dbTransactionEnded = true;
+
+                Logger.minor(this, "UnsafeContentTypeException " + uri + " : " + page.getId(), e);
+                return; // Ignore
+            } catch (IOException e) {
+                // ugh?
+                Logger.error(this, "Bucket error?: " + e, e);
+                return;
+            } catch (Exception e) {
+                // we have lots of invalid html on net - just normal, not error
+                Logger.normal(this, "exception on content filter for " + page, e);
+                return;
+            } finally {
+                Closer.close(filterInput);
+                Closer.close(filterOutput);
+            }
+
+            page.setStatus(Status.NOT_PUSHED);
+            db.endThreadTransaction();
+            dbTransactionEnded  = true;
+
+            Logger.minor(this, "Filtered " + uri + " : " + page.getId());
+        } catch (RuntimeException e) {
+            // other runtime exceptions
+            Logger.error(this, "Runtime Exception: " + e, e);        
+            throw e;
+        } finally {
+            try {
+                data.free();
+
+                synchronized (this) {
+                    runningFetch.remove(page);
+                }
+                if (!stopped) startSomeRequests();
+            } finally {
+                if (!dbTransactionEnded) {
+                    Logger.minor(this, "rollback transaction", new Exception("debug"));
+                    db.rollbackThreadTransaction();
+                    db.beginThreadTransaction(Storage.EXCLUSIVE_TRANSACTION);
+                    // page is now invalidated.
+                    page = getRoot().getPageByURI(uri, false, "");
+                    if(page != null) page.setStatus(Status.FAILED);
+                    db.endThreadTransaction();
+                }
+            }
+        }
+    }
+
+    protected void onFailure(FetchException fe, ClientGetter state, Page page) {
+        Logger.minor(this, "Failed: " + page + " : " + state, fe);
+
+        synchronized (this) {
+            if (stopped) return;
+        }
+
+        boolean dbTransactionEnded = false;
+        db.beginThreadTransaction(Storage.EXCLUSIVE_TRANSACTION);
+        try {
+            synchronized (page) {
+                if (fe.newURI != null) {
+                    // redirect, mark as succeeded
+                    queueURI(fe.newURI, "redirect from " + state.getURI(), false);
+                    page.setStatus(Status.SUCCEEDED);
+                } else if (fe.isFatal()) {
+                    // too many tries or fatal, mark as failed
+                    page.setStatus(Status.FAILED);
+                } else {
+                    // requeue at back
+                    page.setStatus(Status.QUEUED);
+                }
+            }
+            db.endThreadTransaction();
+            dbTransactionEnded = true;
+        } catch (Exception e) {
+            Logger.error(this, "Unexcepected exception in onFailure(): " + e, e);
+            throw new RuntimeException("Unexcepected exception in onFailure()", e);
+        } finally {
+            runningFetch.remove(page);
+            if (!dbTransactionEnded) {
+                Logger.minor(this, "rollback transaction", new Exception("debug"));
+                db.rollbackThreadTransaction();
+            }
+        }
+
+        startSomeRequests();
+    } 
+
+    private boolean garbageCollecting = false;
+
+    /**
+     * Stop the plugin, pausing any writing which is happening
+     */
+    public void terminate(){
+        Logger.normal(this, "Spider terminating");
+
+        synchronized (this) {
+            stopped = true;
+
+            for (Map.Entry<Page, ClientGetter> me : runningFetch.entrySet()) {
+                ClientGetter getter = me.getValue();
+                Logger.minor(this, "Canceling request" + getter);
+                getter.cancel(null, clientContext);
+            }
+            runningFetch.clear();
+            callbackExecutor.shutdownNow();
+        }
+        librarybuffer.terminate();
+
+        try { callbackExecutor.awaitTermination(30, TimeUnit.SECONDS); } catch (InterruptedException e) {}
+        try { db.close(); } catch (Exception e) {}
+        
+        webInterface.unload();
+        
+        Logger.normal(this, "Spider terminated");
+    }
+
+    /**
+     * Start plugin
+     * @param pr
+     */
+    public synchronized void runPlugin(PluginRespirator pr) {
+        this.core = pr.getNode().clientCore;
+        this.pr = pr;
+        pageMaker = pr.getPageMaker();
+
+        /* Initialize Fetch Context */
+        this.ctx = pr.getHLSimpleClient().getFetchContext();
+        ctx.maxSplitfileBlockRetries = 1;
+        ctx.maxNonSplitfileRetries = 1;
+        ctx.maxTempLength = 2 * 1024 * 1024;
+        ctx.maxOutputLength = 2 * 1024 * 1024;
+        allowedMIMETypes = new HashSet<String>();
+        allowedMIMETypes.add("text/html");
+        allowedMIMETypes.add("text/plain");
+        allowedMIMETypes.add("application/xhtml+xml");
+        ctx.allowedMIMETypes = new HashSet<String>(allowedMIMETypes);
+        clientContext = pr.getNode().clientCore.clientContext;
+
+        stopped = false;
+
+        // Initial Database
+        db = initDB();
+
+        webInterface = new WebInterface(this, pr.getHLSimpleClient(), pr.getToadletContainer(), pr.getNode().clientCore);
+        webInterface.load();
+
+        FreenetURI[] initialURIs = core.getBookmarkURIs();
+        for (int i = 0; i < initialURIs.length; i++) {
+            queueURI(initialURIs[i], "bookmark", false);
+        }
+
+        librarybuffer = new LibraryBuffer(pr, this);
+        librarybuffer.start();
+
+        callbackExecutor.execute(new StartSomeRequestsCallback());
+    }
+
+    private WebInterface webInterface;
+
+    /**
+     * creates the callback object for each page.
+     *<p>Used to create inlinks and outlinks for each page separately.
+     * @author swati
+     *
+     */
+    public class PageCallBack implements FoundURICallback{
+        protected final Page page;
+        private FreenetURI uri;
+        private String title;
+        private int totalWords;
+
+        protected final boolean logDEBUG = Logger.shouldLog(Logger.DEBUG, this); // per instance, allow changing on the fly
+
+        PageCallBack(Page page) {
+            this.page = page;
+            try {
+                this.uri = new FreenetURI(page.getURI());
+            } catch (MalformedURLException ex) {
+                Logger.error(this, "Error creating uri from '"+page.getURI()+"'", ex);
+            }
+            //Logger.normal(this, "Parsing "+page.getURI());
+        }
+
+        public void foundURI(FreenetURI uri) {
+            // Ignore
+        }
+
+        /**
+         * When a link is found in html
+         * @param uri
+         * @param inline
+         */
+        public void foundURI(FreenetURI uri, boolean inline) {
+            if (stopped) throw new RuntimeException("plugin stopping");
+            if (logDEBUG) Logger.debug(this, "foundURI " + uri + " on " + page);
+            queueURI(uri, "Added from " + page.getURI(), false);
+        }
+
+        protected Integer lastPosition = null;
+
+        /**
+         * When text is found
+         * @param s
+         * @param type
+         * @param baseURI
+         */
+        public void onText(String s, String type, URI baseURI){
+            if (stopped) throw new RuntimeException("plugin stopping");
+            if (logDEBUG) Logger.debug(this, "onText on " + page.getId() + " (" + baseURI + ")");
+
+            if ("title".equalsIgnoreCase(type) && (s != null) && (s.length() != 0) && (s.indexOf('\n') < 0)) {
+                /*
+                 * title of the page 
+                 */
+                page.setPageTitle(s);
+                title = s;
+                type = "title";
+            } else {
+                type = null;
+            }
+            // Tokenise. Do not use the pairs-of-CJK-chars option because we need
+            // accurate word index numbers.
+            SearchTokenizer tok = new SearchTokenizer(s, false);
+
+            if(lastPosition == null) lastPosition = 1; 
+            int i = 0;
+            for (String word: tok) {
+                totalWords++;
+                try {
+                    if(type == null)
+                        addWord(word, lastPosition + i);
+                    else
+                        addWord(word, Integer.MIN_VALUE + i); // Put title words in the right order starting at Min_Value
+                } catch (Exception e) {
+                    // If a word fails continue
+                    Logger.error(this, "Word failed: "+e, e);
+                } 
+                i++;
+            }
+
+            if (type == null) {
+                lastPosition = lastPosition + i;
+            }
+        }
+        
+        void finish() {
+            for (TermPageEntry termPageEntry : tpes.values()) {
+                if(title != null)
+                    librarybuffer.setTitle(termPageEntry, title);
+                // Crude first approximation to relevance calculation.
+                // Client should multiply by log ( total count of files / count of files with this word in )
+                // Which is equal to log ( total count of files ) - log ( count of files with this word in )
+                librarybuffer.setRelevance(termPageEntry, ((float)termPageEntry.positionsSize()) / ((float)totalWords));
+            }
+        }
+
+        HashMap<String, TermPageEntry> tpes = new HashMap();
+
+        /**
+         * Add a word to the database for this page
+         * @param word
+         * @param position
+         * @throws java.lang.Exception
+         */
+        private void addWord(String word, int position) {
+            if (logDEBUG) Logger.debug(this, "addWord on " + page.getId() + " (" + word + "," + position + ")");
+
+            // Skip word if it is a stop word
+            if (isStopWord(word)) return;
+
+            // Add to Library buffer
+            TermPageEntry tp = getEntry(word);
+            librarybuffer.addPos(tp, position);
+        }
+
+        /**
+         * Makes a TermPageEntry for this term
+         * @param word
+         * @return
+         */
+        private TermPageEntry getEntry(String word) {
+            TermPageEntry tp = tpes.get(word);
+            if (tp == null) {
+                tp = new TermPageEntry(word, 0, uri, null);
+                tpes.put(word, tp);
+            }
+            return tp;
+        }
+
+        @Override
+        public void onFinishedPage() {
+            // Ignore
+        }
+    }
+
+    public void onFoundEdition(long l, USK key, ObjectContainer container, ClientContext context, boolean metadata,
             short codec, byte[] data, boolean newKnownGood, boolean newSlotToo) {
-		FreenetURI uri = key.getURI();
-		/*-
-		 * FIXME this code don't make sense 
-		 *  (1) runningFetchesByURI contain SSK, not USK
-		 *  (2) onFoundEdition always have the edition set
-		 *  
-		if(runningFetchesByURI.containsKey(uri)) runningFetchesByURI.remove(uri);
-		uri = key.getURI().setSuggestedEdition(l);
-		 */
-		queueURI(uri, "USK found edition", true);
-		startSomeRequests();
-	}
+        FreenetURI uri = key.getURI();
+        /*-
+         * FIXME this code don't make sense 
+         *  (1) runningFetchesByURI contain SSK, not USK
+         *  (2) onFoundEdition always have the edition set
+         *  
+        if(runningFetchesByURI.containsKey(uri)) runningFetchesByURI.remove(uri);
+        uri = key.getURI().setSuggestedEdition(l);
+         */
+        queueURI(uri, "USK found edition", true);
+        startSomeRequests();
+    }
 
-	public short getPollingPriorityNormal() {
-		return (short) Math.min(RequestStarter.MINIMUM_PRIORITY_CLASS, getRoot().getConfig().getRequestPriority() + 1);
-	}
+    public short getPollingPriorityNormal() {
+        return (short) Math.min(RequestStarter.MINIMUM_PRIORITY_CLASS, getRoot().getConfig().getRequestPriority() + 1);
+    }
 
-	public short getPollingPriorityProgress() {
-		return getRoot().getConfig().getRequestPriority();
-	}
+    public short getPollingPriorityProgress() {
+        return getRoot().getConfig().getRequestPriority();
+    }
 
-	protected Storage db;
+    protected Storage db;
 
-	/**
-	 * Initializes Database
-	 */
-	private Storage initDB() {
-		Storage db = StorageFactory.getInstance().createStorage();
-		db.setProperty("perst.object.cache.kind", "pinned");
-		db.setProperty("perst.object.cache.init.size", 65536); //Increasing from 8192 no longer brings my system to it's knees after a few hours.  Does this make sense?
-		db.setProperty("perst.alternative.btree", true);
-		db.setProperty("perst.string.encoding", "UTF-8");
-		db.setProperty("perst.concurrent.iterator", true);
+    /**
+     * Initializes Database
+     */
+    private Storage initDB() {
+        Storage db = StorageFactory.getInstance().createStorage();
+        db.setProperty("perst.object.cache.kind", "pinned");
+        db.setProperty("perst.object.cache.init.size", 65536); //Increasing from 8192 no longer brings my system to it's knees after a few hours.  Does this make sense?
+        db.setProperty("perst.alternative.btree", true);
+        db.setProperty("perst.string.encoding", "UTF-8");
+        db.setProperty("perst.concurrent.iterator", true);
 
-		db.open("Spider-" + dbVersion + ".dbs");
+        db.open("Spider-" + dbVersion + ".dbs");
 
-		PerstRoot root = (PerstRoot) db.getRoot();
-		if (root == null) PerstRoot.createRoot(db);
+        PerstRoot root = (PerstRoot) db.getRoot();
+        if (root == null) PerstRoot.createRoot(db);
 
-		return db;
-	}
+        return db;
+    }
 
-	public PerstRoot getRoot() {
-		return (PerstRoot) db.getRoot();
-	}
+    public PerstRoot getRoot() {
+        return (PerstRoot) db.getRoot();
+    }
 
-	protected Page getPageById(long id) {
-		return getRoot().getPageById(id);
-	}
+    protected Page getPageById(long id) {
+        return getRoot().getPageById(id);
+    }
 
-	// language for I10N
-	private LANGUAGE language;
+    // language for I10N
+    private LANGUAGE language;
 
-	public String getString(String key) {
-		// TODO return a translated string
-		return key;
-	}
+    public String getString(String key) {
+        // TODO return a translated string
+        return key;
+    }
 
-	public void setLanguage(LANGUAGE newLanguage) {
-		language = newLanguage;
-	}
+    public void setLanguage(LANGUAGE newLanguage) {
+        language = newLanguage;
+    }
 
-	public PageMaker getPageMaker() {
-		return pageMaker;
-	}
+    public PageMaker getPageMaker() {
+        return pageMaker;
+    }
 
-	public List<Page> getRunningFetch() {
-		synchronized (runningFetch) {
-			return new ArrayList<Page>(runningFetch.keySet());
-		}
-	}
+    public List<Page> getRunningFetch() {
+        synchronized (runningFetch) {
+            return new ArrayList<Page>(runningFetch.keySet());
+        }
+    }
 
-	public PluginRespirator getPluginRespirator() {
-		return pr;
-	}
+    public PluginRespirator getPluginRespirator() {
+        return pr;
+    }
 
-	public boolean persistent() {
-		return false;
-	}
+    public boolean persistent() {
+        return false;
+    }
 
-	public void removeFrom(ObjectContainer container) {
-		throw new UnsupportedOperationException();
-	}
+    public void removeFrom(ObjectContainer container) {
+        throw new UnsupportedOperationException();
+    }
 
-	public void resetPages(Status from, Status to) {
-		int count = 0;
-		Iterator<Page> pages = getRoot().getPages(from);
-		while(pages.hasNext()) {
-			pages.next().setStatus(to);
-			count++;
-		}
-		System.out.println("Reset "+count+" pages status from "+from+" to "+to);
-	}
+    public void resetPages(Status from, Status to) {
+        int count = 0;
+        Iterator<Page> pages = getRoot().getPages(from);
+        while(pages.hasNext()) {
+            pages.next().setStatus(to);
+            count++;
+        }
+        System.out.println("Reset "+count+" pages status from "+from+" to "+to);
+    }
 
-	public boolean realTimeFlag() {
-		return false; // We definitely want throughput here.
-	}
+    public boolean realTimeFlag() {
+        return false; // We definitely want throughput here.
+    }
 
-	public FreenetURI getURI() {
-		return librarybuffer.getURI();
-	}
+    public FreenetURI getURI() {
+        return librarybuffer.getURI();
+    }
 }

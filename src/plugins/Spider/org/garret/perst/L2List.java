@@ -209,8 +209,8 @@ public class L2List extends L2ListElem implements ITable {
      * <tt>null</tt> elements.
      *
      * @param a the array into which the elements of the list are to
-     *		be stored, if it is big enough; otherwise, a new array of the
-     * 		same runtime type is allocated for this purpose.
+     *        be stored, if it is big enough; otherwise, a new array of the
+     *         same runtime type is allocated for this purpose.
      * @return an array containing the elements of the list.
      * @throws ArrayStoreException if the runtime type of a is not a supertype
      *         of the runtime type of every element in this list.
@@ -242,19 +242,19 @@ public class L2List extends L2ListElem implements ITable {
      *
      * @param c collection to be checked for containment in this collection.
      * @return <tt>true</tt> if this collection contains all of the elements
-     * 	       in the specified collection.
+     *            in the specified collection.
      * @throws NullPointerException if the specified collection is null.
      * 
      * @see #contains(Object)
      */
     public synchronized boolean containsAll(Collection c) {
-	Iterator e = c.iterator();
-	while (e.hasNext()) { 
-	    if (!contains(e.next())) { 
-		return false;
+    Iterator e = c.iterator();
+    while (e.hasNext()) { 
+        if (!contains(e.next())) { 
+        return false;
             }
         }
-	return true;
+    return true;
     }
 
     /**
@@ -282,11 +282,11 @@ public class L2List extends L2ListElem implements ITable {
      * @see #add(Object)
      */
     public synchronized boolean addAll(Collection c) {
-	Iterator e = c.iterator();
-	while (e.hasNext()) {
-	    add(e.next()); 
-	}
-	return true;
+    Iterator e = c.iterator();
+    while (e.hasNext()) {
+        add(e.next()); 
+    }
+    return true;
     }
 
     /**
@@ -308,22 +308,22 @@ public class L2List extends L2ListElem implements ITable {
      * @return <tt>true</tt> if this collection changed as a result of the
      *         call.
      * @throws UnsupportedOperationException if the <tt>removeAll</tt> method
-     * 	       is not supported by this collection.
+     *            is not supported by this collection.
      * @throws NullPointerException if the specified collection is null.
      *
      * @see #remove(Object)
      * @see #contains(Object)
      */
     public synchronized boolean removeAll(Collection c) {
-	boolean modified = false;
-	Iterator e = iterator();
-	while (e.hasNext()) {
-	    if(c.contains(e.next())) {
-		e.remove();
-		modified = true;
-	    }
-	}
-	return modified;
+    boolean modified = false;
+    Iterator e = iterator();
+    while (e.hasNext()) {
+        if(c.contains(e.next())) {
+        e.remove();
+        modified = true;
+        }
+    }
+    return modified;
     }
 
     /**
@@ -347,22 +347,22 @@ public class L2List extends L2ListElem implements ITable {
      * @return <tt>true</tt> if this collection changed as a result of the
      *         call.
      * @throws UnsupportedOperationException if the <tt>retainAll</tt> method
-     * 	       is not supported by this Collection.
+     *            is not supported by this Collection.
      * @throws NullPointerException if the specified collection is null.
      *
      * @see #remove(Object)
      * @see #contains(Object)
      */
     public synchronized boolean retainAll(Collection c) {
-	boolean modified = false;
-	Iterator e = iterator();
-	while (e.hasNext()) {
-	    if (!c.contains(e.next())) {
-		e.remove();
-		modified = true;
-	    }
-	}
-	return modified;
+    boolean modified = false;
+    Iterator e = iterator();
+    while (e.hasNext()) {
+        if (!c.contains(e.next())) {
+        e.remove();
+        modified = true;
+        }
+    }
+    return modified;
     }
 
     /**

@@ -543,17 +543,17 @@ public class CompressedReadWriteFile implements IFile
         initState = new byte[256];
         state = new byte[256];
 
-	for (int counter = 0; counter < 256; ++counter) { 
-	    initState[counter] = (byte)counter;
+    for (int counter = 0; counter < 256; ++counter) { 
+        initState[counter] = (byte)counter;
         }
-	int index1 = 0;
-	int index2 = 0;
-	for (int counter = 0; counter < 256; ++counter) {
-	    index2 = (key[index1] + initState[counter] + index2) & 0xff;
-	    byte temp = initState[counter];
-	    initState[counter] = initState[index2];
-	    initState[index2] = temp;
-	    index1 = (index1 + 1) % key.length;
+    int index1 = 0;
+    int index2 = 0;
+    for (int counter = 0; counter < 256; ++counter) {
+        index2 = (key[index1] + initState[counter] + index2) & 0xff;
+        byte temp = initState[counter];
+        initState[counter] = initState[index2];
+        initState[index2] = temp;
+        index1 = (index1 + 1) % key.length;
         }
     }
 

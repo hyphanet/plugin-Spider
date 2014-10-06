@@ -84,13 +84,13 @@ public class LinkImpl<T extends IPersistent> implements EmbeddedLink<T>, IClonea
 
     protected void removeRange(int fromIndex, int toIndex) {
         int size = used;
- 	int numMoved = size - toIndex;
+     int numMoved = size - toIndex;
         System.arraycopy(arr, toIndex, arr, fromIndex, numMoved);
 
-	// Let gc do its work
-	int newSize = size - (toIndex-fromIndex);
-	while (size != newSize) {
-	    arr[--size] = null;
+    // Let gc do its work
+    int newSize = size - (toIndex-fromIndex);
+    while (size != newSize) {
+        arr[--size] = null;
         }                                       
         used = size;
         modify();
@@ -153,13 +153,13 @@ public class LinkImpl<T extends IPersistent> implements EmbeddedLink<T>, IClonea
     }
     
     public boolean addAll(int index, Collection<? extends T> c) {
-	boolean modified = false;
-	Iterator<? extends T> e = c.iterator();
-	while (e.hasNext()) {
-	    add(index++, e.next());
-	    modified = true;
-	}
-	return modified;
+    boolean modified = false;
+    Iterator<? extends T> e = c.iterator();
+    while (e.hasNext()) {
+        add(index++, e.next());
+        modified = true;
+    }
+    return modified;
     }
 
     public void addAll(T[] a, int from, int length) {
@@ -485,9 +485,9 @@ public class LinkImpl<T extends IPersistent> implements EmbeddedLink<T>, IClonea
             return link.get(last = --i);
         }
 
-	public int previousIndex() {
-	    return i-1;
-	}
+    public int previousIndex() {
+        return i-1;
+    }
 
         public int nextOid() throws NoSuchElementException { 
             if (!hasNext()) { 
@@ -497,8 +497,8 @@ public class LinkImpl<T extends IPersistent> implements EmbeddedLink<T>, IClonea
         }
 
         public void remove() {
-	    if (last < 0) { 
-		throw new IllegalStateException();
+        if (last < 0) { 
+        throw new IllegalStateException();
             }
             link.removeObject(last);
             if (last < i) { 
@@ -506,14 +506,14 @@ public class LinkImpl<T extends IPersistent> implements EmbeddedLink<T>, IClonea
             }
         }
 
-	public void set(T o) {
-	    if (last < 0) { 
-		throw new IllegalStateException();
+    public void set(T o) {
+        if (last < 0) { 
+        throw new IllegalStateException();
             }
             link.setObject(last, o);
         }
 
-	public void add(T o) {
+    public void add(T o) {
             link.insert(i++, o);
             last = -1;
         }
@@ -529,48 +529,48 @@ public class LinkImpl<T extends IPersistent> implements EmbeddedLink<T>, IClonea
     }
         
     public boolean containsAll(Collection<?> c) {
-	Iterator<?> e = c.iterator();
-	while (e.hasNext()) {
-	    if(!contains(e.next())) {
-		return false;
+    Iterator<?> e = c.iterator();
+    while (e.hasNext()) {
+        if(!contains(e.next())) {
+        return false;
             }
         }
-	return true;
+    return true;
     }
 
     public boolean addAll(Collection<? extends T> c) {
-	boolean modified = false;
-	Iterator<? extends T> e = c.iterator();
-	while (e.hasNext()) {
-	    if (add(e.next())) { 
-		modified = true;
+    boolean modified = false;
+    Iterator<? extends T> e = c.iterator();
+    while (e.hasNext()) {
+        if (add(e.next())) { 
+        modified = true;
             }
-	}
-	return modified;
+    }
+    return modified;
     }
 
     public boolean removeAll(Collection<?> c) {
-	boolean modified = false;
-	Iterator<?> e = iterator();
-	while (e.hasNext()) {
-	    if (c.contains(e.next())) {
-		e.remove();
-		modified = true;
-	    }
-	}
-	return modified;
+    boolean modified = false;
+    Iterator<?> e = iterator();
+    while (e.hasNext()) {
+        if (c.contains(e.next())) {
+        e.remove();
+        modified = true;
+        }
+    }
+    return modified;
     }
 
     public boolean retainAll(Collection<?> c) {
-	boolean modified = false;
-	Iterator<T> e = iterator();
-	while (e.hasNext()) {
-	    if (!c.contains(e.next())) {
-		e.remove();
-		modified = true;
-	    }
-	}
-	return modified;
+    boolean modified = false;
+    Iterator<T> e = iterator();
+    while (e.hasNext()) {
+        if (!c.contains(e.next())) {
+        e.remove();
+        modified = true;
+        }
+    }
+    return modified;
     }
 
     public Iterator<T> iterator() { 
