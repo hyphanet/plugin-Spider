@@ -1,28 +1,28 @@
 package plugins.Spider.org.garret.perst.impl;
 import plugins.Spider.org.garret.perst.*;
 
-class BtreeKey { 
+class BtreeKey {
     Key key;
     int oid;
     int oldOid;
 
-    BtreeKey(Key key, int oid) { 
+    BtreeKey(Key key, int oid) {
         this.key = key;
         this.oid = oid;
     }
 
-    final void getStr(Page pg, int i) { 
+    final void getStr(Page pg, int i) {
         int len = BtreePage.getKeyStrSize(pg, i);
         int offs = BtreePage.firstKeyOffs + BtreePage.getKeyStrOffs(pg, i);
         char[] sval = new char[len];
-        for (int j = 0; j < len; j++) { 
+        for (int j = 0; j < len; j++) {
             sval[j] = (char)Bytes.unpack2(pg.data, offs);
             offs += 2;
         }
         key = new Key(sval);
     }
 
-    final void getByteArray(Page pg, int i) { 
+    final void getByteArray(Page pg, int i) {
         int len = BtreePage.getKeyStrSize(pg, i);
         int offs = BtreePage.firstKeyOffs + BtreePage.getKeyStrOffs(pg, i);
         byte[] bval = new byte[len];
@@ -31,7 +31,7 @@ class BtreeKey {
     }
 
 
-    final void extract(Page pg, int offs, int type) { 
+    final void extract(Page pg, int offs, int type) {
         byte[] data = pg.data;
 
         switch (type) {
@@ -65,11 +65,11 @@ class BtreeKey {
           default:
             Assert.failed("Invalid type");
         }
-    } 
-    
-    final void pack(Page pg, int i) { 
+    }
+
+    final void pack(Page pg, int i) {
         byte[] dst = pg.data;
-        switch (key.type) { 
+        switch (key.type) {
           case ClassDescriptor.tpBoolean:
           case ClassDescriptor.tpByte:
             dst[BtreePage.firstKeyOffs + i] = (byte)key.ival;

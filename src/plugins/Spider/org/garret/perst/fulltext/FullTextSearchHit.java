@@ -5,11 +5,11 @@ import plugins.Spider.org.garret.perst.*;
 /**
  * Class representing full text search result hit (document + rank)
  */
-public class FullTextSearchHit implements Comparable { 
+public class FullTextSearchHit implements Comparable {
     /**
-     * Get document matching full text query 
+     * Get document matching full text query
      */
-    public IPersistent getDocument() { 
+    public IPersistent getDocument() {
         return storage.getObjectByOID(oid);
     }
 
@@ -33,9 +33,9 @@ public class FullTextSearchHit implements Comparable {
     /**
      * Constructor of the full text search result hit
      */
-    public FullTextSearchHit(Storage storage, int oid, float rank) { 
+    public FullTextSearchHit(Storage storage, int oid, float rank) {
         this.storage = storage;
         this.oid = oid;
         this.rank = rank;
-    }    
+    }
 }

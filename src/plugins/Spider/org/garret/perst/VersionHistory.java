@@ -5,17 +5,17 @@ import java.util.*;
 /**
  * Collection of version of versioned object.
  * Versioned object should be access through version history object.
- * Instead of storing direct reference to Verson in some component of some other persistent object, 
+ * Instead of storing direct reference to Verson in some component of some other persistent object,
  * it is necessary to store reference to it's VersionHistory.
  */
-public class VersionHistory<V extends Version>  extends PersistentResource 
+public class VersionHistory<V extends Version>  extends PersistentResource
 {
     /**
      * Get current version in version history.
      * Current version can be explicitely set by setVersion or result of last checkOut
      * is used as current version
      */
-    public synchronized V getCurrent() { 
+    public synchronized V getCurrent() {
         return current;
     }
 
@@ -23,7 +23,7 @@ public class VersionHistory<V extends Version>  extends PersistentResource
      * Set new current version in version history
      * @param version new current version in version history (it must belong to version history)
      */
-    public synchronized void setCurrent(V version) { 
+    public synchronized void setCurrent(V version) {
         current = version;
         modify();
     }
@@ -35,14 +35,14 @@ public class VersionHistory<V extends Version>  extends PersistentResource
      */
     public synchronized V checkout() {
         Assert.that(current.isCheckedIn());
-        return (V)current.newVersion();        
+        return (V)current.newVersion();
     }
 
     /**
      * Get root version
      * @return root version in this version history
      */
-    public synchronized V getRoot() { 
+    public synchronized V getRoot() {
         return versions.get(0);
     }
 
@@ -51,17 +51,17 @@ public class VersionHistory<V extends Version>  extends PersistentResource
      * @param timestamp deadline, if <code>null</code> then the latest version in version history will be returned
      * @return version with the largest timestamp less than or equal to specified <code>timestamp</code>
      */
-    public synchronized V getLatestBefore(Date timestamp) { 
-        if (timestamp == null) { 
+    public synchronized V getLatestBefore(Date timestamp) {
+        if (timestamp == null) {
             return versions.get(versions.size()-1);
         }
         int l = 0, n = versions.size(), r = n;
         long t = timestamp.getTime()+1;
-        while (l < r) { 
+        while (l < r) {
             int m = (l + r) >> 1;
-            if (versions.get(m).getDate().getTime() < t) { 
+            if (versions.get(m).getDate().getTime() < t) {
                 l = m + 1;
-            } else { 
+            } else {
                 r = m;
             }
         }
@@ -73,17 +73,17 @@ public class VersionHistory<V extends Version>  extends PersistentResource
      * @param timestamp deadline, if <code>null</code> then root version will be returned
      * @return version with the smallest timestamp greater than or equal to specified <code>timestamp</code>
      */
-    public synchronized V getEarliestAfter(Date timestamp) { 
-        if (timestamp == null) { 
+    public synchronized V getEarliestAfter(Date timestamp) {
+        if (timestamp == null) {
             return versions.get(0);
         }
         int l = 0, n = versions.size(), r = n;
         long t = timestamp.getTime();
-        while (l < r) { 
+        while (l < r) {
             int m = (l + r) >> 1;
-            if (versions.get(m).getDate().getTime() < t) { 
+            if (versions.get(m).getDate().getTime() < t) {
                 l = m + 1;
-            } else { 
+            } else {
                 r = m;
             }
         }
@@ -92,15 +92,15 @@ public class VersionHistory<V extends Version>  extends PersistentResource
 
 
     /**
-     * Get version with specified label. If there are more than one version marked with 
+     * Get version with specified label. If there are more than one version marked with
      * this label, then the latest one will be returned
      * @param label version label
      * @return latest version with specified label
      */
-    public synchronized V getVersionByLabel(String label) { 
-        for (int i = versions.size(); --i >= 0;) { 
+    public synchronized V getVersionByLabel(String label) {
+        for (int i = versions.size(); --i >= 0;) {
             V v = versions.get(i);
-            if (v.hasLabel(label)) { 
+            if (v.hasLabel(label)) {
                 return v;
             }
         }
@@ -112,10 +112,10 @@ public class VersionHistory<V extends Version>  extends PersistentResource
      * @param id version ID
      * @return version with specified ID
      */
-    public synchronized V getVersionById(String id) { 
-        for (int i = versions.size(); --i >= 0;) { 
+    public synchronized V getVersionById(String id) {
+        for (int i = versions.size(); --i >= 0;) {
             V v = versions.get(i);
-            if (v.getId().equals(id)) { 
+            if (v.getId().equals(id)) {
                 return v;
             }
         }
@@ -137,7 +137,7 @@ public class VersionHistory<V extends Version>  extends PersistentResource
      * This iterator supports remove() method.
      * @return version iterator
      */
-    public synchronized Iterator<V> iterator() { 
+    public synchronized Iterator<V> iterator() {
         return versions.iterator();
     }
 
@@ -145,7 +145,7 @@ public class VersionHistory<V extends Version>  extends PersistentResource
      * Create new version history
      * @param root root version
      */
-    public VersionHistory(V root) { 
+    public VersionHistory(V root) {
         versions = root.getStorage().<V>createLink(1);
         versions.add(root);
         current = root;

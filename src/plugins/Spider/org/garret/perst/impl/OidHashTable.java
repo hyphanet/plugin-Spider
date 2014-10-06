@@ -1,7 +1,7 @@
 package plugins.Spider.org.garret.perst.impl;
 import plugins.Spider.org.garret.perst.IPersistent;
 
-public interface OidHashTable { 
+public interface OidHashTable {
     boolean     remove(int oid);
     void        put(int oid, IPersistent obj);
     IPersistent get(int oid);

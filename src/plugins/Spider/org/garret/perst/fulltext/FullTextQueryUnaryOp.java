@@ -6,11 +6,11 @@ package plugins.Spider.org.garret.perst.fulltext;
 public class FullTextQueryUnaryOp extends FullTextQuery
 {
     public FullTextQuery opd;
-    
+
     /**
      * Query node visitor.
      */
-    public void visit(FullTextQueryVisitor visitor) { 
+    public void visit(FullTextQueryVisitor visitor) {
         visitor.visit(this);
         opd.visit(visitor);
     }
@@ -19,11 +19,11 @@ public class FullTextQueryUnaryOp extends FullTextQuery
      * This method checks that query can be executed by interection of keyword occurrences lists
      * @return true if quuery can be executed by FullTextIndex, false otherwise
      */
-    public boolean isConstrained() { 
+    public boolean isConstrained() {
         return op == NOT ? false : opd.isConstrained();
     }
 
-    public String toString() { 
+    public String toString() {
         return operatorName[op] + '(' + opd.toString() + ')';
     }
 
@@ -32,8 +32,8 @@ public class FullTextQueryUnaryOp extends FullTextQuery
      * @param op operation code
      * @param opd operand
      */
-    public FullTextQueryUnaryOp(int op, FullTextQuery opd) { 
+    public FullTextQueryUnaryOp(int op, FullTextQuery opd) {
         super(op);
         this.opd = opd;
     }
-}    
+}

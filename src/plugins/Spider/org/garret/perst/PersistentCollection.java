@@ -6,7 +6,7 @@ import  java.util.*;
 
 public abstract class PersistentCollection<T> extends PersistentResource implements ITable<T>
 {
-    public IterableIterator<T> select(Class cls, String predicate) { 
+    public IterableIterator<T> select(Class cls, String predicate) {
         Query<T> query = new QueryImpl<T>(getStorage());
         return query.select(cls, iterator(), predicate);
     }
@@ -24,7 +24,7 @@ public abstract class PersistentCollection<T> extends PersistentResource impleme
      * @return <tt>true</tt> if this collection contains all of the elements
      *            in the specified collection.
      * @throws NullPointerException if the specified collection is null.
-     * 
+     *
      * @see #contains(Object)
      */
     public boolean containsAll(Collection<?> c) {
@@ -56,7 +56,7 @@ public abstract class PersistentCollection<T> extends PersistentResource impleme
      * @throws UnsupportedOperationException if this collection does not
      *         support the <tt>addAll</tt> method.
      * @throws NullPointerException if the specified collection is null.
-     * 
+     *
      * @see #add(Object)
      */
     public boolean addAll(Collection<? extends T> c) {
@@ -140,10 +140,10 @@ public abstract class PersistentCollection<T> extends PersistentResource impleme
             }
         }
         int n = toBeRemoved.size();
-        for (int j = 0; j < n; j++) { 
+        for (int j = 0; j < n; j++) {
             remove(toBeRemoved.get(j));
         }
-        return n != 0;         
+        return n != 0;
     }
 
     /**
@@ -233,17 +233,17 @@ public abstract class PersistentCollection<T> extends PersistentResource impleme
      *
      * @param o element whose presence in this collection is to be ensured.
      * @return <tt>true</tt> if the collection changed as a result of the call.
-     * 
+     *
      * @throws UnsupportedOperationException if the <tt>add</tt> method is not
      *          supported by this collection.
-     * 
+     *
      * @throws NullPointerException if this collection does not permit
      *           <tt>null</tt> elements, and the specified element is
      *           <tt>null</tt>.
-     * 
+     *
      * @throws ClassCastException if the class of the specified element
      *           prevents it from being added to this collection.
-     * 
+     *
      * @throws IllegalArgumentException if some aspect of this element
      *            prevents it from being added to this collection.
      */
@@ -271,7 +271,7 @@ public abstract class PersistentCollection<T> extends PersistentResource impleme
      * Constructor of the collection associated with the specified storage
      * @param storage storage associated with the collection
      */
-    public PersistentCollection(Storage storage) { 
+    public PersistentCollection(Storage storage) {
         super(storage);
     }
-}    
+}

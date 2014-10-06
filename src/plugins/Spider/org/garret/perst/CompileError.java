@@ -13,8 +13,8 @@ package plugins.Spider.org.garret.perst;
 /**
  * Exception thrown by compiler
  */
-public class CompileError extends RuntimeException { 
-    public CompileError(String msg, int  pos) { 
+public class CompileError extends RuntimeException {
+    public CompileError(String msg, int  pos) {
     super(msg + " in position " + pos);
     }
 }

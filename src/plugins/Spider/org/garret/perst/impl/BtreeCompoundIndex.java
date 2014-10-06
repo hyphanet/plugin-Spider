@@ -3,14 +3,14 @@ import plugins.Spider.org.garret.perst.*;
 
 import java.util.*;
 
-class BtreeCompoundIndex<T extends IPersistent> extends Btree<T> implements Index<T> { 
+class BtreeCompoundIndex<T extends IPersistent> extends Btree<T> implements Index<T> {
     int[]    types;
 
     BtreeCompoundIndex() {}
-    
+
     BtreeCompoundIndex(Class[] keyTypes, boolean unique) {
         this.unique = unique;
-        type = ClassDescriptor.tpArrayOfByte;        
+        type = ClassDescriptor.tpArrayOfByte;
         types = new int[keyTypes.length];
         for (int i = 0; i < keyTypes.length; i++) {
             types[i] = getCompoundKeyComponentType(keyTypes[i]);
@@ -22,52 +22,52 @@ class BtreeCompoundIndex<T extends IPersistent> extends Btree<T> implements Inde
         this.unique = unique;
     }
 
-    static int getCompoundKeyComponentType(Class c) { 
-        if (c.equals(Boolean.class)) { 
+    static int getCompoundKeyComponentType(Class c) {
+        if (c.equals(Boolean.class)) {
             return ClassDescriptor.tpBoolean;
-        } else if (c.equals(Byte.class)) { 
+        } else if (c.equals(Byte.class)) {
             return ClassDescriptor.tpByte;
-        } else if (c.equals(Character.class)) { 
+        } else if (c.equals(Character.class)) {
             return ClassDescriptor.tpChar;
-        } else if (c.equals(Short.class)) { 
+        } else if (c.equals(Short.class)) {
             return ClassDescriptor.tpShort;
-        } else if (c.equals(Integer.class)) { 
+        } else if (c.equals(Integer.class)) {
             return ClassDescriptor.tpInt;
-        } else if (c.equals(Long.class)) { 
+        } else if (c.equals(Long.class)) {
             return ClassDescriptor.tpLong;
-        } else if (c.equals(Float.class)) { 
+        } else if (c.equals(Float.class)) {
             return ClassDescriptor.tpFloat;
-        } else if (c.equals(Double.class)) { 
+        } else if (c.equals(Double.class)) {
             return ClassDescriptor.tpDouble;
-        } else if (c.equals(String.class)) { 
+        } else if (c.equals(String.class)) {
             return ClassDescriptor.tpString;
-        } else if (c.equals(Date.class)) { 
+        } else if (c.equals(Date.class)) {
             return ClassDescriptor.tpDate;
-        } else if (c.equals(byte[].class)) { 
+        } else if (c.equals(byte[].class)) {
             return ClassDescriptor.tpArrayOfByte;
         } else if (IPersistent.class.isAssignableFrom(c)) {
             return ClassDescriptor.tpObject;
-        } else { 
+        } else {
             throw new StorageError(StorageError.UNSUPPORTED_INDEX_TYPE, c);
         }
     }
 
     public Class[] getKeyTypes() {
         Class[] keyTypes = new Class[types.length];
-        for (int i = 0; i < keyTypes.length; i++) { 
+        for (int i = 0; i < keyTypes.length; i++) {
             keyTypes[i] = mapKeyType(types[i]);
         }
         return keyTypes;
     }
 
-    int compareByteArrays(byte[] key, byte[] item, int offs, int lengtn) { 
+    int compareByteArrays(byte[] key, byte[] item, int offs, int lengtn) {
         int o1 = 0;
         int o2 = offs;
         byte[] a1 = key;
         byte[] a2 = item;
         for (int i = 0; i < types.length && o1 < key.length; i++) {
             int diff = 0;
-            switch (types[i]) { 
+            switch (types[i]) {
               case ClassDescriptor.tpBoolean:
               case ClassDescriptor.tpByte:
                 diff = a1[o1++] - a2[o2++];
@@ -128,9 +128,9 @@ class BtreeCompoundIndex<T extends IPersistent> extends Btree<T> implements Inde
                   o1 += 4;
                   o2 += 4;
                   int len = len1 < len2 ? len1 : len2;
-                  while (--len >= 0) { 
+                  while (--len >= 0) {
                       diff = (char)Bytes.unpack2(a1, o1) - (char)Bytes.unpack2(a2, o2);
-                      if (diff != 0) { 
+                      if (diff != 0) {
                           return diff;
                       }
                       o1 += 2;
@@ -146,9 +146,9 @@ class BtreeCompoundIndex<T extends IPersistent> extends Btree<T> implements Inde
                   o1 += 4;
                   o2 += 4;
                   int len = len1 < len2 ? len1 : len2;
-                  while (--len >= 0) { 
+                  while (--len >= 0) {
                       diff = a1[o1++] - a2[o2++];
-                      if (diff != 0) { 
+                      if (diff != 0) {
                           return diff;
                       }
                   }
@@ -158,7 +158,7 @@ class BtreeCompoundIndex<T extends IPersistent> extends Btree<T> implements Inde
               default:
                 Assert.failed("Invalid type");
             }
-            if (diff != 0) { 
+            if (diff != 0) {
                 return diff;
             }
         }
@@ -172,7 +172,7 @@ class BtreeCompoundIndex<T extends IPersistent> extends Btree<T> implements Inde
 
         for (int i = 0; i < types.length; i++) {
             Object v = null;
-            switch (types[i]) { 
+            switch (types[i]) {
               case ClassDescriptor.tpBoolean:
                 v = Boolean.valueOf(data[offs++] != 0);
                 break;
@@ -222,7 +222,7 @@ class BtreeCompoundIndex<T extends IPersistent> extends Btree<T> implements Inde
                   int len = Bytes.unpack4(data, offs);
                   offs += 4;
                   char[] sval = new char[len];
-                  for (int j = 0; j < len; j++) { 
+                  for (int j = 0; j < len; j++) {
                       sval[j] = (char)Bytes.unpack2(data, offs);
                       offs += 2;
                   }
@@ -245,19 +245,19 @@ class BtreeCompoundIndex<T extends IPersistent> extends Btree<T> implements Inde
         }
         return values;
     }
-            
 
-    private Key convertKey(Key key) { 
-        if (key == null) { 
+
+    private Key convertKey(Key key) {
+        if (key == null) {
             return null;
         }
-        if (key.type != ClassDescriptor.tpArrayOfObject) { 
+        if (key.type != ClassDescriptor.tpArrayOfObject) {
             throw new StorageError(StorageError.INCOMPATIBLE_KEY_TYPE);
         }
         Object[] values = (Object[])key.oval;
         ByteBuffer buf = new ByteBuffer();
         int dst = 0;
-        for (int i = 0; i < values.length; i++) { 
+        for (int i = 0; i < values.length; i++) {
             Object v = values[i];
             switch (types[i]) {
               case ClassDescriptor.tpBoolean:
@@ -316,17 +316,17 @@ class BtreeCompoundIndex<T extends IPersistent> extends Btree<T> implements Inde
               case ClassDescriptor.tpString:
               {
                   buf.extend(dst+4);
-                  if (v != null) { 
+                  if (v != null) {
                       String str = (String)v;
                       int len = str.length();
                       Bytes.pack4(buf.arr, dst, len);
                       dst += 4;
                       buf.extend(dst + len*2);
-                      for (int j = 0; j < len; j++) { 
+                      for (int j = 0; j < len; j++) {
                           Bytes.pack2(buf.arr, dst, (short)str.charAt(j));
                           dst += 2;
                       }
-                  } else { 
+                  } else {
                       Bytes.pack4(buf.arr, dst, 0);
                       dst += 4;
                   }
@@ -335,15 +335,15 @@ class BtreeCompoundIndex<T extends IPersistent> extends Btree<T> implements Inde
               case ClassDescriptor.tpArrayOfByte:
               {
                   buf.extend(dst+4);
-                  if (v != null) { 
+                  if (v != null) {
                       byte[] arr = (byte[])v;
                       int len = arr.length;
                       Bytes.pack4(buf.arr, dst, len);
-                      dst += 4;                          
+                      dst += 4;
                       buf.extend(dst + len);
                       System.arraycopy(arr, 0, buf.arr, dst, len);
                       dst += len;
-                  } else { 
+                  } else {
                       Bytes.pack4(buf.arr, dst, 0);
                       dst += 4;
                   }
@@ -355,8 +355,8 @@ class BtreeCompoundIndex<T extends IPersistent> extends Btree<T> implements Inde
         }
         return new Key(buf.toArray(), key.inclusion != 0);
     }
-            
-    public ArrayList<T> getList(Key from, Key till) { 
+
+    public ArrayList<T> getList(Key from, Key till) {
         return super.getList(convertKey(from), convertKey(till));
     }
 
@@ -365,15 +365,15 @@ class BtreeCompoundIndex<T extends IPersistent> extends Btree<T> implements Inde
     }
 
 
-    public T  remove(Key key) { 
+    public T  remove(Key key) {
         return super.remove(convertKey(key));
     }
 
-    public void remove(Key key, T obj) { 
+    public void remove(Key key, T obj) {
         super.remove(convertKey(key), obj);
     }
 
-    public T  set(Key key, T obj) { 
+    public T  set(Key key, T obj) {
         return super.set(convertKey(key), obj);
     }
 

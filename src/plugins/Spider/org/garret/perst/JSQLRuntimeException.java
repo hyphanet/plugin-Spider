@@ -14,13 +14,13 @@ package plugins.Spider.org.garret.perst;
  * Exception thown by JSQL at runtime which should be ignored and boolean expression caused this
  * exption should be treated as false
  */
-public class JSQLRuntimeException extends RuntimeException { 
+public class JSQLRuntimeException extends RuntimeException {
     /**
      * Constructor of exception
      * @param target class of the target object in which field was not found
      * @param fieldName name of the locate field
      */
-    public JSQLRuntimeException(String message, Class target, String fieldName) { 
+    public JSQLRuntimeException(String message, Class target, String fieldName) {
         super(message);
         this.target  = target;
         this.fieldName = fieldName;
@@ -29,14 +29,14 @@ public class JSQLRuntimeException extends RuntimeException {
     /**
      * Get class in which lookup was performed
      */
-    public Class getTarget() { 
+    public Class getTarget() {
         return target;
     }
 
     /**
      * Get name of the field
      */
-    public String getFieldName() { 
+    public String getFieldName() {
         return fieldName;
     }
 

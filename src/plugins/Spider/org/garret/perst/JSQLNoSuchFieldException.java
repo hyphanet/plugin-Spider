@@ -13,13 +13,13 @@ package plugins.Spider.org.garret.perst;
 /**
  * Exception thown when field is not found during runtime lookup
  */
-public class JSQLNoSuchFieldException extends JSQLRuntimeException { 
+public class JSQLNoSuchFieldException extends JSQLRuntimeException {
     /**
      * Constructor of exception
      * @param target class of the target object in which field was not found
      * @param fieldName name of the locate field
      */
-    public JSQLNoSuchFieldException(Class target, String fieldName) { 
+    public JSQLNoSuchFieldException(Class target, String fieldName) {
         super("Dynamic lookup failed for field ", target, fieldName);
     }
 }

@@ -29,45 +29,45 @@ import plugins.Spider.org.garret.perst.*;
 // Visit the ACME Labs Java page for up-to-date versions of this and other
 // fine Java utilities: http://www.acme.com/java/
 
-public class Rc4File implements IFile 
-{ 
-    public void write(long pos, byte[] buf) 
+public class Rc4File implements IFile
+{
+    public void write(long pos, byte[] buf)
     {
-        if (pos > length) { 
-            if (zeroPage == null) { 
+        if (pos > length) {
+            if (zeroPage == null) {
                 zeroPage = new byte[Page.pageSize];
                 encrypt(zeroPage, 0, zeroPage, 0, Page.pageSize);
             }
-            do { 
+            do {
                 file.write(length, zeroPage);
             } while ((length += Page.pageSize) < pos);
-        } 
-        if (pos == length) { 
+        }
+        if (pos == length) {
             length += Page.pageSize;
-        }        
+        }
         encrypt(buf, 0, cipherBuf, 0, buf.length);
         file.write(pos, cipherBuf);
     }
 
-    public int read(long pos, byte[] buf) 
-    { 
-        if (pos < length) { 
+    public int read(long pos, byte[] buf)
+    {
+        if (pos < length) {
             int rc = file.read(pos, buf);
             decrypt(buf, 0, buf, 0, rc);
             return rc;
-        } 
+        }
         return 0;
     }
 
-    public Rc4File(String filePath, boolean readOnly, boolean noFlush, String key) 
-    { 
+    public Rc4File(String filePath, boolean readOnly, boolean noFlush, String key)
+    {
         file = new OSFile(filePath, readOnly, noFlush);
         length = file.length() & ~(Page.pageSize-1);
         setKey(key.getBytes());
     }
 
-    public Rc4File(IFile file, String key) 
-    { 
+    public Rc4File(IFile file, String key)
+    {
         this.file = file;
         length = file.length() & ~(Page.pageSize-1);
         setKey(key.getBytes());
@@ -75,7 +75,7 @@ public class Rc4File implements IFile
 
     private void setKey(byte[] key)
     {
-    for (int counter = 0; counter < 256; ++counter) { 
+    for (int counter = 0; counter < 256; ++counter) {
         initState[counter] = (byte)counter;
         }
     int index1 = 0;
@@ -119,23 +119,23 @@ public class Rc4File implements IFile
     return (state[x] + state[y]) & 0xff;
     }
 
-    public void close() { 
+    public void close() {
         file.close();
     }
 
-    public boolean tryLock(boolean shared) { 
+    public boolean tryLock(boolean shared) {
         return file.tryLock(shared);
     }
 
-    public void lock(boolean shared) { 
+    public void lock(boolean shared) {
         file.lock(shared);
     }
 
-    public void unlock() { 
+    public void unlock() {
         file.unlock();
     }
 
-    public void sync() { 
+    public void sync() {
         file.sync();
     }
 

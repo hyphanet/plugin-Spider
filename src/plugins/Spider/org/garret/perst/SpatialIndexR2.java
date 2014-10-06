@@ -7,7 +7,7 @@ import java.util.*;
  * Spatial index is used to allow fast selection of spatial objects belonging to the specified rectangle.
  * Spatial index is implemented using Guttman R-Tree with quadratic split algorithm.
  */
-public interface SpatialIndexR2<T extends IPersistent> extends IPersistent, IResource, ITable<T> { 
+public interface SpatialIndexR2<T extends IPersistent> extends IPersistent, IResource, ITable<T> {
     /**
      * Find all objects located in the selected rectangle
      * @param r selected rectangle
@@ -21,9 +21,9 @@ public interface SpatialIndexR2<T extends IPersistent> extends IPersistent, IRes
      * @return array list of objects which enveloping rectangle intersects with specified rectangle
      */
     public ArrayList<T> getList(RectangleR2 r);
-    
+
     /**
-     * Put new object in the index. 
+     * Put new object in the index.
      * @param r enveloping rectangle for the object
      * @param obj object associated with this rectangle. Object can be not yet persistent, in this case
      * its forced to become persistent by assigning OID to it.
@@ -45,11 +45,11 @@ public interface SpatialIndexR2<T extends IPersistent> extends IPersistent, IRes
     public int  size();
 
     /**
-     * Get wrapping rectangle 
-     * @return minimal rectangle containing all rectangles in the index, <code>null</code> if index is empty     
+     * Get wrapping rectangle
+     * @return minimal rectangle containing all rectangles in the index, <code>null</code> if index is empty
      */
     public RectangleR2 getWrappingRectangle();
-    
+
     /**
      * Remove all objects from the index
      */
@@ -78,7 +78,7 @@ public interface SpatialIndexR2<T extends IPersistent> extends IPersistent, IRes
      * @param r selected rectangle
      * @return iterator for objects which enveloping rectangle overlaps with specified rectangle
      */
-    public IterableIterator<T> iterator(RectangleR2 r); 
+    public IterableIterator<T> iterator(RectangleR2 r);
 
     /**
      * Get entry iterator through objects which rectangle intersects with specified rectangle

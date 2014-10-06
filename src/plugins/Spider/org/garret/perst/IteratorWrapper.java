@@ -2,19 +2,19 @@ package plugins.Spider.org.garret.perst;
 
 import java.util.*;
 
-public class IteratorWrapper<T> extends IterableIterator<T> 
-{ 
+public class IteratorWrapper<T> extends IterableIterator<T>
+{
     private Iterator<T> iterator;
 
-    public IteratorWrapper(Iterator<T> iterator) { 
+    public IteratorWrapper(Iterator<T> iterator) {
         this.iterator = iterator;
     }
-    
-    public boolean hasNext() { 
+
+    public boolean hasNext() {
         return iterator.hasNext();
     }
-    
-    public T next() { 
+
+    public T next() {
         return iterator.next();
     }
 

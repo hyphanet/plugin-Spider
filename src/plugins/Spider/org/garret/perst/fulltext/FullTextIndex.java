@@ -8,7 +8,7 @@ import java.io.Reader;
 /**
  * Full text search index.
  * This index split document text in words, perform stemming of the words and build inverse index.
- * Full text index is able to execute search queries with logical operators (AND/OR/NOT) and 
+ * Full text index is able to execute search queries with logical operators (AND/OR/NOT) and
  * strict match. Returned results are ordered by rank, which includes inverse document frequency (IDF),
  * frequency of word in the document, occurrence kind and nearness of query keywords in the document text.
  */
@@ -50,7 +50,7 @@ public interface FullTextIndex extends IPersistent, IResource
      * @param maxResults maximal amount of selected documents
      * @param timeLimit limit for query execution time
      * @return result of query execution ordered by rank or null in case of empty or incorrect query
-     */    
+     */
     FullTextSearchResult search(FullTextQuery query, int maxResults, int timeLimit);
 
     /**
@@ -62,7 +62,7 @@ public interface FullTextIndex extends IPersistent, IResource
      * Get total number of indexed documents
      */
     int getNumberOfDocuments();
-    
+
     /**
      * Get full text search helper
      */

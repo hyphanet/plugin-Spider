@@ -16,40 +16,40 @@ class PersistentMapImpl<K extends Comparable, V extends IPersistent> extends Per
 
     static final int BTREE_TRESHOLD = 128;
 
-    PersistentMapImpl(Storage storage, Class keyType, int initialSize) { 
+    PersistentMapImpl(Storage storage, Class keyType, int initialSize) {
         super(storage);
         type = getTypeCode(keyType);
         keys = new Comparable[initialSize];
         values = storage.<V>createLink(initialSize);
     }
 
-   static class PersistentMapEntry<K extends Comparable,V extends IPersistent> extends Persistent implements Entry<K,V> { 
+   static class PersistentMapEntry<K extends Comparable,V extends IPersistent> extends Persistent implements Entry<K,V> {
         K key;
         V value;
 
-        public K getKey() { 
+        public K getKey() {
             return key;
         }
 
-        public V getValue() { 
+        public V getValue() {
             return value;
         }
 
-        public V setValue(V value) { 
+        public V setValue(V value) {
             modify();
             V prevValue = this.value;
             this.value = value;
             return prevValue;
         }
 
-        PersistentMapEntry(K key, V value) { 
+        PersistentMapEntry(K key, V value) {
             this.key = key;
             this.value = value;
         }
         PersistentMapEntry() {}
     }
 
-    static class PersistentMapComparator<K extends Comparable, V extends IPersistent> extends PersistentComparator<PersistentMapEntry<K,V>> { 
+    static class PersistentMapComparator<K extends Comparable, V extends IPersistent> extends PersistentComparator<PersistentMapEntry<K,V>> {
         public int compareMembers(PersistentMapEntry<K,V> m1, PersistentMapEntry<K,V> m2) {
             return m1.key.compareTo(m2.key);
         }
@@ -61,8 +61,8 @@ class PersistentMapImpl<K extends Comparable, V extends IPersistent> extends Per
 
     PersistentMapImpl() {}
 
-    protected int getTypeCode(Class c) { 
-        if (c.equals(byte.class) || c.equals(Byte.class)) { 
+    protected int getTypeCode(Class c) {
+        if (c.equals(byte.class) || c.equals(Byte.class)) {
             return ClassDescriptor.tpByte;
         } else if (c.equals(short.class) || c.equals(Short.class)) {
             return ClassDescriptor.tpShort;
@@ -86,7 +86,7 @@ class PersistentMapImpl<K extends Comparable, V extends IPersistent> extends Per
             return ClassDescriptor.tpDate;
         } else if (Comparable.class.isAssignableFrom(c)) {
             return ClassDescriptor.tpRaw;
-        } else { 
+        } else {
             throw new StorageError(StorageError.UNSUPPORTED_TYPE, c);
         }
     }
@@ -122,9 +122,9 @@ class PersistentMapImpl<K extends Comparable, V extends IPersistent> extends Per
         int l = 0, r = values.size();
         while (l < r) {
             int i = (l + r) >> 1;
-            if (keys[i].compareTo(key) < 0) { 
+            if (keys[i].compareTo(key) < 0) {
                 l = i+1;
-            } else { 
+            } else {
                 r = i;
             }
         }
@@ -132,13 +132,13 @@ class PersistentMapImpl<K extends Comparable, V extends IPersistent> extends Per
     }
 
     public boolean containsKey(Object key) {
-        if (index != null) { 
-            if (type == ClassDescriptor.tpRaw) { 
+        if (index != null) {
+            if (type == ClassDescriptor.tpRaw) {
                 return ((SortedCollection)index).containsKey(key);
-            } else { 
+            } else {
                 Key k = generateKey(key);
                 return ((Index)index).entryIterator(k, k, Index.ASCENT_ORDER).hasNext();
-            } 
+            }
         } else {
             int i = binarySearch(key);
             return i < values.size() && ((Comparable[])keys)[i].equals(key);
@@ -146,11 +146,11 @@ class PersistentMapImpl<K extends Comparable, V extends IPersistent> extends Per
     }
 
     public V get(Object key) {
-        if (index != null) { 
-            if (type == ClassDescriptor.tpRaw) { 
+        if (index != null) {
+            if (type == ClassDescriptor.tpRaw) {
                 PersistentMapEntry<K,V> entry = ((SortedCollection<PersistentMapEntry<K,V>>)index).get(key);
                 return (entry != null) ? entry.value : null;
-            } else { 
+            } else {
                 return ((Index<V>)index).get(generateKey(key));
             }
         } else {
@@ -163,10 +163,10 @@ class PersistentMapImpl<K extends Comparable, V extends IPersistent> extends Per
     }
 
     public Entry<K,V> getEntry(Object key) {
-        if (index != null) { 
-            if (type == ClassDescriptor.tpRaw) { 
+        if (index != null) {
+            if (type == ClassDescriptor.tpRaw) {
                 return ((SortedCollection<PersistentMapEntry<K,V>>)index).get(key);
-            } else { 
+            } else {
                 V value = ((Index<V>)index).get(generateKey(key));
                 return value != null ? new PersistentMapEntry((K)key, value) : null;
             }
@@ -174,46 +174,46 @@ class PersistentMapImpl<K extends Comparable, V extends IPersistent> extends Per
             int i = binarySearch(key);
             if (i < values.size() && ((Comparable[])keys)[i].equals(key)) {
                 V value = values.get(i);
-                return value != null ? new PersistentMapEntry((K)key, value) : null;                
+                return value != null ? new PersistentMapEntry((K)key, value) : null;
             }
             return null;
         }
     }
-    
+
     public V put(K key, V value) {
         V prev = null;
-        if (index == null) { 
+        if (index == null) {
             int size = values.size();
             int i = binarySearch(key);
             if (i < size && key.equals(((Comparable[])keys)[i])) {
                 prev = values.set(i, value);
             } else {
-                if (size == BTREE_TRESHOLD) { 
+                if (size == BTREE_TRESHOLD) {
                     Comparable[] keys = (Comparable[])this.keys;
-                    if (type == ClassDescriptor.tpRaw) { 
-                        SortedCollection<PersistentMapEntry<K,V>> col 
+                    if (type == ClassDescriptor.tpRaw) {
+                        SortedCollection<PersistentMapEntry<K,V>> col
                             = getStorage().<PersistentMapEntry<K,V>>createSortedCollection(new PersistentMapComparator<K,V>(), true);
                         index = col;
-                        for (i = 0; i < size; i++) { 
+                        for (i = 0; i < size; i++) {
                             col.add(new PersistentMapEntry((K)keys[i], values.get(i)));
-                        }                
+                        }
                         prev = insertInSortedCollection(key, value);
-                    } else { 
+                    } else {
                         Index<V> idx = getStorage().<V>createIndex(Btree.mapKeyType(type), true);
                         index = idx;
-                        for (i = 0; i < size; i++) { 
+                        for (i = 0; i < size; i++) {
                             idx.set(generateKey(keys[i]), values.get(i));
-                        }                
+                        }
                         prev = idx.set(generateKey(key), value);
                     }
                     this.keys = null;
-                    this.values = null;                
+                    this.values = null;
                     modify();
                 } else {
                     Object[] oldKeys = (Object[])keys;
-                    if (size >= oldKeys.length) { 
+                    if (size >= oldKeys.length) {
                         Comparable[] newKeys = new Comparable[size+1 > oldKeys.length*2 ? size+1 : oldKeys.length*2];
-                        System.arraycopy(oldKeys, 0, newKeys, 0, i);                
+                        System.arraycopy(oldKeys, 0, newKeys, 0, i);
                         System.arraycopy(oldKeys, i, newKeys, i+1, size-i);
                         keys = newKeys;
                         newKeys[i] = key;
@@ -224,10 +224,10 @@ class PersistentMapImpl<K extends Comparable, V extends IPersistent> extends Per
                     values.insert(i, value);
                 }
             }
-        } else { 
-            if (type == ClassDescriptor.tpRaw) {               
+        } else {
+            if (type == ClassDescriptor.tpRaw) {
                 prev = insertInSortedCollection(key, value);
-            } else { 
+            } else {
                 prev = ((Index<V>)index).set(generateKey(key), value);
             }
         }
@@ -239,7 +239,7 @@ class PersistentMapImpl<K extends Comparable, V extends IPersistent> extends Per
         PersistentMapEntry<K,V> entry = col.get(key);
         V prev = null;
         getStorage().makePersistent(value);
-        if (entry == null) { 
+        if (entry == null) {
             col.add(new PersistentMapEntry(key, value));
         } else {
             prev = entry.setValue(value);
@@ -248,7 +248,7 @@ class PersistentMapImpl<K extends Comparable, V extends IPersistent> extends Per
     }
 
     public V remove(Object key) {
-        if (index == null) { 
+        if (index == null) {
             int size = values.size();
             int i = binarySearch(key);
             if (i < size && ((Comparable[])keys)[i].equals(key)) {
@@ -258,19 +258,19 @@ class PersistentMapImpl<K extends Comparable, V extends IPersistent> extends Per
             }
             return null;
         } else {
-            if (type == ClassDescriptor.tpRaw) {               
+            if (type == ClassDescriptor.tpRaw) {
                 SortedCollection<PersistentMapEntry<K,V>> col = (SortedCollection<PersistentMapEntry<K,V>>)index;
                 PersistentMapEntry<K,V> entry = col.get(key);
-                if (entry == null) { 
+                if (entry == null) {
                     return null;
                 }
                 col.remove(entry);
                 return entry.value;
-            } else { 
-                try { 
+            } else {
+                try {
                     return ((Index<V>)index).remove(generateKey(key));
-                } catch (StorageError x) { 
-                    if (x.getErrorCode() == StorageError.KEY_NOT_FOUND) { 
+                } catch (StorageError x) {
+                    if (x.getErrorCode() == StorageError.KEY_NOT_FOUND) {
                         return null;
                     }
                     throw x;
@@ -288,7 +288,7 @@ class PersistentMapImpl<K extends Comparable, V extends IPersistent> extends Per
     }
 
     public void clear() {
-        if (index != null) { 
+        if (index != null) {
             ((Collection)index).clear();
         } else {
             values.clear();
@@ -363,15 +363,15 @@ class PersistentMapImpl<K extends Comparable, V extends IPersistent> extends Per
     }
 
     protected Iterator<Entry<K,V>> entryIterator() {
-        if (index != null) { 
+        if (index != null) {
             if (type == ClassDescriptor.tpRaw) {
-                return new Iterator<Entry<K,V>>() {          
+                return new Iterator<Entry<K,V>>() {
                     private Iterator<PersistentMapEntry<K,V>> i = ((SortedCollection<PersistentMapEntry<K,V>>)index).iterator();
 
                     public boolean hasNext() {
                         return i.hasNext();
                     }
-                    
+
                     public Entry<K,V> next() {
                         return i.next();
                     }
@@ -380,27 +380,27 @@ class PersistentMapImpl<K extends Comparable, V extends IPersistent> extends Per
                         i.remove();
                     }
                 };
-            } else { 
-                return new Iterator<Entry<K,V>>() {          
+            } else {
+                return new Iterator<Entry<K,V>>() {
                     private Iterator<Entry<Object,V>> i = ((Index<V>)index).entryIterator();
 
                     public boolean hasNext() {
                         return i.hasNext();
                     }
-                    
+
                     public Entry<K,V> next() {
                         final Entry<Object,V> e = i.next();
                         return new Entry<K,V>() {
-                            public K getKey() { 
+                            public K getKey() {
                                 return (K)e.getKey();
                             }
-                            public V getValue() { 
+                            public V getValue() {
                                 return e.getValue();
                             }
                             public V setValue(V value) {
                                 throw new UnsupportedOperationException("Entry.Map.setValue");
                             }
-                        };                        
+                        };
                     }
 
                     public void remove() {
@@ -409,7 +409,7 @@ class PersistentMapImpl<K extends Comparable, V extends IPersistent> extends Per
                 };
             }
         } else {
-            return new Iterator<Entry<K,V>>() {                     
+            return new Iterator<Entry<K,V>>() {
                 private int i = -1;
 
                 public boolean hasNext() {
@@ -417,21 +417,21 @@ class PersistentMapImpl<K extends Comparable, V extends IPersistent> extends Per
                 }
 
                 public Entry<K,V> next() {
-                    if (!hasNext()) { 
-                        throw new NoSuchElementException(); 
+                    if (!hasNext()) {
+                        throw new NoSuchElementException();
                     }
                     i += 1;
                     return new Entry<K,V>() {
-                        public K getKey() { 
+                        public K getKey() {
                             return (K)(((Comparable[])keys)[i]);
                         }
-                        public V getValue() { 
+                        public V getValue() {
                             return values.get(i);
                         }
                         public V setValue(V value) {
                             throw new UnsupportedOperationException("Entry.Map.setValue");
                         }
-                    };  
+                    };
                 }
 
                 public void remove() {
@@ -466,7 +466,7 @@ class PersistentMapImpl<K extends Comparable, V extends IPersistent> extends Per
                     Map.Entry<K,V> entry = (Map.Entry<K,V>) o;
                     K key = entry.getKey();
                     V value = entry.getValue();
-                    if (value != null) { 
+                    if (value != null) {
                         V v = PersistentMapImpl.this.get(key);
                         if (value.equals(v)) {
                             PersistentMapImpl.this.remove(key);
@@ -482,22 +482,22 @@ class PersistentMapImpl<K extends Comparable, V extends IPersistent> extends Per
                     }
                     return false;
                 }
-                
+
         public boolean contains(Object k) {
                     Entry<K,V> e = (Entry<K,V>)k;
-                    if (e.getValue() != null) { 
+                    if (e.getValue() != null) {
                         return e.getValue().equals(PersistentMapImpl.this.get(e.getKey()));
                     } else {
-                        return PersistentMapImpl.this.containsKey(e.getKey()) 
+                        return PersistentMapImpl.this.containsKey(e.getKey())
                             && PersistentMapImpl.this.get(e.getKey()) == null;
                     }
         }
         };
     }
     return entrySet;
-    }   
+    }
 
-     
+
     public boolean equals(Object o) {
     if (o == this) {
         return true;
@@ -580,27 +580,27 @@ class PersistentMapImpl<K extends Comparable, V extends IPersistent> extends Per
     }
 
     final Key generateKey(Object key, boolean inclusive) {
-        if (key instanceof Integer) { 
+        if (key instanceof Integer) {
             return new Key(((Integer)key).intValue(), inclusive);
-        } else if (key instanceof Byte) { 
+        } else if (key instanceof Byte) {
             return new Key(((Byte)key).byteValue(), inclusive);
-        } else if (key instanceof Character) { 
+        } else if (key instanceof Character) {
             return new Key(((Character)key).charValue(), inclusive);
-        } else if (key instanceof Short) { 
+        } else if (key instanceof Short) {
             return new Key(((Short)key).shortValue(), inclusive);
-        } else if (key instanceof Long) { 
+        } else if (key instanceof Long) {
             return new Key(((Long)key).longValue(), inclusive);
-        } else if (key instanceof Float) { 
+        } else if (key instanceof Float) {
             return new Key(((Float)key).floatValue(), inclusive);
-        } else if (key instanceof Double) { 
+        } else if (key instanceof Double) {
             return new Key(((Double)key).doubleValue(), inclusive);
-        } else if (key instanceof String) { 
+        } else if (key instanceof String) {
             return new Key((String)key, inclusive);
-        } else if (key instanceof Enum) { 
+        } else if (key instanceof Enum) {
             return new Key((Enum)key, inclusive);
-        } else if (key instanceof java.util.Date) { 
+        } else if (key instanceof java.util.Date) {
             return new Key((java.util.Date)key, inclusive);
-        } else { 
+        } else {
             throw new StorageError(StorageError.UNSUPPORTED_INDEX_TYPE, key.getClass());
         }
     }
@@ -673,10 +673,10 @@ class PersistentMapImpl<K extends Comparable, V extends IPersistent> extends Per
         }
 
         protected Iterator<Entry<K,V>> entryIterator(final int order) {
-            if (index != null) { 
-                if (type == ClassDescriptor.tpRaw) {               
-                    if (order == Index.ASCENT_ORDER) { 
-                        return new Iterator<Entry<K,V>>() { 
+            if (index != null) {
+                if (type == ClassDescriptor.tpRaw) {
+                    if (order == Index.ASCENT_ORDER) {
+                        return new Iterator<Entry<K,V>>() {
                             private Iterator<PersistentMapEntry<K,V>> i = ((SortedCollection<PersistentMapEntry<K,V>>)index).iterator(fromKey, toKey);
 
                             public boolean hasNext() {
@@ -689,22 +689,22 @@ class PersistentMapImpl<K extends Comparable, V extends IPersistent> extends Per
                                 i.remove();
                             }
                         };
-                    } else { 
-                        return new Iterator<Entry<K,V>>() { 
-                            private ArrayList<PersistentMapEntry<K,V>> entries 
+                    } else {
+                        return new Iterator<Entry<K,V>>() {
+                            private ArrayList<PersistentMapEntry<K,V>> entries
                                 = ((SortedCollection<PersistentMapEntry<K,V>>)index).getList(fromKey, toKey);
                             private int i = entries.size();
-                            
+
                             public boolean hasNext() {
                                 return i > 0;
                             }
                             public Entry<K,V> next() {
-                                if (!hasNext()) { 
-                                    throw new NoSuchElementException(); 
+                                if (!hasNext()) {
+                                    throw new NoSuchElementException();
                                 }
                                 return entries.get(--i);
                             }
-                            
+
                             public void remove() {
                                 if (i < entries.size() || entries.get(i) == null) {
                                     throw new IllegalStateException();
@@ -715,63 +715,63 @@ class PersistentMapImpl<K extends Comparable, V extends IPersistent> extends Per
                         };
                     }
                 } else {
-                    return new Iterator<Entry<K,V>>() {                        
+                    return new Iterator<Entry<K,V>>() {
                         private Iterator<Entry<Object,V>> i = ((Index<V>)index).entryIterator(fromKey, toKey, order);
-                        
+
                         public boolean hasNext() {
                             return i.hasNext();
                         }
-                        
+
                         public Entry<K,V> next() {
                             final Entry<Object,V> e = i.next();
                             return new Entry<K,V>() {
-                                public K getKey() { 
+                                public K getKey() {
                                     return (K)e.getKey();
                                 }
-                                public V getValue() { 
+                                public V getValue() {
                                     return e.getValue();
                                 }
                                 public V setValue(V value) {
                                     throw new UnsupportedOperationException("Entry.Map.setValue");
                                 }
-                            };  
+                            };
                         }
-                        
+
                         public void remove() {
                             i.remove();
                         }
                     };
-                } 
+                }
             } else {
-                if (order == Index.ASCENT_ORDER) { 
+                if (order == Index.ASCENT_ORDER) {
                     final int beg = (from != null ? binarySearch(from) : 0) - 1;
                     final int end = values.size();
 
-                    return new Iterator<Entry<K,V>>() {                     
+                    return new Iterator<Entry<K,V>>() {
                         private int i = beg;
-                        
+
                         public boolean hasNext() {
                             return i+1 < end && (to == null || ((Comparable[])keys)[i+1].compareTo(to) < 0);
                         }
-                        
+
                         public Entry<K,V> next() {
-                            if (!hasNext()) { 
-                                throw new NoSuchElementException(); 
+                            if (!hasNext()) {
+                                throw new NoSuchElementException();
                             }
                             i += 1;
                             return new Entry<K,V>() {
-                                public K getKey() { 
+                                public K getKey() {
                                     return (K)((Comparable[])keys)[i];
                                 }
-                                public V getValue() { 
+                                public V getValue() {
                                     return values.get(i);
                                 }
                                 public V setValue(V value) {
                                     throw new UnsupportedOperationException("Entry.Map.setValue");
                                 }
-                            };  
+                            };
                         }
-                        
+
                         public void remove() {
                             if (i < 0) {
                                 throw new IllegalStateException();
@@ -786,31 +786,31 @@ class PersistentMapImpl<K extends Comparable, V extends IPersistent> extends Per
                 } else {
                     final int beg = (to != null ? binarySearch(to) : 0) - 1;
 
-                    return new Iterator<Entry<K,V>>() {                     
+                    return new Iterator<Entry<K,V>>() {
                         private int i = beg;
-                        
+
                         public boolean hasNext() {
                             return i > 0 && (from == null || ((Comparable[])keys)[i-1].compareTo(from) >= 0);
                         }
-                        
+
                         public Entry<K,V> next() {
-                            if (!hasNext()) { 
-                                throw new NoSuchElementException(); 
+                            if (!hasNext()) {
+                                throw new NoSuchElementException();
                             }
                             i -= 1;
                             return new Entry<K,V>() {
-                                public K getKey() { 
+                                public K getKey() {
                                     return (K)((Comparable[])keys)[i];
                                 }
-                                public V getValue() { 
+                                public V getValue() {
                                     return values.get(i);
                                 }
                                 public V setValue(V value) {
                                     throw new UnsupportedOperationException("Entry.Map.setValue");
                                 }
-                            };  
+                            };
                         }
-                        
+
                         public void remove() {
                             if (i < 0) {
                                 throw new IllegalStateException();
@@ -831,11 +831,11 @@ class PersistentMapImpl<K extends Comparable, V extends IPersistent> extends Per
                     public Iterator<Entry<K,V>> iterator() {
                         return entryIterator(Index.ASCENT_ORDER);
                     }
-                    
+
                     public int size() {
                         Iterator<Entry<K,V>> i = iterator();
                         int n;
-                        for (n = 0; i.hasNext(); i.next()) { 
+                        for (n = 0; i.hasNext(); i.next()) {
                             n += 1;
                         }
                         return n;
@@ -855,7 +855,7 @@ class PersistentMapImpl<K extends Comparable, V extends IPersistent> extends Per
                             return false;
                         }
                         V value = entry.getValue();
-                        if (value != null) { 
+                        if (value != null) {
                             V v = PersistentMapImpl.this.get(key);
                             if (value.equals(v)) {
                                 PersistentMapImpl.this.remove(key);
@@ -876,18 +876,18 @@ class PersistentMapImpl<K extends Comparable, V extends IPersistent> extends Per
                         Entry<K,V> e = (Entry<K,V>)k;
                         if (!inRange(e.getKey())) {
                             return false;
-                        }                        
-                        if (e.getValue() != null) { 
+                        }
+                        if (e.getValue() != null) {
                             return e.getValue().equals(PersistentMapImpl.this.get(e.getKey()));
                         } else {
-                            return PersistentMapImpl.this.containsKey(e.getKey()) 
+                            return PersistentMapImpl.this.containsKey(e.getKey())
                                 && PersistentMapImpl.this.get(e.getKey()) == null;
                         }
                     }
                 };
             }
             return entrySet;
-        }   
+        }
 
         public SortedMap<K,V> subMap(K from, K to) {
             if (!inRange2(from)) {
@@ -926,40 +926,40 @@ class PersistentMapImpl<K extends Comparable, V extends IPersistent> extends Per
     }
 
     public K firstKey() {
-        if (index != null) { 
-            if (type == ClassDescriptor.tpRaw) {               
+        if (index != null) {
+            if (type == ClassDescriptor.tpRaw) {
                 return ((SortedCollection<PersistentMapEntry<K,V>>)index).iterator().next().key;
-            } else { 
+            } else {
                 return (K)((Index<V>)index).entryIterator().next().getKey();
             }
-        } else { 
+        } else {
             Comparable[] keys = (Comparable[])this.keys;
             if (values.size() == 0) {
-                throw new NoSuchElementException(); 
+                throw new NoSuchElementException();
             }
             return (K)((Comparable[])keys)[0];
         }
     }
 
     public K lastKey() {
-        if (index != null) { 
-            if (type == ClassDescriptor.tpRaw) {       
+        if (index != null) {
+            if (type == ClassDescriptor.tpRaw) {
                 ArrayList<PersistentMapEntry<K,V>> entries = ((SortedCollection<PersistentMapEntry<K,V>>)index).getList(null, null);
                 return entries.get(entries.size()-1).key;
-            } else { 
+            } else {
                 return (K)((Index<V>)index).entryIterator(null, null, Index.DESCENT_ORDER).next().getKey();
             }
-        } else { 
+        } else {
             int size = values.size();
             if (size == 0) {
-                throw new NoSuchElementException(); 
+                throw new NoSuchElementException();
             }
             return (K)((Comparable[])keys)[size-1];
         }
     }
 
-    public Iterator<V> select(Class cls, String predicate) { 
+    public Iterator<V> select(Class cls, String predicate) {
         Query<V> query = new QueryImpl<V>(getStorage());
         return query.select(cls, values().iterator(), predicate);
     }
-} 
+}

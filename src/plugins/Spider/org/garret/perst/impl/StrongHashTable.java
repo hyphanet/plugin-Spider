@@ -1,7 +1,7 @@
 package plugins.Spider.org.garret.perst.impl;
 import plugins.Spider.org.garret.perst.*;
 
-public class StrongHashTable implements OidHashTable { 
+public class StrongHashTable implements OidHashTable {
     Entry table[];
     static final float loadFactor = 0.75f;
     int count;
@@ -14,7 +14,7 @@ public class StrongHashTable implements OidHashTable {
 
     public StrongHashTable(int initialCapacity) {
         threshold = (int)(initialCapacity * loadFactor);
-        if (initialCapacity != 0) { 
+        if (initialCapacity != 0) {
             table = new Entry[initialCapacity];
         }
         modified = new IPersistent[MODIFIED_BUFFER_SIZE];
@@ -38,7 +38,7 @@ public class StrongHashTable implements OidHashTable {
         return false;
     }
 
-    public synchronized void put(int oid, IPersistent obj) { 
+    public synchronized void put(int oid, IPersistent obj) {
         Entry tab[] = table;
         int index = (oid & 0x7FFFFFFF) % tab.length;
         for (Entry e = tab[index]; e != null; e = e.next) {
@@ -52,7 +52,7 @@ public class StrongHashTable implements OidHashTable {
             rehash();
             tab = table;
             index = (oid & 0x7FFFFFFF) % tab.length;
-        } 
+        }
 
         // Creates the new entry.
         tab[index] = new Entry(oid, obj, tab[index]);
@@ -69,7 +69,7 @@ public class StrongHashTable implements OidHashTable {
         }
         return null;
     }
-    
+
     void rehash() {
         int oldCapacity = table.length;
         Entry oldMap[] = table;
@@ -94,20 +94,20 @@ public class StrongHashTable implements OidHashTable {
     }
 
     public synchronized void flush() {
-        if (nModified < MODIFIED_BUFFER_SIZE) { 
+        if (nModified < MODIFIED_BUFFER_SIZE) {
             IPersistent[] mod = modified;
-            for (int i = nModified; --i >= 0;) { 
+            for (int i = nModified; --i >= 0;) {
                 IPersistent obj = mod[i];
-                if (obj.isModified()) { 
+                if (obj.isModified()) {
                     obj.store();
                 }
             }
-        } else { 
+        } else {
             Entry tab[] = table;
             flushing = true;
-            for (int i = 0; i < tab.length; i++) { 
-                for (Entry e = tab[i]; e != null; e = e.next) { 
-                    if (e.obj.isModified()) { 
+            for (int i = 0; i < tab.length; i++) {
+                for (Entry e = tab[i]; e != null; e = e.next) {
+                    if (e.obj.isModified()) {
                         e.obj.store();
                     }
                 }
@@ -123,7 +123,7 @@ public class StrongHashTable implements OidHashTable {
 
     public synchronized void clear() {
         Entry tab[] = table;
-        for (int i = 0; i < tab.length; i++) { 
+        for (int i = 0; i < tab.length; i++) {
             tab[i] = null;
         }
         count = 0;
@@ -131,9 +131,9 @@ public class StrongHashTable implements OidHashTable {
     }
 
     public synchronized void invalidate() {
-        for (int i = 0; i < table.length; i++) { 
-            for (Entry e = table[i]; e != null; e = e.next) { 
-                if (e.obj.isModified()) { 
+        for (int i = 0; i < table.length; i++) {
+            for (Entry e = table[i]; e != null; e = e.next) {
+                if (e.obj.isModified()) {
                     e.obj.invalidate();
                 }
             }
@@ -144,26 +144,26 @@ public class StrongHashTable implements OidHashTable {
     }
 
     public synchronized void setDirty(IPersistent obj) {
-        if (nModified < MODIFIED_BUFFER_SIZE) { 
+        if (nModified < MODIFIED_BUFFER_SIZE) {
             modified[nModified++] = obj;
         }
-    } 
+    }
 
     public void clearDirty(IPersistent obj) {
     }
 
-    public int size() { 
+    public int size() {
         return count;
     }
 
     public void preprocess() {}
 
-    static class Entry { 
+    static class Entry {
         Entry         next;
         IPersistent   obj;
         int           oid;
-        
-        Entry(int oid, IPersistent obj, Entry chain) { 
+
+        Entry(int oid, IPersistent obj, Entry chain) {
             next = chain;
             this.oid = oid;
             this.obj = obj;

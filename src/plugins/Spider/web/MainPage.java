@@ -46,7 +46,7 @@ class MainPage implements WebPage {
 
     /*
      * (non-Javadoc)
-     * 
+     *
      * @see plugins.Spider.WebPage#processPostRequest(freenet.support.api.HTTPRequest,
      * freenet.support.HTMLNode)
      */
@@ -71,7 +71,7 @@ class MainPage implements WebPage {
 
     /*
      * (non-Javadoc)
-     * 
+     *
      * @see plugins.Spider.WebPage#writeContent(freenet.support.api.HTTPRequest,
      * freenet.support.HTMLNode)
      */
@@ -125,7 +125,7 @@ class MainPage implements WebPage {
         } else {
             statusContent.addChild("#", "Key: Unknown");
         }
-        
+
         // Column 2
         nextTableCell = overviewTableRow.addChild("td", "class", "second");
         HTMLNode mainContent = pageMaker.getInfobox("#", "Main", nextTableCell);

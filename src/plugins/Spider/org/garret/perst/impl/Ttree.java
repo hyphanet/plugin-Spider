@@ -10,10 +10,10 @@ public class Ttree<T extends IPersistent> extends PersistentCollection<T> implem
     private boolean                 unique;
     private TtreePage               root;
     private int                     nMembers;
-    
-    private Ttree() {} 
 
-    Ttree(PersistentComparator<T> comparator, boolean unique) { 
+    private Ttree() {}
+
+    Ttree(PersistentComparator<T> comparator, boolean unique) {
         this.comparator = comparator;
         this.unique = unique;
     }
@@ -22,7 +22,7 @@ public class Ttree<T extends IPersistent> extends PersistentCollection<T> implem
      * Get comparator used in this collection
      * @return collection comparator
      */
-    public PersistentComparator<T> getComparator() { 
+    public PersistentComparator<T> getComparator() {
         return comparator;
     }
 
@@ -30,45 +30,45 @@ public class Ttree<T extends IPersistent> extends PersistentCollection<T> implem
         return false;
     }
 
-    public T get(Object key) { 
-        if (root != null) { 
+    public T get(Object key) {
+        if (root != null) {
             ArrayList list = new ArrayList();
             root.find(comparator, key, 1, key, 1, list);
-            if (list.size() > 1) { 
+            if (list.size() > 1) {
                 throw new StorageError(StorageError.KEY_NOT_UNIQUE);
-            } else if (list.size() == 0) { 
+            } else if (list.size() == 0) {
                 return null;
-            } else { 
+            } else {
                 return (T)list.get(0);
             }
         }
         return null;
     }
-            
-    public ArrayList<T> getList(Object from, Object till) { 
+
+    public ArrayList<T> getList(Object from, Object till) {
         ArrayList list = new ArrayList();
-        if (root != null) { 
+        if (root != null) {
             root.find(comparator, from, 1, till, 1, list);
         }
         return list;
     }
 
-    public ArrayList<T> getList(Object from, boolean fromInclusive, Object till, boolean tillInclusive) { 
+    public ArrayList<T> getList(Object from, boolean fromInclusive, Object till, boolean tillInclusive) {
         ArrayList list = new ArrayList();
-        if (root != null) { 
+        if (root != null) {
             root.find(comparator, from, fromInclusive ? 1 : 0, till, tillInclusive ? 1 : 0, list);
         }
         return list;
     }
 
 
-    public IPersistent[] get(Object from, Object till) { 
+    public IPersistent[] get(Object from, Object till) {
         ArrayList<T> list = getList(from, till);
         return (IPersistent[])list.toArray(new IPersistent[list.size()]);
 
     }
 
-    public IPersistent[] get(Object from, boolean fromInclusive, Object till, boolean tillInclusive) { 
+    public IPersistent[] get(Object from, boolean fromInclusive, Object till, boolean tillInclusive) {
         ArrayList<T> list = getList(from, fromInclusive, till, tillInclusive);
         return (IPersistent[])list.toArray(new IPersistent[list.size()]);
 
@@ -77,17 +77,17 @@ public class Ttree<T extends IPersistent> extends PersistentCollection<T> implem
     /**
      * Add new member to collection
      * @param obj new member
-     * @return <code>true</code> if object is successfully added in the index, 
+     * @return <code>true</code> if object is successfully added in the index,
      * <code>false</code> if collection was declared as unique and there is already member with such value
-     * of the key in the collection. 
+     * of the key in the collection.
      */
-    public boolean add(T obj) { 
+    public boolean add(T obj) {
         TtreePage newRoot;
-        if (root == null) { 
+        if (root == null) {
             newRoot = new TtreePage(obj);
-        } else { 
+        } else {
             TtreePage.PageReference ref = new TtreePage.PageReference(root);
-            if (root.insert(comparator, obj, unique, ref) == TtreePage.NOT_UNIQUE) { 
+            if (root.insert(comparator, obj, unique, ref) == TtreePage.NOT_UNIQUE) {
                 return false;
             }
             newRoot = ref.pg;
@@ -97,23 +97,23 @@ public class Ttree<T extends IPersistent> extends PersistentCollection<T> implem
         modify();
         return true;
     }
-                
-                
+
+
     /**
      * Check if collections contains specified member
      * @return <code>true</code> if specified member belongs to the collection
      */
     public boolean containsObject(T member) {
         return (root != null && member != null)  ? root.containsObject(comparator, member) : false;
-    }    
-    
+    }
+
     public boolean contains(T member) {
         return (root != null && member != null) ? root.contains(comparator, member) : false;
-    } 
-       
+    }
+
     public boolean containsKey(Object key) {
         return (root != null && key != null) ? root.containsKey(comparator, key) : false;
-    } 
+    }
 
 
     /**
@@ -126,11 +126,11 @@ public class Ttree<T extends IPersistent> extends PersistentCollection<T> implem
             throw new StorageError(StorageError.KEY_NOT_FOUND);
         }
         TtreePage.PageReference ref = new TtreePage.PageReference(root);
-        if (root.remove(comparator, obj, ref) == TtreePage.NOT_FOUND) {             
+        if (root.remove(comparator, obj, ref) == TtreePage.NOT_FOUND) {
             throw new StorageError(StorageError.KEY_NOT_FOUND);
         }
         root = ref.pg;
-        nMembers -= 1;        
+        nMembers -= 1;
         modify();
     }
 
@@ -141,24 +141,24 @@ public class Ttree<T extends IPersistent> extends PersistentCollection<T> implem
     public int size() {
         return nMembers;
     }
-    
+
     /**
      * Remove all objects from the collection
      */
     public void clear() {
-        if (root != null) { 
+        if (root != null) {
             root.prune();
             root = null;
             nMembers = 0;
             modify();
         }
     }
- 
+
     /**
      * T-Tree destructor
      */
     public void deallocate() {
-        if (root != null) { 
+        if (root != null) {
             root.prune();
         }
         super.deallocate();
@@ -171,7 +171,7 @@ public class Ttree<T extends IPersistent> extends PersistentCollection<T> implem
     static final IPersistent[] emptySelection = new IPersistent[0];
 
     public IPersistent[] toPersistentArray() {
-        if (root == null) { 
+        if (root == null) {
             return emptySelection;
         }
         IPersistent[] arr = new IPersistent[nMembers];
@@ -185,9 +185,9 @@ public class Ttree<T extends IPersistent> extends PersistentCollection<T> implem
 
     /**
      * Get all objects in the index as array ordered by index key.
-     * The runtime type of the returned array is that of the specified array.  
-     * If the index fits in the specified array, it is returned therein.  
-     * Otherwise, a new array is allocated with the runtime type of the 
+     * The runtime type of the returned array is that of the specified array.
+     * If the index fits in the specified array, it is returned therein.
+     * Otherwise, a new array is allocated with the runtime type of the
      * specified array and the size of this index.<p>
      *
      * If this index fits in the specified array with room to spare
@@ -199,56 +199,56 @@ public class Ttree<T extends IPersistent> extends PersistentCollection<T> implem
      * @return array of objects in the index ordered by key value
      */
     public <E> E[] toArray(E[] arr) {
-        if (arr.length < nMembers) { 
+        if (arr.length < nMembers) {
             arr = (E[])Array.newInstance(arr.getClass().getComponentType(), nMembers);
         }
-        if (root != null) { 
+        if (root != null) {
             root.toArray((IPersistent[])arr, 0);
         }
-        if (arr.length > nMembers) { 
+        if (arr.length > nMembers) {
             arr[nMembers] = null;
         }
         return arr;
     }
 
-    static class TtreeIterator<T extends IPersistent> extends IterableIterator<T> implements PersistentIterator { 
+    static class TtreeIterator<T extends IPersistent> extends IterableIterator<T> implements PersistentIterator {
         int           i;
         ArrayList     list;
         boolean       removed;
         Ttree         tree;
 
-        TtreeIterator(Ttree tree, ArrayList list) { 
+        TtreeIterator(Ttree tree, ArrayList list) {
             this.tree = tree;
             this.list = list;
             i = -1;
         }
-        
-        public T next() { 
-            if (i+1 >= list.size()) { 
+
+        public T next() {
+            if (i+1 >= list.size()) {
                 throw new NoSuchElementException();
             }
             removed = false;
             return (T)list.get(++i);
         }
-        
-        public int nextOid() { 
+
+        public int nextOid() {
             return ((IPersistent)next()).getOid();
         }
-        
-        public void remove() { 
-            if (removed || i < 0 || i >= list.size()) { 
+
+        public void remove() {
+            if (removed || i < 0 || i >= list.size()) {
                 throw new IllegalStateException();
             }
             tree.remove((IPersistent)list.get(i));
             list.remove(i--);
             removed = true;
         }
-            
+
         public boolean hasNext() {
             return i+1 < list.size();
         }
     }
-        
+
     public Iterator<T> iterator() {
         return iterator(null, null);
     }
@@ -259,9 +259,9 @@ public class Ttree<T extends IPersistent> extends PersistentCollection<T> implem
 
     public IterableIterator<T> iterator(Object from, boolean fromInclusive, Object till, boolean tillInclusive) {
         ArrayList list = new ArrayList();
-        if (root != null) { 
+        if (root != null) {
             root.find(comparator, from, fromInclusive ? 1 : 0, till, tillInclusive ? 1 : 0, list);
-        }            
+        }
         return new TtreeIterator<T>(this, list);
     }
 

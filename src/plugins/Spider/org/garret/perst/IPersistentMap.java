@@ -8,7 +8,7 @@ import java.util.*;
 public interface IPersistentMap<K extends Comparable, V extends IPersistent> extends SortedMap<K,V>, IPersistent, IResource
 {
     /**
-     * Get entry for the specified key. 
+     * Get entry for the specified key.
      * This method can be used to obtains both key and value.
      * It is needed when key is persistent object.
      * @param key searched key
@@ -24,4 +24,4 @@ public interface IPersistentMap<K extends Comparable, V extends IPersistent> ext
      * @return iterator through members of the collection matching search condition
      */
     public Iterator<V> select(Class cls, String predicate);
-} 
+}

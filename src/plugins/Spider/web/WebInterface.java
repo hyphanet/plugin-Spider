@@ -1,6 +1,6 @@
 /**
  * Web reuqest handlers
- * 
+ *
  * @author j16sdiz (1024D/75494252)
  */
 package plugins.Spider.web;
@@ -22,7 +22,7 @@ public class WebInterface {
 
     /**
      * @param spider
-     * @param client 
+     * @param client
      */
     public WebInterface(Spider spider, HighLevelSimpleClient client, ToadletContainer container, NodeClientCore core) {
         this.spider = spider;
@@ -32,15 +32,15 @@ public class WebInterface {
         this.client = client;
         this.core = core;
     }
-    
+
     public void load() {
         pageMaker.addNavigationCategory("/spider/", "Spider", "Spider", spider);
-        
+
         toadletContainer.register(mainToadlet = new MainPageToadlet(client, spider, core), "Spider", "/spider/", true, "Spider", "Spider", true, null);
         toadletContainer.register(configToadlet = new ConfigPageToadlet(client, spider, core), "Spider", "/spider/config", true, "Configure Spider", "Configure Spider", true, null);
     }
 
-    
+
     public void unload() {
         toadletContainer.unregister(configToadlet);
         toadletContainer.unregister(mainToadlet);

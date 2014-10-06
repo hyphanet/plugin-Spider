@@ -10,46 +10,46 @@ class ScalableList<E extends IPersistent> extends PersistentCollection<E> implem
 
     static final int BTREE_THRESHOLD = 128;
 
-    ScalableList(Storage storage, int initialSize) { 
+    ScalableList(Storage storage, int initialSize) {
         super(storage);
-        if (initialSize <= BTREE_THRESHOLD) { 
+        if (initialSize <= BTREE_THRESHOLD) {
             small = storage.<E>createLink(initialSize);
-        } else { 
+        } else {
             large = storage.<E>createList();
         }
     }
 
     ScalableList() {}
 
-    public E get(int i) { 
+    public E get(int i) {
         return small != null ? small.get(i) : large.get(i);
     }
-    
-    public E set(int i, E obj) { 
+
+    public E set(int i, E obj) {
         return small != null ? small.set(i, obj) : large.set(i, obj);
     }
-       
-    public boolean isEmpty() { 
+
+    public boolean isEmpty() {
         return small != null ? small.isEmpty() : large.isEmpty();
-    }    
+    }
 
     public int size() {
         return small != null ? small.size() : large.size();
     }
 
-    public boolean contains(Object o) {         
-        if (o instanceof IPersistent) { 
+    public boolean contains(Object o) {
+        if (o instanceof IPersistent) {
             IPersistent p = (IPersistent)o;
             return small != null ? small.contains(p) : large.contains(p);
         }
         return false;
     }
 
-    public <T> T[] toArray(T a[]) { 
+    public <T> T[] toArray(T a[]) {
         return small != null ? small.<T>toArray(a) : large.<T>toArray(a);
     }
 
-    public Object[] toArray() { 
+    public Object[] toArray() {
         return small != null ? small.toArray() : large.toArray();
     }
     public boolean add(E o) {
@@ -58,17 +58,17 @@ class ScalableList<E extends IPersistent> extends PersistentCollection<E> implem
     }
 
     public void add(int i, E o) {
-        if (small != null) { 
-            if (small.size() == BTREE_THRESHOLD) { 
+        if (small != null) {
+            if (small.size() == BTREE_THRESHOLD) {
                 large = getStorage().<E>createList();
                 large.addAll(small);
                 large.add(i, o);
                 modify();
                 small = null;
-            } else { 
+            } else {
                 small.add(i, o);
             }
-        } else { 
+        } else {
             large.add(i, o);
         }
     }
@@ -78,16 +78,16 @@ class ScalableList<E extends IPersistent> extends PersistentCollection<E> implem
     }
 
     public void clear() {
-        if (large != null) { 
-            large.clear();            
-        } else { 
+        if (large != null) {
+            large.clear();
+        } else {
             small.clear();
         }
-    }   
+    }
 
     public int indexOf(Object o) {
         return small != null ? small.indexOf(o) : large.indexOf(o);
-    }    
+    }
 
     public int lastIndexOf(Object o) {
         return small != null ? small.lastIndexOf(o) : large.lastIndexOf(o);
@@ -101,12 +101,12 @@ class ScalableList<E extends IPersistent> extends PersistentCollection<E> implem
         modified = true;
     }
     return modified;
-    }    
-            
+    }
+
     public Iterator<E> iterator() {
         return small != null ? small.iterator() : large.iterator();
     }
-    
+
     public ListIterator<E> listIterator() {
     return listIterator(0);
     }
@@ -119,4 +119,3 @@ class ScalableList<E extends IPersistent> extends PersistentCollection<E> implem
         return small != null ? small.subList(fromIndex, toIndex) : large.subList(fromIndex, toIndex);
     }
 }
-        

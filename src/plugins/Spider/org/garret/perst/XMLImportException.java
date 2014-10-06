@@ -3,23 +3,23 @@ package plugins.Spider.org.garret.perst;
 /**
  * Exception thrown during import of data from XML file in database
  */
-public class XMLImportException extends Exception { 
-    public XMLImportException(int line, int column, String message) { 
+public class XMLImportException extends Exception {
+    public XMLImportException(int line, int column, String message) {
         super("In line " + line + " column " + column + ": " + message);
         this.line = line;
         this.column = column;
         this.message = message;
     }
 
-    public String getMessageText() { 
+    public String getMessageText() {
         return message;
     }
-    
-    public int getLine() { 
+
+    public int getLine() {
         return line;
     }
 
-    public int getColumn() { 
+    public int getColumn() {
         return column;
     }
 

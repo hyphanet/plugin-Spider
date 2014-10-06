@@ -3,7 +3,7 @@ import plugins.Spider.org.garret.perst.*;
 
 import  java.lang.ref.*;
 
-public class PinWeakHashTable implements OidHashTable { 
+public class PinWeakHashTable implements OidHashTable {
     Entry table[];
     static final float loadFactor = 0.75f;
     int count;
@@ -33,11 +33,11 @@ public class PinWeakHashTable implements OidHashTable {
         return false;
     }
 
-    protected Reference createReference(Object obj) { 
+    protected Reference createReference(Object obj) {
         return new WeakReference(obj);
     }
 
-    public synchronized void put(int oid, IPersistent obj) { 
+    public synchronized void put(int oid, IPersistent obj) {
         Reference ref = createReference(obj);
         Entry tab[] = table;
         int index = (oid & 0x7FFFFFFF) % tab.length;
@@ -52,19 +52,19 @@ public class PinWeakHashTable implements OidHashTable {
             rehash();
             tab = table;
             index = (oid & 0x7FFFFFFF) % tab.length;
-        } 
+        }
 
         // Creates the new entry.
         tab[index] = new Entry(oid, ref, tab[index]);
         count += 1;
     }
-    
+
     public synchronized IPersistent get(int oid) {
         Entry tab[] = table;
         int index = (oid & 0x7FFFFFFF) % tab.length;
         for (Entry e = tab[index]; e != null; e = e.next) {
             if (e.oid == oid) {
-                if (e.pin != null) { 
+                if (e.pin != null) {
                     return e.pin;
                 }
                 return (IPersistent)e.ref.get();
@@ -72,13 +72,13 @@ public class PinWeakHashTable implements OidHashTable {
         }
         return null;
     }
-    
+
     public synchronized void flush() {
         flushing = true;
-        for (int i = 0; i < table.length; i++) { 
-            for (Entry e = table[i]; e != null; e = e.next) { 
+        for (int i = 0; i < table.length; i++) {
+            for (Entry e = table[i]; e != null; e = e.next) {
                 IPersistent obj = e.pin;
-                if (obj != null) {  
+                if (obj != null) {
                     obj.store();
                     e.pin = null;
                 }
@@ -93,10 +93,10 @@ public class PinWeakHashTable implements OidHashTable {
     }
 
     public synchronized void invalidate() {
-        for (int i = 0; i < table.length; i++) { 
-            for (Entry e = table[i]; e != null; e = e.next) { 
+        for (int i = 0; i < table.length; i++) {
+            for (Entry e = table[i]; e != null; e = e.next) {
                 IPersistent obj = e.pin;
-                if (obj != null) { 
+                if (obj != null) {
                     e.pin = null;
                     obj.invalidate();
                 }
@@ -108,7 +108,7 @@ public class PinWeakHashTable implements OidHashTable {
 
     public synchronized void clear() {
         Entry tab[] = table;
-        for (int i = 0; i < tab.length; i++) { 
+        for (int i = 0; i < tab.length; i++) {
             tab[i] = null;
         }
         count = 0;
@@ -121,18 +121,18 @@ public class PinWeakHashTable implements OidHashTable {
 
         for (i = oldCapacity; --i >= 0;) {
             Entry e, next, prev;
-            for (prev = null, e = oldMap[i]; e != null; e = next) { 
+            for (prev = null, e = oldMap[i]; e != null; e = next) {
                 next = e.next;
                 IPersistent obj = (IPersistent)e.ref.get();
-                if ((obj == null || obj.isDeleted()) && e.pin == null) { 
+                if ((obj == null || obj.isDeleted()) && e.pin == null) {
                     count -= 1;
                     e.clear();
-                    if (prev == null) { 
+                    if (prev == null) {
                         oldMap[i] = next;
-                    } else { 
+                    } else {
                         prev.next = next;
                     }
-                } else { 
+                } else {
                     prev = e;
                 }
             }
@@ -182,24 +182,24 @@ public class PinWeakHashTable implements OidHashTable {
         }
     }
 
-    public int size() { 
+    public int size() {
         return count;
     }
 
-    static class Entry { 
+    static class Entry {
         Entry       next;
         Reference   ref;
         int         oid;
         IPersistent pin;
-        
-        void clear() { 
+
+        void clear() {
             ref.clear();
             ref = null;
             pin = null;
             next = null;
         }
 
-        Entry(int oid, Reference ref, Entry chain) { 
+        Entry(int oid, Reference ref, Entry chain) {
             next = chain;
             this.oid = oid;
             this.ref = ref;

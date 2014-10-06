@@ -6,11 +6,11 @@ package plugins.Spider.org.garret.perst;
  * is set to <code>Storage.INFINITE_PAGE_POOL</code>. In this case all pages are cached in memory
  * and <code>NullFile</code> is used just as a stub.<P>
  * <code>NullFile</code> should be used only when data is transient - i.e. it should not be saved
- * between database sessions. If you need in-memory database but which provide data persistency, 
- * you should use normal file and infinite page pool size. 
+ * between database sessions. If you need in-memory database but which provide data persistency,
+ * you should use normal file and infinite page pool size.
  */
-public class NullFile implements IFile 
-{ 
+public class NullFile implements IFile
+{
     public void write(long pos, byte[] buf) {}
 
     public int read(long pos, byte[] buf) {
@@ -19,19 +19,19 @@ public class NullFile implements IFile
 
     public void sync() {}
 
-    public boolean tryLock(boolean shared) { 
+    public boolean tryLock(boolean shared) {
         return true;
     }
 
-    public void lock(boolean shared) { 
+    public void lock(boolean shared) {
     }
 
-    public void unlock() { 
+    public void unlock() {
     }
 
     public void close() {}
 
-    public long length() { 
+    public long length() {
         return 0;
     }
 }

@@ -9,7 +9,7 @@ public abstract class IterableIterator<T> implements Iterable<T>, Iterator<T> {
     /**
      * This class itself is iterator
      */
-    public Iterator<T> iterator() { 
+    public Iterator<T> iterator() {
         return this;
     }
 }

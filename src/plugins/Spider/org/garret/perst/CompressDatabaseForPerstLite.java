@@ -6,14 +6,14 @@ import java.util.zip.*;
 
 /**
  * Utility used to compress database file. You should create database using normal file (OSFile).
- * Then use this utiulity to compress database file. 
+ * Then use this utiulity to compress database file.
  * To work with compressed database file you should path instance if this class in <code>Storage.open</code> method
  */
 public class CompressDatabaseForPerstLite {
     static final int PAGE_SIZE = plugins.Spider.org.garret.perst.impl.Page.pageSize;
 
-    public static void compress(OutputStream out, InputStream in, String cipherKey) throws IOException 
-    { 
+    public static void compress(OutputStream out, InputStream in, String cipherKey) throws IOException
+    {
         int rc;
         byte[] buf = new byte[PAGE_SIZE];
         DataInputStream din = new DataInputStream(in);
@@ -21,9 +21,9 @@ public class CompressDatabaseForPerstLite {
 
         byte[] initState = new byte[256];
         byte[] state = new byte[256];
-        if (cipherKey != null) { 
+        if (cipherKey != null) {
             byte[] key = cipherKey.getBytes();
-            for (int counter = 0; counter < 256; ++counter) { 
+            for (int counter = 0; counter < 256; ++counter) {
                 initState[counter] = (byte)counter;
             }
             int index1 = 0;
@@ -36,9 +36,9 @@ public class CompressDatabaseForPerstLite {
                 index1 = (index1 + 1) % key.length;
             }
         }
-        
-        while ((rc = in.read(buf, 0, PAGE_SIZE)) >= 0) { 
-            if (rc != PAGE_SIZE) { 
+
+        while ((rc = in.read(buf, 0, PAGE_SIZE)) >= 0) {
+            if (rc != PAGE_SIZE) {
                 throw new IOException("Database file is corrupted");
             }
             ByteArrayOutputStream bs = new ByteArrayOutputStream();
@@ -47,7 +47,7 @@ public class CompressDatabaseForPerstLite {
             gs.finish();
             byte[] compressed = bs.toByteArray();
             int len = compressed.length;
-            if (cipherKey != null) { 
+            if (cipherKey != null) {
                 int x = 0, y = 0;
                 System.arraycopy(initState, 0, state, 0, state.length);
                 for (int i = 0; i < len; i++) {
@@ -70,9 +70,9 @@ public class CompressDatabaseForPerstLite {
      * This utility accepts one argument: path to database file.
      * It creates new file at the same location and with the same name but with with ".dbz" extension.
      */
-    public static void main(String[] args) throws IOException 
-    { 
-        if (args.length == 0 || args.length > 2) { 
+    public static void main(String[] args) throws IOException
+    {
+        if (args.length == 0 || args.length > 2) {
             System.err.println("Usage: java plugins.Spider.org.garret.perst.CompressDatabaseForPerstLite DATABASE_FILE_PATH [cipher-key]");
             return;
         }
@@ -81,7 +81,7 @@ public class CompressDatabaseForPerstLite {
         int ext = path.lastIndexOf('.');
         String gzip = path.substring(0, ext) + ".dgz";
         String cipherKey = null;
-        if (args.length > 1) { 
+        if (args.length > 1) {
             cipherKey = args[1];
         }
         FileOutputStream out = new FileOutputStream(gzip);
@@ -90,6 +90,5 @@ public class CompressDatabaseForPerstLite {
         out.close();
         System.out.println("File " + gzip + " is written");
     }
-}      
-                
-        
+}
+

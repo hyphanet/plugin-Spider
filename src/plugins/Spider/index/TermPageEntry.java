@@ -14,9 +14,9 @@ import freenet.support.SortedIntSet;
 /**
 ** A {@link TermEntry} that associates a subject term with a final target
 ** {@link FreenetURI} that satisfies the term.
-** 
+**
 ** NOTE: This is different to the code in Library! Most notably it is modifiable.
-** 
+**
 ** @author infinity0
 */
 public class TermPageEntry extends TermEntry {
@@ -28,10 +28,10 @@ public class TermPageEntry extends TermEntry {
 
     /** Positions where the term occurs. May be null if we don't have that data. */
     private SortedIntSet positions;
-    
+
     /**
     ** Map from positions in the text to a fragment of text around where it occurs.
-    ** Only non-null if we have the fragments of text (we may have positions but not details), 
+    ** Only non-null if we have the fragments of text (we may have positions but not details),
     ** to save memory.
     */
     private Map<Integer, String> posFragments;
@@ -126,7 +126,7 @@ public class TermPageEntry extends TermEntry {
     @Override public int hashCode() {
         return super.hashCode() ^ page.hashCode();
     }
-    
+
     public int sizeEstimate() {
         int s = 0;
         s += page.toString().length();

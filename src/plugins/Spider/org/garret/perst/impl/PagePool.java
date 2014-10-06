@@ -1,7 +1,7 @@
 package plugins.Spider.org.garret.perst.impl;
 import plugins.Spider.org.garret.perst.*;
 
-class PagePool { 
+class PagePool {
     LRU     lru;
     Page    freePages;
     Page    hashTable[];
@@ -12,41 +12,41 @@ class PagePool {
 
     int     nDirtyPages;
     Page    dirtyPages[];
-    
+
     boolean flushing;
 
     static final int INFINITE_POOL_INITIAL_SIZE = 8;
 
-    PagePool(int poolSize, long lruLimit) { 
-        if (poolSize == 0) { 
+    PagePool(int poolSize, long lruLimit) {
+        if (poolSize == 0) {
             autoExtended = true;
             poolSize = INFINITE_POOL_INITIAL_SIZE;
-        }            
+        }
         this.poolSize = poolSize;
         this.lruLimit = lruLimit;
     }
 
-    final Page find(long addr, int state) {     
+    final Page find(long addr, int state) {
         //Assert.that((addr & (Page.pageSize-1)) == 0);
         Page pg;
         int pageNo = (int)(addr >>> Page.pageSizeLog);
         int hashCode = pageNo % poolSize;
 
-        synchronized (this) {           
-            for (pg = hashTable[hashCode]; pg != null; pg = pg.collisionChain) 
-            { 
+        synchronized (this) {
+            for (pg = hashTable[hashCode]; pg != null; pg = pg.collisionChain)
+            {
                 if (pg.offs == addr) {
-                    if (pg.accessCount++ == 0) { 
+                    if (pg.accessCount++ == 0) {
                         pg.unlink();
                     }
                     break;
                 }
             }
-            if (pg == null) { 
+            if (pg == null) {
                 pg = freePages;
-                if (pg != null) { 
+                if (pg != null) {
                     freePages = (Page)pg.next;
-                } else if (autoExtended) { 
+                } else if (autoExtended) {
                     if (pageNo >= poolSize) {
                         int newPoolSize = pageNo >= poolSize*2 ? pageNo+1 : poolSize*2;
                         Page[] newHashTable = new Page[newPoolSize];
@@ -56,15 +56,15 @@ class PagePool {
                     }
                     pg = new Page();
                     hashCode = pageNo;
-                } else { 
+                } else {
                     Assert.that("unfixed page available", lru.prev != lru);
                     pg = (Page)lru.prev;
                     pg.unlink();
-                    synchronized (pg) { 
-                        if ((pg.state & Page.psDirty) != 0) { 
+                    synchronized (pg) {
+                        if ((pg.state & Page.psDirty) != 0) {
                             pg.state = 0;
                             file.write(pg.offs, pg.data);
-                            if (!flushing) { 
+                            if (!flushing) {
                                 dirtyPages[pg.writeQueueIndex] = dirtyPages[--nDirtyPages];
                                 dirtyPages[pg.writeQueueIndex].writeQueueIndex = pg.writeQueueIndex;
                             }
@@ -72,13 +72,13 @@ class PagePool {
                     }
                     int h = (int)(pg.offs >> Page.pageSizeLog) % poolSize;
                     Page curr = hashTable[h], prev = null;
-                    while (curr != pg) { 
+                    while (curr != pg) {
                         prev = curr;
                         curr = curr.collisionChain;
                     }
-                    if (prev == null) { 
+                    if (prev == null) {
                         hashTable[h] = pg.collisionChain;
-                    } else { 
+                    } else {
                         prev.collisionChain = pg.collisionChain;
                     }
                 }
@@ -91,7 +91,7 @@ class PagePool {
             if ((pg.state & Page.psDirty) == 0 && (state & Page.psDirty) != 0)
             {
                 Assert.that(!flushing);
-                if (nDirtyPages >= dirtyPages.length) {                     
+                if (nDirtyPages >= dirtyPages.length) {
                     Page[] newDirtyPages = new Page[nDirtyPages*2];
                     System.arraycopy(dirtyPages, 0, newDirtyPages, 0, dirtyPages.length);
                     dirtyPages = newDirtyPages;
@@ -102,18 +102,18 @@ class PagePool {
             }
             if ((pg.state & Page.psRaw) != 0) {
                 if (file.read(pg.offs, pg.data) < Page.pageSize) {
-                    for (int i = 0; i < Page.pageSize; i++) { 
+                    for (int i = 0; i < Page.pageSize; i++) {
                         pg.data[i] = 0;
                     }
                 }
                 pg.state &= ~Page.psRaw;
-            }           
+            }
         }
         return pg;
     }
 
 
-    final synchronized void copy(long dst, long src, long size) 
+    final synchronized void copy(long dst, long src, long size)
     {
         int dstOffs = (int)dst & (Page.pageSize-1);
         int srcOffs = (int)src & (Page.pageSize-1);
@@ -121,25 +121,25 @@ class PagePool {
         src -= srcOffs;
         Page dstPage = find(dst, Page.psDirty);
         Page srcPage = find(src, 0);
-        do { 
-            if (dstOffs == Page.pageSize) { 
+        do {
+            if (dstOffs == Page.pageSize) {
                 unfix(dstPage);
                 dst += Page.pageSize;
                 dstPage = find(dst, Page.psDirty);
                 dstOffs = 0;
             }
-            if (srcOffs == Page.pageSize) { 
+            if (srcOffs == Page.pageSize) {
                 unfix(srcPage);
                 src += Page.pageSize;
                 srcPage = find(src, 0);
                 srcOffs = 0;
             }
             long len = size;
-            if (len > Page.pageSize - srcOffs) { 
-                len = Page.pageSize - srcOffs; 
+            if (len > Page.pageSize - srcOffs) {
+                len = Page.pageSize - srcOffs;
             }
-            if (len > Page.pageSize - dstOffs) { 
-                len = Page.pageSize - dstOffs; 
+            if (len > Page.pageSize - dstOffs) {
+                len = Page.pageSize - dstOffs;
             }
             System.arraycopy(srcPage.data, srcOffs, dstPage.data, dstOffs, (int)len);
             srcOffs += len;
@@ -150,14 +150,14 @@ class PagePool {
         unfix(srcPage);
     }
 
-    final void write(long dstPos, byte[] src) 
+    final void write(long dstPos, byte[] src)
     {
         Assert.that((dstPos & (Page.pageSize-1)) == 0);
         Assert.that((src.length & (Page.pageSize-1)) == 0);
-        for (int i = 0; i < src.length;) { 
+        for (int i = 0; i < src.length;) {
             Page pg = find(dstPos, Page.psDirty);
             byte[] dst = pg.data;
-            for (int j = 0; j < Page.pageSize; j++) { 
+            for (int j = 0; j < Page.pageSize; j++) {
                 dst[j] = src[i++];
             }
             unfix(pg);
@@ -165,20 +165,20 @@ class PagePool {
         }
     }
 
-    final void open(IFile f) 
+    final void open(IFile f)
     {
         file = f;
         reset();
     }
 
-    final void reset() { 
+    final void reset() {
         lru = new LRU();
         freePages = null;
         hashTable = new Page[poolSize];
         dirtyPages = new Page[poolSize];
         nDirtyPages = 0;
-        if (!autoExtended) { 
-            for (int i = poolSize; --i >= 0; ) { 
+        if (!autoExtended) {
+            for (int i = poolSize; --i >= 0; ) {
                 Page pg = new Page();
                 pg.next = freePages;
                 freePages = pg;
@@ -186,7 +186,7 @@ class PagePool {
         }
     }
 
-    final void clear() { 
+    final void clear() {
         Assert.that(nDirtyPages == 0);
         reset();
     }
@@ -199,23 +199,23 @@ class PagePool {
         freePages = null;
     }
 
-    final synchronized void unfix(Page pg) { 
+    final synchronized void unfix(Page pg) {
         Assert.that(pg.accessCount > 0);
-        if (--pg.accessCount == 0) { 
-            if (pg.offs <= lruLimit) { 
+        if (--pg.accessCount == 0) {
+            if (pg.offs <= lruLimit) {
                 lru.link(pg);
-            } else { 
+            } else {
                 lru.prev.link(pg);
             }
         }
     }
 
-    final synchronized void modify(Page pg) { 
+    final synchronized void modify(Page pg) {
         Assert.that(pg.accessCount > 0);
-        if ((pg.state & Page.psDirty) == 0) { 
+        if ((pg.state & Page.psDirty) == 0) {
             Assert.that(!flushing);
             pg.state |= Page.psDirty;
-            if (nDirtyPages >= dirtyPages.length) {                     
+            if (nDirtyPages >= dirtyPages.length) {
                 Page[] newDirtyPages = new Page[nDirtyPages*2];
                 System.arraycopy(dirtyPages, 0, newDirtyPages, 0, dirtyPages.length);
                 dirtyPages = newDirtyPages;
@@ -224,16 +224,16 @@ class PagePool {
             pg.writeQueueIndex = nDirtyPages++;
         }
     }
-    
-    final Page getPage(long addr) { 
+
+    final Page getPage(long addr) {
         return find(addr, 0);
     }
-    
-    final Page putPage(long addr) { 
+
+    final Page putPage(long addr) {
         return find(addr, Page.psDirty);
     }
-    
-    final byte[] get(long pos) { 
+
+    final byte[] get(long pos) {
         Assert.that(pos != 0);
         int offs = (int)pos & (Page.pageSize-1);
         Page pg = find(pos - offs, 0);
@@ -241,7 +241,7 @@ class PagePool {
         Assert.that(size >= ObjectHeader.sizeof);
         byte[] obj = new byte[size];
         int dst = 0;
-        while (size > Page.pageSize - offs) { 
+        while (size > Page.pageSize - offs) {
             System.arraycopy(pg.data, offs, obj, dst, Page.pageSize - offs);
             unfix(pg);
             size -= Page.pageSize - offs;
@@ -255,15 +255,15 @@ class PagePool {
         return obj;
     }
 
-    final void put(long pos, byte[] obj) { 
+    final void put(long pos, byte[] obj) {
         put(pos, obj, obj.length);
     }
 
-    final void put(long pos, byte[] obj, int size) { 
+    final void put(long pos, byte[] obj, int size) {
         int offs = (int)pos & (Page.pageSize-1);
         Page pg = find(pos - offs, Page.psDirty);
         int src = 0;
-        while (size > Page.pageSize - offs) { 
+        while (size > Page.pageSize - offs) {
             System.arraycopy(obj, src, pg.data, offs, Page.pageSize - offs);
             unfix(pg);
             size -= Page.pageSize - offs;
@@ -276,20 +276,20 @@ class PagePool {
         unfix(pg);
     }
 
-    void flush() { 
-        synchronized (this) { 
+    void flush() {
+        synchronized (this) {
             flushing = true;
-            java.util.Arrays.sort(dirtyPages, 0, nDirtyPages); 
+            java.util.Arrays.sort(dirtyPages, 0, nDirtyPages);
         }
-        for (int i = 0; i < nDirtyPages; i++) { 
+        for (int i = 0; i < nDirtyPages; i++) {
             Page pg = dirtyPages[i];
-            synchronized (pg) { 
-                if ((pg.state & Page.psDirty) != 0) { 
+            synchronized (pg) {
+                if ((pg.state & Page.psDirty) != 0) {
                     file.write(pg.offs, pg.data);
                     pg.state &= ~Page.psDirty;
                 }
             }
-        }           
+        }
         file.sync();
         nDirtyPages = 0;
         flushing = false;

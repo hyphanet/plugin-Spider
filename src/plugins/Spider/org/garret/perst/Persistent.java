@@ -4,10 +4,10 @@ import plugins.Spider.org.garret.perst.impl.StorageImpl;
 /**
  * Base class for all persistent capable objects
  */
-public class Persistent implements IPersistent, ICloneable 
-{ 
+public class Persistent implements IPersistent, ICloneable
+{
     public synchronized void load() {
-        if (oid != 0 && (state & RAW) != 0) { 
+        if (oid != 0 && (state & RAW) != 0) {
             storage.loadObject(this);
         }
     }
@@ -17,41 +17,41 @@ public class Persistent implements IPersistent, ICloneable
         modify();
     }
 
-    public final boolean isRaw() { 
+    public final boolean isRaw() {
         return (state & RAW) != 0;
-    } 
-    
-    public final boolean isModified() { 
+    }
+
+    public final boolean isModified() {
         return (state & DIRTY) != 0;
-    } 
-    
-    public final boolean isDeleted() { 
+    }
+
+    public final boolean isDeleted() {
         return (state & DELETED) != 0;
-    } 
-    
-    public final boolean isPersistent() { 
+    }
+
+    public final boolean isPersistent() {
         return oid != 0;
     }
-    
-    public void makePersistent(Storage storage) { 
-        if (oid == 0) { 
+
+    public void makePersistent(Storage storage) {
+        if (oid == 0) {
             storage.makePersistent(this);
         }
     }
 
     public void store() {
-        if ((state & RAW) != 0) { 
+        if ((state & RAW) != 0) {
             throw new StorageError(StorageError.ACCESS_TO_STUB);
         }
-        if (storage != null) { 
+        if (storage != null) {
             storage.storeObject(this);
             state &= ~DIRTY;
         }
     }
-  
-    public void modify() { 
-        if ((state & DIRTY) == 0 && oid != 0) { 
-            if ((state & RAW) != 0) { 
+
+    public void modify() {
+        if ((state & DIRTY) == 0 && oid != 0) {
+            if ((state & RAW) != 0) {
                 throw new StorageError(StorageError.ACCESS_TO_STUB);
             }
             Assert.that((state & DELETED) == 0);
@@ -62,7 +62,7 @@ public class Persistent implements IPersistent, ICloneable
 
     public Persistent() {}
 
-    public Persistent(Storage storage) { 
+    public Persistent(Storage storage) {
         this.storage = storage;
     }
 
@@ -70,8 +70,8 @@ public class Persistent implements IPersistent, ICloneable
         return oid;
     }
 
-    public void deallocate() { 
-        if (oid != 0) { 
+    public void deallocate() {
+        if (oid != 0) {
             storage.deallocateObject(this);
         }
     }
@@ -79,13 +79,13 @@ public class Persistent implements IPersistent, ICloneable
     public boolean recursiveLoading() {
         return true;
     }
-    
+
     public final Storage getStorage() {
         return storage;
     }
-    
-    public boolean equals(Object o) { 
-        if (oid == 0) { 
+
+    public boolean equals(Object o) {
+        if (oid == 0) {
             return super.equals(o);
         }
         return o instanceof IPersistent && ((IPersistent)o).getOid() == oid;
@@ -101,13 +101,13 @@ public class Persistent implements IPersistent, ICloneable
     public void onStore() {
     }
 
-    public void invalidate() { 
+    public void invalidate() {
         state &= ~DIRTY;
         state |= RAW;
     }
 
-    protected void finalize() { 
-        if ((state & DIRTY) != 0 && oid != 0) { 
+    protected void finalize() {
+        if ((state & DIRTY) != 0 && oid != 0) {
             storage.storeFinalizedObject(this);
         }
         state = DELETED;
@@ -121,22 +121,22 @@ public class Persistent implements IPersistent, ICloneable
     static private final int DIRTY = 2;
     static private final int DELETED = 4;
 
-    public void assignOid(Storage storage, int oid, boolean raw) { 
+    public void assignOid(Storage storage, int oid, boolean raw) {
         this.oid = oid;
         this.storage = storage;
-        if (raw) { 
+        if (raw) {
             state |= RAW;
-        } else { 
+        } else {
             state &= ~RAW;
-        }            
+        }
     }
 
-    protected void clearState() { 
+    protected void clearState() {
         state = 0;
         oid = 0;
     }
 
-    public Object clone() throws CloneNotSupportedException { 
+    public Object clone() throws CloneNotSupportedException {
         Persistent p = (Persistent)super.clone();
         p.oid = 0;
         p.state = 0;
@@ -150,7 +150,7 @@ public class Persistent implements IPersistent, ICloneable
 
     public void writeExternal(java.io.ObjectOutput s) throws java.io.IOException
     {
-        if (s instanceof StorageImpl.PersistentObjectOutputStream) { 
+        if (s instanceof StorageImpl.PersistentObjectOutputStream) {
             makePersistent(((StorageImpl.PersistentObjectOutputStream)s).getStorage());
         }
         s.writeInt(oid);

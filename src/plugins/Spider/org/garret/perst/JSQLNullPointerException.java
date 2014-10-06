@@ -13,13 +13,13 @@ package plugins.Spider.org.garret.perst;
 /**
  * Exception thown when null reference field is dereferenced
  */
-public class JSQLNullPointerException extends JSQLRuntimeException { 
+public class JSQLNullPointerException extends JSQLRuntimeException {
     /**
      * Constructor of exception
      * @param target class of the target object in which field was not found
      * @param fieldName name of the locate field
      */
-    public JSQLNullPointerException(Class target, String fieldName) { 
+    public JSQLNullPointerException(Class target, String fieldName) {
         super("Dereferencing null reference ", target, fieldName);
     }
 }

@@ -1,7 +1,7 @@
 package plugins.Spider.org.garret.perst.impl;
 
-public class GenericSort { 
-    static void sort(GenericSortArray arr) { 
+public class GenericSort {
+    static void sort(GenericSortArray arr) {
         sort1(arr, 0, arr.size());
     }
 

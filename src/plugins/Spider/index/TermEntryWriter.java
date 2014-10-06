@@ -29,7 +29,7 @@ public class TermEntryWriter {
     /*@Override**/ public void writeObject(TermEntry en, OutputStream os) throws IOException {
         writeObject(en, new DataOutputStream(os));
     }
-    
+
     public void writeObject(TermEntry en, DataOutputStream dos) throws IOException {
         dos.writeLong(TermEntry.serialVersionUID);
         TermEntry.EntryType type = en.entryType();

@@ -26,7 +26,7 @@ public class Config extends Persistent implements Cloneable {
     private short requestPriority;
 
     private boolean debug;
-    
+
     private int newFormatIndexBufferLimit;
 
     public Config() {
@@ -54,11 +54,11 @@ public class Config extends Persistent implements Cloneable {
                 ".mpg", ".ogg", ".ogv", ".mp3", ".avi", ".wv", ".swf", ".wmv", ".mkv", ".flac", ".ogm", ".divx", ".mpeg", ".rm", ".wma", ".asf", ".rmvb", ".mov", ".flv", ".mp4", ".m4v", ".wav", ".aac", ".cda", ".fla", ".m4a", ".midi", ".vob", // media
                 ".css", ".sig", ".gml", ".df", ".cbr", ".gf", ".pdf", ".db", ".dbf", ".accdb", ".dat", ".docx", ".dwg", ".mdf", ".odg", ".odt", ".ods", ".pps", ".wdb", ".xls", ".xlsx" // other
         };
-        
+
         badlistedKeywords = new String[] {}; // No excluded keywords by default.
 
         requestPriority = RequestStarter.IMMEDIATE_SPLITFILE_PRIORITY_CLASS;
-        
+
         newFormatIndexBufferLimit = 4;
 
         storage.makePersistent(this);
@@ -174,11 +174,11 @@ public class Config extends Persistent implements Cloneable {
         assert !isPersistent();
         this.badlistedExtensions = badlistedExtensions;
     }
-    
+
     public synchronized void setBadlistedKeywords(String[] badlistedKeywords) {
         this.badlistedKeywords = badlistedKeywords;
     }
-    
+
     public synchronized String[] getBadlistedKeywords() {
         if(badlistedKeywords == null) return new String[0];
         // FIXME remove - caused by config errors some time before 91346024428393592fc971bbcdec5f7ca5b4f055
@@ -208,11 +208,11 @@ public class Config extends Persistent implements Cloneable {
         assert !isPersistent();
         this.debug = debug;
     }
-    
+
     public synchronized int getNewFormatIndexBufferLimit() {
         return newFormatIndexBufferLimit;
     }
-    
+
     public synchronized void setNewFormatIndexBufferLimit(int limit) {
         newFormatIndexBufferLimit = limit;
     }

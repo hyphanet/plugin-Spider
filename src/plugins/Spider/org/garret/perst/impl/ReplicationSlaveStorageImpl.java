@@ -7,10 +7,10 @@ import plugins.Spider.org.garret.perst.*;
 
 
 public abstract class ReplicationSlaveStorageImpl extends StorageImpl implements ReplicationSlaveStorage, Runnable
-{ 
+{
     static final int REPL_CLOSE = -1;
     static final int REPL_SYNC  = -2;
-    
+
     public void open(IFile file, int pagePoolSize) {
         if (opened) {
             throw new StorageError(StorageError.STORAGE_ALREADY_OPENED);
@@ -22,11 +22,11 @@ public abstract class ReplicationSlaveStorageImpl extends StorageImpl implements
         done = new Object();
         commit = new Object();
         listening = true;
-        connect();        
+        connect();
         thread = new Thread(this);
         thread.start();
         waitSynchronizationCompletion();
-        waitInitializationCompletion(); 
+        waitInitializationCompletion();
         opened = true;
         beginThreadTransaction(REPLICATION_SLAVE_TRANSACTION);
         reloadScheme();
@@ -41,7 +41,7 @@ public abstract class ReplicationSlaveStorageImpl extends StorageImpl implements
     public boolean isConnected() {
         return socket != null;
     }
-    
+
     public void beginThreadTransaction(int mode)
     {
         if (mode != REPLICATION_SLAVE_TRANSACTION) {
@@ -57,31 +57,31 @@ public abstract class ReplicationSlaveStorageImpl extends StorageImpl implements
         usedSize = header.root[currIndex].size;
         objectCache.clear();
     }
-     
+
     public void endThreadTransaction(int maxDelay)
     {
         lock.unlock();
     }
 
     protected void waitSynchronizationCompletion() {
-        try { 
-            synchronized (sync) { 
-                while (outOfSync) { 
+        try {
+            synchronized (sync) {
+                while (outOfSync) {
                     sync.wait();
                 }
             }
-        } catch (InterruptedException x) { 
+        } catch (InterruptedException x) {
         }
     }
 
     protected void waitInitializationCompletion() {
-        try { 
-            synchronized (init) { 
-                while (!initialized) { 
+        try {
+            synchronized (init) {
+                while (!initialized) {
                     init.wait();
                 }
             }
-        } catch (InterruptedException x) { 
+        } catch (InterruptedException x) {
         }
     }
 
@@ -90,14 +90,14 @@ public abstract class ReplicationSlaveStorageImpl extends StorageImpl implements
      * This method blocks current thread until master node commits trasanction and
      * this transanction is completely delivered to this slave node
      */
-    public void waitForModification() { 
-        try { 
-            synchronized (commit) { 
-                if (socket != null) { 
+    public void waitForModification() {
+        try {
+            synchronized (commit) {
+                if (socket != null) {
                     commit.wait();
                 }
             }
-        } catch (InterruptedException x) { 
+        } catch (InterruptedException x) {
         }
     }
 
@@ -105,34 +105,34 @@ public abstract class ReplicationSlaveStorageImpl extends StorageImpl implements
     protected static final int DB_HDR_DIRTY_OFFSET       = 1;
     protected static final int DB_HDR_INITIALIZED_OFFSET = 2;
     protected static final int PAGE_DATA_OFFSET          = 8;
-    
+
     public static int LINGER_TIME = 10; // linger parameter for the socket
 
     /**
      * When overriden by base class this method perfroms socket error handling
-     * @return <code>true</code> if host should be reconnected and attempt to send data to it should be 
-     * repeated, <code>false</code> if no more attmpts to communicate with this host should be performed 
-     */     
-    public boolean handleError() 
+     * @return <code>true</code> if host should be reconnected and attempt to send data to it should be
+     * repeated, <code>false</code> if no more attmpts to communicate with this host should be performed
+     */
+    public boolean handleError()
     {
         return (listener != null) ? listener.replicationError(null) : false;
     }
 
     void connect()
     {
-        try { 
+        try {
             socket = getSocket();
             try {
                 socket.setSoLinger(true, LINGER_TIME);
             } catch (NoSuchMethodError er) {}
-            try { 
+            try {
                 socket.setTcpNoDelay(true);
             } catch (Exception x) {}
             in = socket.getInputStream();
-            if (replicationAck) { 
+            if (replicationAck) {
                 out = socket.getOutputStream();
             }
-        } catch (IOException x) { 
+        } catch (IOException x) {
             socket = null;
             in = null;
         }
@@ -142,83 +142,83 @@ public abstract class ReplicationSlaveStorageImpl extends StorageImpl implements
 
     void cancelIO() {}
 
-    public void run() { 
+    public void run() {
         byte[] buf = new byte[Page.pageSize+PAGE_DATA_OFFSET];
 
-        while (listening) { 
+        while (listening) {
             int offs = 0;
             do {
                 int rc;
-                try { 
+                try {
                     rc = in.read(buf, offs, buf.length - offs);
-                } catch (IOException x) { 
+                } catch (IOException x) {
                     rc = -1;
                 }
-                synchronized(done) { 
-                    if (!listening) { 
+                synchronized(done) {
+                    if (!listening) {
                         return;
                     }
                 }
-                if (rc < 0) { 
-                    if (handleError()) { 
+                if (rc < 0) {
+                    if (handleError()) {
                         connect();
-                    } else { 
+                    } else {
                         return;
                     }
-                } else { 
+                } else {
                     offs += rc;
                 }
             } while (offs < buf.length);
-            
+
             long pos = Bytes.unpack8(buf, 0);
             boolean transactionCommit = false;
-            if (pos == 0) { 
-                if (replicationAck) { 
-                    try { 
+            if (pos == 0) {
+                if (replicationAck) {
+                    try {
                         out.write(buf, 0, 1);
                     } catch (IOException x) {
                         handleError();
                     }
                 }
-                if (buf[PAGE_DATA_OFFSET + DB_HDR_CURR_INDEX_OFFSET] != prevIndex) { 
+                if (buf[PAGE_DATA_OFFSET + DB_HDR_CURR_INDEX_OFFSET] != prevIndex) {
                     prevIndex = buf[PAGE_DATA_OFFSET + DB_HDR_CURR_INDEX_OFFSET];
                     lock.exclusiveLock();
                     transactionCommit = true;
                 }
-            } else if (pos == REPL_SYNC) { 
-                synchronized(sync) { 
+            } else if (pos == REPL_SYNC) {
+                synchronized(sync) {
                     outOfSync = false;
                     sync.notify();
                 }
                 continue;
-            } else if (pos == REPL_CLOSE) { 
-                synchronized(commit) { 
+            } else if (pos == REPL_CLOSE) {
+                synchronized(commit) {
                     hangup();
                     commit.notifyAll();
-                }     
+                }
                 return;
             }
-            
+
             Page pg = pool.putPage(pos);
             System.arraycopy(buf, PAGE_DATA_OFFSET, pg.data, 0, Page.pageSize);
             pool.unfix(pg);
-            
-            if (pos == 0) { 
-                if (!initialized && buf[PAGE_DATA_OFFSET + DB_HDR_INITIALIZED_OFFSET] != 0) { 
-                    synchronized(init) { 
+
+            if (pos == 0) {
+                if (!initialized && buf[PAGE_DATA_OFFSET + DB_HDR_INITIALIZED_OFFSET] != 0) {
+                    synchronized(init) {
                         initialized = true;
                         init.notify();
                     }
                 }
-                if (transactionCommit) { 
+                if (transactionCommit) {
                     lock.unlock();
-                    synchronized(commit) { 
+                    synchronized(commit) {
                         commit.notifyAll();
                     }
                     pool.flush();
                 }
             }
-        }            
+        }
     }
 
     public void close() {
@@ -226,7 +226,7 @@ public abstract class ReplicationSlaveStorageImpl extends StorageImpl implements
             listening = false;
         }
         cancelIO();
-        try { 
+        try {
             thread.interrupt();
             thread.join();
         } catch (InterruptedException x) {}
@@ -237,11 +237,11 @@ public abstract class ReplicationSlaveStorageImpl extends StorageImpl implements
         super.close();
     }
 
-    protected void hangup() { 
-        if (socket != null) { 
-            try { 
+    protected void hangup() {
+        if (socket != null) {
+            try {
                 in.close();
-                if (out != null) { 
+                if (out != null) {
                     out.close();
                 }
                 socket.close();
@@ -251,7 +251,7 @@ public abstract class ReplicationSlaveStorageImpl extends StorageImpl implements
         }
     }
 
-    protected boolean isDirty() { 
+    protected boolean isDirty() {
         return false;
     }
 

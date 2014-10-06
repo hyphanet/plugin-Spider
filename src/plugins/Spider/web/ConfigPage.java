@@ -27,13 +27,13 @@ class ConfigPage implements WebPage {
 
     /*
      * (non-Javadoc)
-     * 
+     *
      * @see plugins.Spider.WebPage#processPostRequest(freenet.support.api.HTTPRequest,
      * freenet.support.HTMLNode)
      */
     public synchronized void processPostRequest(HTTPRequest request, HTMLNode contentNode) {
         config = spider.getConfig().clone();
-        
+
         if (request.isPartSet("maxParallelRequestsWorking")) {
             int v = request.getIntPart("maxParallelRequestsWorking", config.getMaxParallelRequestsWorking());
             config.setMaxParallelRequestsWorking(v);
@@ -98,22 +98,22 @@ class ConfigPage implements WebPage {
             String v = request.getPartAsString("newFormatBufferSize", 10);
             config.setNewFormatIndexBufferLimit(Integer.valueOf(v));
         }
-        
+
         spider.setConfig(config);
     }
 
     /*
      * (non-Javadoc)
-     * 
+     *
      * @see plugins.Spider.WebPage#writeContent(freenet.support.api.HTTPRequest,
      * freenet.support.HTMLNode)
      */
-    public void writeContent(HTTPRequest request, HTMLNode contentNode) {    
+    public void writeContent(HTTPRequest request, HTMLNode contentNode) {
         HTMLNode configContent = pageMaker.getInfobox("#", "Configuration", contentNode);
         HTMLNode configForm = pr.addFormChild(configContent, "", "configForm");
-    
+
         configForm.addChild("div", "class", "configprefix", "Spider Options");
-        
+
         HTMLNode spiderConfig = configForm.addChild("ul", "class", "config");
         addConfig(spiderConfig, //
                 "Max Parallel Requests (Working)", "Maximum number of parallel requests if we are in the working period.", //
@@ -140,50 +140,50 @@ class ConfigPage implements WebPage {
                 Integer.toString(config.getEndWorkingPeriod()));
 
         addConfig(spiderConfig, //
-                "Bad Listed Extensions", "Comma seprated list of banned URI suffix.", // 
+                "Bad Listed Extensions", "Comma seprated list of banned URI suffix.", //
                 "badListedExtensions", //
                 config.getBadlistedExtensions());
-        
+
         addConfig(spiderConfig, //
-                "Bad Listed Keywords", "Comma seprated list of banned URI keywords.", // 
+                "Bad Listed Keywords", "Comma seprated list of banned URI keywords.", //
                 "badListedKeywords", //
                 config.getBadlistedKeywords());
-        
+
         configForm.addChild("div", "class", "configprefix", "Index Writer Options");
-        
+
         HTMLNode indexConfig = configForm.addChild("ul", "class", "config");
         addConfig(indexConfig, //
-                "Index Title", "Index Title", // 
+                "Index Title", "Index Title", //
                 "indexTitle", config.getIndexTitle());
         addConfig(indexConfig, //
-                "Index Owner", "Index Owner", // 
+                "Index Owner", "Index Owner", //
                 "indexOwner", config.getIndexOwner());
         addConfig(indexConfig, //
-                "Index Owner Email", "Index Owner Email", // 
+                "Index Owner Email", "Index Owner Email", //
                 "indexOwnerEmail", config.getIndexOwnerEmail());
         addConfig(indexConfig, //
-                "Write debug info", "Write debug info", // 
+                "Write debug info", "Write debug info", //
                 "debug", //
                 new String[] { "false", "true" }, //
                 Boolean.toString(config.isDebug()));
         addConfig(indexConfig, //
-                "Buffer size for new format indexes (MB)", "In-memory buffer size for new format indexes. Probably a good idea for this to be fairly big, although we will use more memory than the limit given.", // 
+                "Buffer size for new format indexes (MB)", "In-memory buffer size for new format indexes. Probably a good idea for this to be fairly big, although we will use more memory than the limit given.", //
                 "newFormatBufferSize", //
                 new String[] { "0", "1", "2", "4", "8", "16", "32", "64", "128" }, //
-                Integer.toString(config.getNewFormatIndexBufferLimit()));        
-        
+                Integer.toString(config.getNewFormatIndexBufferLimit()));
+
         configForm.addChild("input", //
                 new String[] { "type", "value" }, //
                 new String[] { "submit", "Apply" });
     }
 
-    
+
     private void addHTML(HTMLNode configUi, String shortDesc, HTMLNode node) {
         HTMLNode li = configUi.addChild("li");
         li.addChild("span", "class", "configshortdesc", shortDesc);
         li.addChild("span", "class", "config").addChild(node);
     }
-    
+
     private void addConfig(HTMLNode configUi, String shortDesc, String longDesc, String name, String value) {
         HTMLNode li = configUi.addChild("li");
         li.addChild("span","class","configshortdesc", shortDesc);
@@ -193,7 +193,7 @@ class ConfigPage implements WebPage {
                         new String[] { "config", "text", name, value });
         li.addChild("span", "class", "configlongdesc", longDesc);
     }
-    
+
     private void addConfig(HTMLNode configUi, String shortDesc, String longDesc, String name, String[] values,
             String value) {
         HTMLNode li = configUi.addChild("li");
@@ -209,7 +209,7 @@ class ConfigPage implements WebPage {
         }
         li.addChild("span", "class", "configlongdesc", longDesc);
     }
-    
+
     private void addConfig(HTMLNode configUi, String shortDesc, String longDesc, String name, String[] value) {
         StringBuilder value2 = new StringBuilder();
         if(value.length > 0) {

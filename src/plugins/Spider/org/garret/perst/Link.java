@@ -13,18 +13,18 @@ import java.util.*;
  */
 public interface Link<T extends IPersistent> extends ITable<T>, List<T>, RandomAccess {
     /**
-     * Get number of the linked objects 
+     * Get number of the linked objects
      * @return the number of related objects
      */
     public int size();
-    
+
     /**
-     * Set number of the linked objects 
-     * @param newSize new number of linked objects (if it is greater than original number, 
+     * Set number of the linked objects
+     * @param newSize new number of linked objects (if it is greater than original number,
      * than extra elements will be set to null)
      */
     public void setSize(int newSize);
-    
+
     /**
      * Returns <tt>true</tt> if there are no related object
      *
@@ -51,7 +51,7 @@ public interface Link<T extends IPersistent> extends ITable<T>, List<T>, RandomA
     /**
      * Replace i-th element of the relation
      * @param i index in the relartion
-     * @param obj object to be included in the relation     
+     * @param obj object to be included in the relation
      * @return the element previously at the specified position.
      */
     public T set(int i, T obj);
@@ -61,13 +61,13 @@ public interface Link<T extends IPersistent> extends ITable<T>, List<T>, RandomA
      * Unlike Link.set methos this method doesn't return previous value of the element
      * and so is faster if previous element value is not needed (it has not to be fetched from the database)
      * @param i index in the relartion
-     * @param obj object to be included in the relation     
+     * @param obj object to be included in the relation
      */
     public void setObject(int i, T obj);
 
     /**
      * Remove object with specified index from the relation
-     * Unlike Link.remove methos this method doesn't return removed element and so is faster 
+     * Unlike Link.remove methos this method doesn't return removed element and so is faster
      * if it is not needed (it has not to be fetched from the database)
      * @param i index in the relartion
      */
@@ -98,7 +98,7 @@ public interface Link<T extends IPersistent> extends ITable<T>, List<T>, RandomA
      * @param arr array of obects which should be added to the relation
      */
     public void addAll(T[] arr);
-    
+
     /**
      * Add specified elements of the array to the relation
      * @param arr array of obects which should be added to the relation
@@ -114,23 +114,23 @@ public interface Link<T extends IPersistent> extends ITable<T>, List<T>, RandomA
     public boolean addAll(Link<T> link);
 
    /**
-     * Return array with relation members. Members are not loaded and 
-     * size of the array can be greater than actual number of members. 
+     * Return array with relation members. Members are not loaded and
+     * size of the array can be greater than actual number of members.
      * @return array of object with relation members used in implementation of Link class
      */
-    public IPersistent[] toRawArray(); 
+    public IPersistent[] toRawArray();
 
     /**
      * Get relation members as array of object
      * @return array of object with relation members
      */
     public IPersistent[] toPersistentArray();
-    
+
     /**
      * Get all relation members as array.
-     * The runtime type of the returned array is that of the specified array.  
-     * If the index fits in the specified array, it is returned therein.  
-     * Otherwise, a new array is allocated with the runtime type of the 
+     * The runtime type of the returned array is that of the specified array.
+     * If the index fits in the specified array, it is returned therein.
+     * Otherwise, a new array is allocated with the runtime type of the
      * specified array and the size of this index.<p>
      *
      * If this index fits in the specified array with room to spare
@@ -155,7 +155,7 @@ public interface Link<T extends IPersistent> extends ITable<T>, List<T>, RandomA
      * More formally, returns <tt>true</tt> if and only if this
      * collection contains at least one element <tt>e</tt> such that
      * <tt>(obj==null ? e==null : obj.equals(e))</tt>.<p>
-     * @param obj object to be searched in the index. Object should contain indexed field. 
+     * @param obj object to be searched in the index. Object should contain indexed field.
      * @return <code>true</code> if collection contains object equals to the specified
      */
     public boolean contains(Object obj);
@@ -169,7 +169,7 @@ public interface Link<T extends IPersistent> extends ITable<T>, List<T>, RandomA
     public boolean containsElement(int i, T obj);
 
     /**
-     * Get index of the specified object instance in the relation. 
+     * Get index of the specified object instance in the relation.
      * This method use comparison by object identity (instead of equals() method) and
      * is significantly faster than List.indexOf() method
      * @param obj specified object instance
@@ -199,21 +199,21 @@ public interface Link<T extends IPersistent> extends ITable<T>, List<T>, RandomA
     public Iterator<T> iterator();
 
     /**
-     * Replace all direct references to linked objects with stubs. 
-     * This method is needed tyo avoid memory exhaustion in case when 
+     * Replace all direct references to linked objects with stubs.
+     * This method is needed tyo avoid memory exhaustion in case when
      * there is a large numebr of objectys in databasse, mutually
-     * refefencing each other (each object can directly or indirectly 
+     * refefencing each other (each object can directly or indirectly
      * be accessed from other objects).
      */
     public void unpin();
-     
+
     /**
      * Replace references to elements with direct references.
      * It will impove spped of manipulations with links, but it can cause
      * recursive loading in memory large number of objects and as a result - memory
      * overflow, because garbage collector will not be able to collect them
      */
-    public void pin();     
+    public void pin();
 }
 
 

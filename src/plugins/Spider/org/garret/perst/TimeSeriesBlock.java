@@ -5,13 +5,13 @@ package plugins.Spider.org.garret.perst;
  * Progammer has to define its own block class derived from this class
  * containign array of time series elements and providing getTicks()
  * method to access this array. It is better no to initialize this array in constructor
- * (because it will be also used when block will be loaded from the disk), 
+ * (because it will be also used when block will be loaded from the disk),
  * but check in getTicks() method that array is null, and if so - create new array.
  */
-public abstract class TimeSeriesBlock extends Persistent { 
+public abstract class TimeSeriesBlock extends Persistent {
     public long timestamp;
     public int  used;
-    
+
     /**
      * Get time series elements stored in this block.
      * @return preallocated array of time series element. Only <code>used</code>

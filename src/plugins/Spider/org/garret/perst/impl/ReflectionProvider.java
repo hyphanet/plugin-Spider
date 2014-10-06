@@ -2,13 +2,13 @@ package plugins.Spider.org.garret.perst.impl;
 
 import  java.lang.reflect.*;
 
-public interface ReflectionProvider { 
+public interface ReflectionProvider {
     Constructor getDefaultConstructor(Class cls) throws Exception;
 
     void setInt(Field field, Object object, int value) throws Exception;
 
     void setLong(Field field, Object object, long value) throws Exception;
-    
+
     void setShort(Field field, Object object, short value) throws Exception;
 
     void setChar(Field field, Object object, char value) throws Exception;

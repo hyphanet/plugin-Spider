@@ -70,12 +70,12 @@ import freenet.support.io.NullBucket;
 import freenet.support.io.NullBucketFactory;
 
 /**
- * Spider. Produces xml index for searching words. 
+ * Spider. Produces xml index for searching words.
  * In case the size of the index grows up a specific threshold the index is split into several subindices.
  * The indexing key is the md5 hash of the word.
- * 
+ *
  *  @author swati goyal
- *  
+ *
  */
 public class Spider implements FredPlugin, FredPluginThreadless,
         FredPluginVersioned, FredPluginRealVersioned, FredPluginL10n, USKCallback, RequestClient {
@@ -84,7 +84,7 @@ public class Spider implements FredPlugin, FredPluginThreadless,
     protected Map<Page, ClientGetter> runningFetch = Collections.synchronizedMap(new HashMap<Page, ClientGetter>());
 
     /**
-     * Lists the allowed mime types of the fetched page. 
+     * Lists the allowed mime types of the fetched page.
      */
     protected Set<String> allowedMIMETypes;
 
@@ -96,7 +96,7 @@ public class Spider implements FredPlugin, FredPluginThreadless,
     public String getVersion() {
         return version + "(" + dbVersion + ") r" + Version.getSvnRevision();
     }
-    
+
     public long getRealVersion() {
         return version;
     }
@@ -106,19 +106,19 @@ public class Spider implements FredPlugin, FredPluginThreadless,
     private boolean stopped = true;
 
     private NodeClientCore core;
-    private PageMaker pageMaker;    
+    private PageMaker pageMaker;
     private PluginRespirator pr;
 
     private LibraryBuffer librarybuffer;
-    
+
     public int getLibraryBufferSize() {
         return librarybuffer.bufferUsageEstimate();
     }
-    
+
     public long getStalledTime() {
         return librarybuffer.getTimeStalled();
     }
-    
+
     public long getNotStalledTime() {
         return librarybuffer.getTimeNotStalled();
     }
@@ -136,7 +136,7 @@ public class Spider implements FredPlugin, FredPluginThreadless,
         getRoot().setConfig(config); // hack -- may cause race condition. but this is more user friendly
         callbackExecutor.execute(new SetConfigCallback(config));
     }
-    
+
     /**
      * Adds the found uri to the list of to-be-retrieved uris. <p>Every usk uri added as ssk.
      * @param uri the new uri that needs to be fetched for further indexing
@@ -149,7 +149,7 @@ public class Spider implements FredPlugin, FredPluginThreadless,
                 return; // be smart
             }
         }
-        
+
         for(String keyword : getRoot().getConfig().getBadlistedKeywords()) {
             if(lowerCaseURI.indexOf(keyword.toLowerCase()) != -1) {
                 return; // Fascist keyword exclusion feature. Off by default!
@@ -179,7 +179,7 @@ public class Spider implements FredPlugin, FredPluginThreadless,
             db.endThreadTransaction();
             dbTransactionEnded = true;
         } catch (RuntimeException e) {
-            Logger.error(this, "Runtime Exception: " + e, e);        
+            Logger.error(this, "Runtime Exception: " + e, e);
             throw e;
         } finally {
             if (!dbTransactionEnded) {
@@ -214,7 +214,7 @@ public class Spider implements FredPlugin, FredPluginThreadless,
                         Page page = it.next();
                         // Skip if getting this page already
                         if (runningFetch.containsKey(page)) continue;
-                        
+
                         try {
                             ClientGetter getter = makeGetter(page);
 
@@ -387,7 +387,7 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 
     /**
      * Processes the successfully fetched uri for further outlinks.
-     * 
+     *
      * @param result
      * @param state
      * @param page
@@ -395,9 +395,9 @@ public class Spider implements FredPlugin, FredPluginThreadless,
     // single threaded
     protected void onSuccess(FetchResult result, ClientGetter state, Page page) {
         synchronized (this) {
-            if (stopped) return;                    
+            if (stopped) return;
         }
-        
+
         FreenetURI uri = state.getURI();
         ClientMetadata cm = result.getMetadata();
         Bucket data = result.asBucket();
@@ -464,7 +464,7 @@ public class Spider implements FredPlugin, FredPluginThreadless,
             Logger.minor(this, "Filtered " + uri + " : " + page.getId());
         } catch (RuntimeException e) {
             // other runtime exceptions
-            Logger.error(this, "Runtime Exception: " + e, e);        
+            Logger.error(this, "Runtime Exception: " + e, e);
             throw e;
         } finally {
             try {
@@ -525,7 +525,7 @@ public class Spider implements FredPlugin, FredPluginThreadless,
         }
 
         startSomeRequests();
-    } 
+    }
 
     private boolean garbageCollecting = false;
 
@@ -550,9 +550,9 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 
         try { callbackExecutor.awaitTermination(30, TimeUnit.SECONDS); } catch (InterruptedException e) {}
         try { db.close(); } catch (Exception e) {}
-        
+
         webInterface.unload();
-        
+
         Logger.normal(this, "Spider terminated");
     }
 
@@ -652,7 +652,7 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 
             if ("title".equalsIgnoreCase(type) && (s != null) && (s.length() != 0) && (s.indexOf('\n') < 0)) {
                 /*
-                 * title of the page 
+                 * title of the page
                  */
                 page.setPageTitle(s);
                 title = s;
@@ -664,7 +664,7 @@ public class Spider implements FredPlugin, FredPluginThreadless,
             // accurate word index numbers.
             SearchTokenizer tok = new SearchTokenizer(s, false);
 
-            if(lastPosition == null) lastPosition = 1; 
+            if(lastPosition == null) lastPosition = 1;
             int i = 0;
             for (String word: tok) {
                 totalWords++;
@@ -676,7 +676,7 @@ public class Spider implements FredPlugin, FredPluginThreadless,
                 } catch (Exception e) {
                     // If a word fails continue
                     Logger.error(this, "Word failed: "+e, e);
-                } 
+                }
                 i++;
             }
 
@@ -684,7 +684,7 @@ public class Spider implements FredPlugin, FredPluginThreadless,
                 lastPosition = lastPosition + i;
             }
         }
-        
+
         void finish() {
             for (TermPageEntry termPageEntry : tpes.values()) {
                 if(title != null)
@@ -739,10 +739,10 @@ public class Spider implements FredPlugin, FredPluginThreadless,
             short codec, byte[] data, boolean newKnownGood, boolean newSlotToo) {
         FreenetURI uri = key.getURI();
         /*-
-         * FIXME this code don't make sense 
+         * FIXME this code don't make sense
          *  (1) runningFetchesByURI contain SSK, not USK
          *  (2) onFoundEdition always have the edition set
-         *  
+         *
         if(runningFetchesByURI.containsKey(uri)) runningFetchesByURI.remove(uri);
         uri = key.getURI().setSuggestedEdition(l);
          */

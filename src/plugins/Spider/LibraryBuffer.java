@@ -26,7 +26,7 @@ import plugins.Spider.org.garret.perst.Storage;
  * Buffer which stores TermPageEntrys as they are found by the Spider. When the
  * buffer's estimated size gets up to bufferMax, the buffer is serialized into a
  * Bucket and sent to the Library
- * 
+ *
  *
  * @author MikeB
  */
@@ -47,7 +47,7 @@ public class LibraryBuffer implements FredPluginTalker {
     private int bufferMax;
 
     static final File SAVE_FILE = new File("spider.saved.data");
-    
+
     /** For resetPages */
     private Spider spider;
 
@@ -73,7 +73,7 @@ public class LibraryBuffer implements FredPluginTalker {
         }
         if(push) sendBuffer();
     }
-    
+
     /**
      * Increments the estimate by specified amount.
      * @param increment
@@ -81,17 +81,17 @@ public class LibraryBuffer implements FredPluginTalker {
     private synchronized void increaseEstimate(int increment) {
         bufferUsageEstimate += increment;
     }
-    
+
     public synchronized int bufferUsageEstimate() {
         return bufferUsageEstimate;
     }
-    
+
 
     LibraryBuffer(PluginRespirator pr, Spider spider) {
         this.pr = pr;
         this.spider = spider;
     }
-    
+
     public void start() {
         // Do in a transaction so it gets committed separately.
         spider.db.beginThreadTransaction(Storage.EXCLUSIVE_TRANSACTION);
@@ -114,7 +114,7 @@ public class LibraryBuffer implements FredPluginTalker {
                     // FIXME throw something instead???
                 } catch (InterruptedException e) {
                     // Ignore
-                } 
+                }
         }
         TermPageEntry exTPE = termPageBuffer.get(newTPE);
         if(exTPE==null) {    // TPE is new
@@ -133,7 +133,7 @@ public class LibraryBuffer implements FredPluginTalker {
     synchronized void setTitle(TermPageEntry termPageEntry, String s) {
         get(termPageEntry).title = s;
     }
-    
+
     synchronized void setRelevance(TermPageEntry termPageEntry, float f) {
         get(termPageEntry).rel = f;
     }
@@ -184,7 +184,7 @@ public class LibraryBuffer implements FredPluginTalker {
             System.out.println("Restored data from last time from "+SAVE_FILE);
         }
     }
-    
+
     private synchronized Bucket writeToPush(long totalPagesIndexed, Bucket bucket) throws IOException {
         OutputStream os = bucket.getOutputStream();
         SimpleFieldSet meta = new SimpleFieldSet(true); // Stored with data to make things easier.
@@ -221,11 +221,11 @@ public class LibraryBuffer implements FredPluginTalker {
         }
 
     }
-    
+
     public long getTimeStalled() {
         return timeStalled;
     }
-    
+
     public long getTimeNotStalled() {
         return timeNotStalled;
     }
@@ -307,5 +307,5 @@ public class LibraryBuffer implements FredPluginTalker {
             return lastURI;
         }
     }
-    
+
 }

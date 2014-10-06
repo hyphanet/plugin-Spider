@@ -32,10 +32,10 @@ public class Page extends Persistent implements Comparable<Page> {
         this.comment = comment;
         this.status = Status.QUEUED;
         this.lastChange = System.currentTimeMillis();
-        
+
         storage.makePersistent(this);
     }
-    
+
     public synchronized void setStatus(Status status) {
         preModify();
         this.status = status;
@@ -51,7 +51,7 @@ public class Page extends Persistent implements Comparable<Page> {
         this.comment = comment;
         postModify();
     }
-    
+
     public String getComment() {
         return comment;
     }
@@ -59,11 +59,11 @@ public class Page extends Persistent implements Comparable<Page> {
     public String getURI() {
         return uri;
     }
-    
+
     public long getId() {
         return id;
     }
-    
+
     public void setPageTitle(String pageTitle) {
         preModify();
         this.pageTitle = pageTitle;
@@ -101,7 +101,7 @@ public class Page extends Persistent implements Comparable<Page> {
     public int compareTo(Page o) {
         return new Long(id).compareTo(o.id);
     }
-    
+
     private void preModify() {
         Storage storage = getStorage();
 
@@ -127,7 +127,7 @@ public class Page extends Persistent implements Comparable<Page> {
 
     private void postModify() {
         lastChange = System.currentTimeMillis();
-        
+
         modify();
 
         Storage storage = getStorage();

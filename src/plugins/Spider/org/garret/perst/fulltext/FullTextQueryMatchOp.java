@@ -24,18 +24,18 @@ public class FullTextQueryMatchOp extends FullTextQuery
     /**
      * Query node visitor.
      */
-    public void visit(FullTextQueryVisitor visitor) { 
+    public void visit(FullTextQueryVisitor visitor) {
         visitor.visit(this);
     }
 
     /**
      * Match node provides query constraint
      */
-    public boolean isConstrained() { 
+    public boolean isConstrained() {
         return true;
     }
 
-    public String toString() { 
+    public String toString() {
         return op == MATCH ? word : '"' + word + '"';
     }
 
@@ -46,9 +46,9 @@ public class FullTextQueryMatchOp extends FullTextQuery
      * @param word searched word
      * @param pos position of word in the query
      */
-    public FullTextQueryMatchOp(int op, String word, int pos) { 
+    public FullTextQueryMatchOp(int op, String word, int pos) {
         super(op);
         this.word = word;
         this.pos = pos;
     }
-}    
+}

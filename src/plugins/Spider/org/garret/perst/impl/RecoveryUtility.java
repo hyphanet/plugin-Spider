@@ -18,28 +18,28 @@ public class RecoveryUtility
        System.out.println(prefix + "classDescList=" + page.classDescList);
        System.out.println(prefix + "bitmapExtent=" + page.bitmapExtent);
     }
-        
-            
+
+
 
     public static void main(String args[]) throws Exception
     {
-        if (args.length == 0) { 
+        if (args.length == 0) {
             System.err.println("Usage: java RecoveryUtility FILE-PATH [CURRENT]");
             return;
         }
         String filePath = args[0];
-        IFile file = filePath.startsWith("@") 
+        IFile file = filePath.startsWith("@")
             ? (IFile)new MultiFile(filePath.substring(1), false, false)
-            : (IFile)new OSFile(filePath, false, false);      
+            : (IFile)new OSFile(filePath, false, false);
         byte[] buf = new byte[Header.sizeof];
         int rc = file.read(0, buf);
-        if (rc > 0 && rc < Header.sizeof) { 
+        if (rc > 0 && rc < Header.sizeof) {
             System.err.println("Failed to read database header: rc=" + rc);
             return;
         }
         Header header = new Header();
         header.unpack(buf);
-        if (header.curr < 0 || header.curr > 1) { 
+        if (header.curr < 0 || header.curr > 1) {
             System.err.println("Database header was corrupted, header.curr=" + header.curr);
         }
         System.out.println("curr=" + header.curr);
@@ -48,7 +48,7 @@ public class RecoveryUtility
         System.out.println("transactionId=" + header.transactionId);
         printIndex("index[0].", header.root[0]);
         printIndex("index[1].", header.root[1]);
-        if (args.length > 1) { 
+        if (args.length > 1) {
             header.curr = Integer.parseInt(args[1]);
             header.dirty = true;
             header.pack(buf);

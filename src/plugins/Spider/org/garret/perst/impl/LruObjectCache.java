@@ -3,7 +3,7 @@ import plugins.Spider.org.garret.perst.*;
 
 import  java.lang.ref.*;
 
-public class LruObjectCache implements OidHashTable { 
+public class LruObjectCache implements OidHashTable {
     Entry table[];
     static final float loadFactor = 0.75f;
     static final int defaultInitSize = 1319;
@@ -44,28 +44,28 @@ public class LruObjectCache implements OidHashTable {
         return false;
     }
 
-    protected Reference createReference(Object obj) { 
+    protected Reference createReference(Object obj) {
         return new WeakReference(obj);
     }
 
-    private final void unpinObject(Entry e) 
+    private final void unpinObject(Entry e)
     {
-        if (e.pin != null) { 
+        if (e.pin != null) {
             e.unpin();
             nPinned -= 1;
         }
     }
-        
 
-    private final void pinObject(Entry e, IPersistent obj) 
-    { 
-        if (pinLimit != 0) { 
-            if (e.pin != null) { 
+
+    private final void pinObject(Entry e, IPersistent obj)
+    {
+        if (pinLimit != 0) {
+            if (e.pin != null) {
                 e.unlink();
-            } else { 
+            } else {
                 if (nPinned == pinLimit) {
                     pinList.lru.unpin();
-                } else { 
+                } else {
                     nPinned += 1;
                 }
             }
@@ -73,7 +73,7 @@ public class LruObjectCache implements OidHashTable {
         }
     }
 
-    public synchronized void put(int oid, IPersistent obj) { 
+    public synchronized void put(int oid, IPersistent obj) {
         Reference ref = createReference(obj);
         Entry tab[] = table;
         int index = (oid & 0x7FFFFFFF) % tab.length;
@@ -89,8 +89,8 @@ public class LruObjectCache implements OidHashTable {
             rehash();
             tab = table;
             index = (oid & 0x7FFFFFFF) % tab.length;
-        } 
-        
+        }
+
         // Creates the new entry.
         tab[index] = new Entry(oid, ref, tab[index]);
         pinObject(tab[index], obj);
@@ -98,18 +98,18 @@ public class LruObjectCache implements OidHashTable {
     }
 
     public IPersistent get(int oid) {
-        while (true) { 
-            cs:synchronized(this) { 
+        while (true) {
+            cs:synchronized(this) {
                 Entry tab[] = table;
                 int index = (oid & 0x7FFFFFFF) % tab.length;
                 for (Entry e = tab[index]; e != null; e = e.next) {
                     if (e.oid == oid) {
                         IPersistent obj = (IPersistent)e.ref.get();
-                        if (obj == null) { 
-                            if (e.dirty != 0) { 
+                        if (obj == null) {
+                            if (e.dirty != 0) {
                                 break cs;
                             }
-                        } else  { 
+                        } else  {
                             if (obj.isDeleted()) {
                                 e.ref.clear();
                                 unpinObject(e);
@@ -123,33 +123,33 @@ public class LruObjectCache implements OidHashTable {
                 return null;
             }
             runtime.runFinalization();
-        } 
+        }
     }
-    
+
     public void flush() {
-        while (true) { 
-          cs:synchronized(this) { 
+        while (true) {
+          cs:synchronized(this) {
                 flushing = true;
-                for (int i = 0; i < table.length; i++) { 
+                for (int i = 0; i < table.length; i++) {
                     Entry e, next, prev;
-                    for (e = table[i], prev = null; e != null; e = next) { 
+                    for (e = table[i], prev = null; e != null; e = next) {
                         IPersistent obj = (IPersistent)e.ref.get();
                         next = e.next;
-                        if (obj != null) { 
-                            if (obj.isModified()) { 
+                        if (obj != null) {
+                            if (obj.isModified()) {
                                 obj.store();
                             }
                             prev = e;
-                        } else if (e.dirty != 0) { 
+                        } else if (e.dirty != 0) {
                             break cs;
-                        } else { 
+                        } else {
                             count -= 1;
                             e.clear();
-                            if (prev == null) { 
+                            if (prev == null) {
                                 table[i] = next;
-                            } else { 
+                            } else {
                                 prev.next = next;
-                            }                            
+                            }
                         }
                     }
                 }
@@ -165,18 +165,18 @@ public class LruObjectCache implements OidHashTable {
     }
 
     public void invalidate() {
-        while (true) { 
-            cs:synchronized(this) { 
-                for (int i = 0; i < table.length; i++) { 
-                    for (Entry e = table[i]; e != null; e = e.next) { 
+        while (true) {
+            cs:synchronized(this) {
+                for (int i = 0; i < table.length; i++) {
+                    for (Entry e = table[i]; e != null; e = e.next) {
                         IPersistent obj = (IPersistent)e.ref.get();
-                        if (obj != null) { 
-                            if (obj.isModified()) { 
+                        if (obj != null) {
+                            if (obj.isModified()) {
                                 e.dirty = 0;
                                 unpinObject(e);
                                 obj.invalidate();
                             }
-                        } else if (e.dirty != 0) { 
+                        } else if (e.dirty != 0) {
                             break cs;
                         }
                     }
@@ -193,7 +193,7 @@ public class LruObjectCache implements OidHashTable {
 
     public synchronized void clear() {
         Entry tab[] = table;
-        for (int i = 0; i < tab.length; i++) { 
+        for (int i = 0; i < tab.length; i++) {
             tab[i] = null;
         }
         count = 0;
@@ -207,23 +207,23 @@ public class LruObjectCache implements OidHashTable {
         int i;
         for (i = oldCapacity; --i >= 0;) {
             Entry e, next, prev;
-            for (prev = null, e = oldMap[i]; e != null; e = next) { 
+            for (prev = null, e = oldMap[i]; e != null; e = next) {
                 next = e.next;
                 IPersistent obj = (IPersistent)e.ref.get();
-                if ((obj == null || obj.isDeleted()) && e.dirty == 0) { 
+                if ((obj == null || obj.isDeleted()) && e.dirty == 0) {
                     count -= 1;
                     e.clear();
-                    if (prev == null) { 
+                    if (prev == null) {
                         oldMap[i] = next;
-                    } else { 
+                    } else {
                         prev.next = next;
                     }
-                } else { 
+                } else {
                     prev = e;
                 }
             }
         }
-        
+
         if (count <= (threshold >>> 1)) {
             return;
         }
@@ -263,7 +263,7 @@ public class LruObjectCache implements OidHashTable {
         int index = (oid & 0x7FFFFFFF) % tab.length;
         for (Entry e = tab[index] ; e != null ; e = e.next) {
             if (e.oid == oid) {
-                if (e.dirty > 0) { 
+                if (e.dirty > 0) {
                     e.dirty -= 1;
                 }
                 return;
@@ -271,11 +271,11 @@ public class LruObjectCache implements OidHashTable {
         }
     }
 
-    public int size() { 
+    public int size() {
         return count;
     }
 
-    static class Entry { 
+    static class Entry {
         Entry       next;
         Reference   ref;
         int         oid;
@@ -284,18 +284,18 @@ public class LruObjectCache implements OidHashTable {
         Entry       mru;
         IPersistent pin;
 
-        void unlink() { 
+        void unlink() {
             lru.mru = mru;
             mru.lru = lru;
-        } 
+        }
 
-        void unpin() { 
+        void unpin() {
             unlink();
             lru = mru = null;
             pin = null;
         }
 
-        void linkAfter(Entry head, IPersistent obj) { 
+        void linkAfter(Entry head, IPersistent obj) {
             mru = head.mru;
             mru.lru = this;
             head.mru = this;
@@ -303,14 +303,14 @@ public class LruObjectCache implements OidHashTable {
             pin = obj;
         }
 
-        void clear() { 
+        void clear() {
             ref.clear();
             ref = null;
             dirty = 0;
             next = null;
         }
 
-        Entry(int oid, Reference ref, Entry chain) { 
+        Entry(int oid, Reference ref, Entry chain) {
             next = chain;
             this.oid = oid;
             this.ref = ref;

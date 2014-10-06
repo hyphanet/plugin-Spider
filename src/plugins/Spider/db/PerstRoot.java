@@ -42,7 +42,7 @@ public class PerstRoot extends Persistent {
 
         return root;
     }
-    
+
     public Page getPageByURI(FreenetURI uri, boolean create, String comment) {
         idPage.exclusiveLock();
         uriPage.exclusiveLock();
@@ -107,7 +107,7 @@ public class PerstRoot extends Persistent {
         FieldIndex<Page> index = getPageIndex(status);
         index.unlock();
     }
-    
+
     public Iterator<Page> getPages(Status status) {
         FieldIndex<Page> index = getPageIndex(status);
         index.sharedLock();
@@ -128,7 +128,7 @@ public class PerstRoot extends Persistent {
         }
     }
 
-    public synchronized void setConfig(Config config) {        
+    public synchronized void setConfig(Config config) {
         this.config = config;
         modify();
     }

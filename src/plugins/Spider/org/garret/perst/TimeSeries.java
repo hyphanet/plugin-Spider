@@ -6,11 +6,11 @@ import java.util.*;
  * <p>
  * Time series interface. Time series class is used for efficient
  * handling of time series data. Ussually time series contains a very large number
- * if relatively small elements which are ussually acessed in sucessive order. 
- * To avoid overhead of loading from the disk each particular time series element, 
- * this class group several subsequent time series elements together and store them 
+ * if relatively small elements which are ussually acessed in sucessive order.
+ * To avoid overhead of loading from the disk each particular time series element,
+ * this class group several subsequent time series elements together and store them
  * as single object (block).
- * </p><p> 
+ * </p><p>
  * As far as Java currently has no templates and
  * Perst need to know format of block class, it is responsibity of prgorammer
  * to create block implementation derived from TimeSeries.Block class
@@ -18,29 +18,29 @@ import java.util.*;
  * the size of the block.
  * </p>
  */
-public interface TimeSeries<T extends TimeSeries.Tick> extends IPersistent, IResource, ITable<T> { 
+public interface TimeSeries<T extends TimeSeries.Tick> extends IPersistent, IResource, ITable<T> {
     /**
      * Interface for timeseries element.
      * You should derive your time series element from this class
      * and implement getTime method.
      */
-    public interface Tick extends IValue { 
+    public interface Tick extends IValue {
         /**
          * Get time series element timestamp
          * @return timestamp in milliseconds
          */
         long getTime();
     }
-    
+
     /**
      * Abstract base class for time series block.
      * Progammer has to define its own block class derived from this class
      * containign array of time series elements and providing getTicks()
      * method to access this array. It is better no to initialize this array in constructor
-     * (because it will be also used when block will be loaded from the disk), 
+     * (because it will be also used when block will be loaded from the disk),
      * but check in getTicks() method that array is null, and if so - create new array.
      */
-    public static abstract class Block extends Persistent { 
+    public static abstract class Block extends Persistent {
         public long timestamp;
         public int  used;
 
@@ -57,7 +57,7 @@ public interface TimeSeries<T extends TimeSeries.Tick> extends IPersistent, IRes
      * Add new tick to time series
      * @param tick new time series element
      */
-    boolean add(T tick);    
+    boolean add(T tick);
 
     /**
      * Get list of alements in the time series (in ascending order)
@@ -69,7 +69,7 @@ public interface TimeSeries<T extends TimeSeries.Tick> extends IPersistent, IRes
      * Get forward iterator through all time series elements
      * This iterator doesn't support remove() method. It is not possible to modify
      * time series during iteration.
-     * @return forward iterator 
+     * @return forward iterator
      */
     Iterator<T> iterator();
 
@@ -77,9 +77,9 @@ public interface TimeSeries<T extends TimeSeries.Tick> extends IPersistent, IRes
      * Get forward iterator for time series elements belonging to the specified range
      * This iterator doesn't support remove() method. It is not possible to modify
      * time series during iteration.
-     * @param from inclusive time of the begging of interval, 
+     * @param from inclusive time of the begging of interval,
      * if null then take all elements from the beginning of time series
-     * @param till inclusive time of the ending of interval, 
+     * @param till inclusive time of the ending of interval,
      * if null then take all elements till the end of time series
      * @return forward iterator within specified range.
      */
@@ -98,9 +98,9 @@ public interface TimeSeries<T extends TimeSeries.Tick> extends IPersistent, IRes
      * Get forward iterator for time series elements belonging to the specified range
      * This iterator doesn't support remove() method. It is not possible to modify
      * time series during iteration.
-     * @param from inclusive time of the begging of interval, 
+     * @param from inclusive time of the begging of interval,
      * if null then take all elements from the beginning of time series
-     * @param till inclusive time of the ending of interval, 
+     * @param till inclusive time of the ending of interval,
      * if null then take all elements till the end of time series
      * @param ascent direction of iteration
      * @return iterator within specified range in specified direction
@@ -131,31 +131,30 @@ public interface TimeSeries<T extends TimeSeries.Tick> extends IPersistent, IRes
      */
     long countTicks();
 
-    /** 
+    /**
      * Get tick for specified data
      * @param timestamp time series element timestamp
      * return time series element for the specified timestamp or null
      * if no such element was found
      */
     T getTick(Date timestamp);
-    
+
     /**
      * Check if data is available in time series for the specified time
      * @param timestamp time series element timestamp
-     * @return <code>true</code> if there is element in time series with such timestamp, 
+     * @return <code>true</code> if there is element in time series with such timestamp,
      * <code>false</code> otherwise
      */
     boolean has(Date timestamp);
 
     /**
      * Remove timeseries elements belonging to the specified range
-     * @param from inclusive time of the begging of interval, 
+     * @param from inclusive time of the begging of interval,
      * if null then remove all elements from the beginning of time series
-     * @param till inclusive time of the ending of interval, 
+     * @param till inclusive time of the ending of interval,
      * if null then remove all elements till the end of time series
      * @return number of removed elements
      */
     int remove(Date from, Date till);
 }
 
-    

@@ -15,7 +15,7 @@ public class AsyncReplicationMasterFile extends ReplicationMasterFile {
      * @param file local file used to store data locally
      * @param asyncBufSize size of asynchronous buffer
      */
-    public AsyncReplicationMasterFile(ReplicationMasterStorageImpl storage, IFile file, int asyncBufSize) { 
+    public AsyncReplicationMasterFile(ReplicationMasterStorageImpl storage, IFile file, int asyncBufSize) {
         super(storage, file);
         this.asyncBufSize = asyncBufSize;
         start();
@@ -29,14 +29,14 @@ public class AsyncReplicationMasterFile extends ReplicationMasterFile {
      * @param asyncBufSize size of asynchronous buffer
      * @param ack whether master should wait acknowledgment from slave node during trasanction commit
      */
-    public AsyncReplicationMasterFile(IFile file, String[] hosts, int asyncBufSize, boolean ack) {                 
+    public AsyncReplicationMasterFile(IFile file, String[] hosts, int asyncBufSize, boolean ack) {
         super(file, hosts, ack);
         this.asyncBufSize = asyncBufSize;
         start();
     }
 
-    class WriteThread extends Thread { 
-        public void run() { 
+    class WriteThread extends Thread {
+        public void run() {
             asyncWrite();
         }
     }
@@ -47,18 +47,18 @@ public class AsyncReplicationMasterFile extends ReplicationMasterFile {
         thread = new WriteThread();
         thread.start();
     }
-                
+
     static class Parcel {
         byte[] data;
         long   pos;
         int    host;
         Parcel next;
     }
-    
+
     public void write(long pos, byte[] buf) {
         file.write(pos, buf);
-        for (int i = 0; i < out.length; i++) { 
-            if (out[i] != null) {                
+        for (int i = 0; i < out.length; i++) {
+            if (out[i] != null) {
                 byte[] data = new byte[8 + buf.length];
                 Bytes.pack8(data, 0, pos);
                 System.arraycopy(buf, 0, data, 8, buf.length);
@@ -67,19 +67,19 @@ public class AsyncReplicationMasterFile extends ReplicationMasterFile {
                 p.pos = pos;
                 p.host = i;
 
-                try { 
-                    synchronized(async) { 
+                try {
+                    synchronized(async) {
                         buffered += data.length;
-                        while (buffered > asyncBufSize) { 
+                        while (buffered > asyncBufSize) {
                             async.wait();
                         }
                     }
                 } catch (InterruptedException x) {}
-                    
-                synchronized(go) { 
-                    if (head == null) { 
+
+                synchronized(go) {
+                    if (head == null) {
                         head = tail = p;
-                    } else { 
+                    } else {
                         tail = tail.next = p;
                     }
                     go.notify();
@@ -88,43 +88,43 @@ public class AsyncReplicationMasterFile extends ReplicationMasterFile {
         }
     }
 
-    public void asyncWrite() { 
-        try { 
-            while (true) { 
+    public void asyncWrite() {
+        try {
+            while (true) {
                 Parcel p;
                 synchronized(go) {
-                    while (head == null) { 
-                        if (closed) { 
+                    while (head == null) {
+                        if (closed) {
                             return;
                         }
                         go.wait();
                     }
                     p = head;
                     head = p.next;
-                }  
-                
-                synchronized(async) { 
-                    if (buffered > asyncBufSize) { 
+                }
+
+                synchronized(async) {
+                    if (buffered > asyncBufSize) {
                         async.notifyAll();
                     }
                     buffered -= p.data.length;
                 }
 
                 int i = p.host;
-                while (out[i] != null) { 
-                    try { 
+                while (out[i] != null) {
+                    try {
                         out[i].write(p.data);
                         if (!ack || p.pos != 0 || in[i].read(rcBuf) == 1) {
                             break;
                         }
                     } catch (IOException x) {}
-                    
+
                     out[i] = null;
                     sockets[i] = null;
                     nHosts -= 1;
-                    if (handleError(hosts[i])) { 
+                    if (handleError(hosts[i])) {
                         connect(i);
-                    } else { 
+                    } else {
                         break;
                     }
                 }
@@ -133,7 +133,7 @@ public class AsyncReplicationMasterFile extends ReplicationMasterFile {
     }
 
     public void close() {
-        try { 
+        try {
             synchronized (go) {
                 closed = true;
                 go.notify();
@@ -149,6 +149,6 @@ public class AsyncReplicationMasterFile extends ReplicationMasterFile {
     private Object  go;
     private Object  async;
     private Parcel  head;
-    private Parcel  tail;    
+    private Parcel  tail;
     private Thread  thread;
 }

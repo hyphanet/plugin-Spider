@@ -8,10 +8,10 @@ import static plugins.Spider.SearchUtil.*;
 
 /**
  * Search Tokenizer
- * 
+ *
  * Normalize and tokenize text blocks into words (for latin scripts),
- * or single-double-tokens (for CJK). 
- * 
+ * or single-double-tokens (for CJK).
+ *
  * @author SDiZ <sdiz+freenet@gmail.com>
  */
 public class SearchTokenizer implements Iterable<String>, Iterator<String> {
@@ -162,7 +162,7 @@ public class SearchTokenizer implements Iterable<String>, Iterator<String> {
         case UNDEF:
             // E.g. a number. We do index these. FIXME should we? Probably yes...
             return curSeg;
-            
+
         default:
             assert false; // DOH!
         }
@@ -170,7 +170,7 @@ public class SearchTokenizer implements Iterable<String>, Iterator<String> {
     }
 
     /** Iterate a CJK string. Return characters or characters and pairs of characters.
-     * @param returnPairs If true, return pairs of characters in between characters: 
+     * @param returnPairs If true, return pairs of characters in between characters:
      * C1C2C3C4 -> C1, C1C2, C2, C2C3, C3, C3C4, C4 */
     private Iterator<String> cjkIterator(String cjkText, final boolean returnPairs) {
         ArrayList<String> cjkToken = new ArrayList<String>();

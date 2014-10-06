@@ -5,91 +5,91 @@ import java.lang.reflect.*;
 import java.nio.channels.*;
 import java.io.*;
 
-public class OSFile implements IFile { 
-    public void write(long pos, byte[] buf) 
+public class OSFile implements IFile {
+    public void write(long pos, byte[] buf)
     {
-        try { 
+        try {
             file.seek(pos);
             file.write(buf, 0, buf.length);
-        } catch(IOException x) { 
+        } catch(IOException x) {
             throw new StorageError(StorageError.FILE_ACCESS_ERROR, x);
         }
     }
 
-    public int read(long pos, byte[] buf) 
-    { 
-        try { 
+    public int read(long pos, byte[] buf)
+    {
+        try {
             file.seek(pos);
             return file.read(buf, 0, buf.length);
-        } catch(IOException x) { 
+        } catch(IOException x) {
             throw new StorageError(StorageError.FILE_ACCESS_ERROR, x);
         }
     }
-        
+
     public void sync()
-    { 
-        if (!noFlush) { 
-            try {   
+    {
+        if (!noFlush) {
+            try {
                 file.getFD().sync();
-            } catch(IOException x) { 
+            } catch(IOException x) {
                 throw new StorageError(StorageError.FILE_ACCESS_ERROR, x);
             }
         }
     }
-    
-    public void close() 
-    { 
-        try { 
+
+    public void close()
+    {
+        try {
             file.close();
-        } catch(IOException x) { 
+        } catch(IOException x) {
             throw new StorageError(StorageError.FILE_ACCESS_ERROR, x);
         }
     }
 
-    public boolean tryLock(boolean shared) 
-    { 
-        try { 
+    public boolean tryLock(boolean shared)
+    {
+        try {
             lck = file.getChannel().tryLock(0, Long.MAX_VALUE, shared);
             return lck != null;
-        } catch (IOException x) { 
+        } catch (IOException x) {
             return true;
         }
     }
 
-    public void lock(boolean shared) 
-    { 
-        try { 
+    public void lock(boolean shared)
+    {
+        try {
             lck = file.getChannel().lock(0, Long.MAX_VALUE, shared);
-        } catch (IOException x) { 
+        } catch (IOException x) {
             throw new StorageError(StorageError.LOCK_FAILED, x);
         }
     }
 
-    public void unlock() 
-    { 
-        try { 
+    public void unlock()
+    {
+        try {
             lck.release();
-        } catch (IOException x) { 
+        } catch (IOException x) {
             throw new StorageError(StorageError.LOCK_FAILED, x);
         }
     }
 
     /* JDK 1.3 and older
-    public static boolean lockFile(RandomAccessFile file, boolean shared) 
-    { 
-    try { 
+    public static boolean lockFile(RandomAccessFile file, boolean shared)
+    {
+    try {
         Class cls = file.getClass();
         Method getChannel = cls.getMethod("getChannel", new Class[0]);
-        if (getChannel != null) { 
+        if (getChannel != null) {
         Object channel = getChannel.invoke(file, new Object[0]);
-        if (channel != null) { 
+        if (channel != null) {
             cls = channel.getClass();
             Class[] paramType = new Class[3];
             paramType[0] = Long.TYPE;
             paramType[1] = Long.TYPE;
             paramType[2] = Boolean.TYPE;
             Method lock = cls.getMethod("lock", paramType);
-            if (lock != null) { 
+            if (lock != null) {
             Object[] param = new Object[3];
             param[0] = new Long(0);
             param[1] = new Long(Long.MAX_VALUE);
@@ -104,19 +104,19 @@ public class OSFile implements IFile {
     }
     */
 
-    public OSFile(String filePath, boolean readOnly, boolean noFlush) { 
+    public OSFile(String filePath, boolean readOnly, boolean noFlush) {
         this.noFlush = noFlush;
-        try { 
+        try {
             file = new RandomAccessFile(filePath, readOnly ? "r" : "rw");
-        } catch(IOException x) { 
+        } catch(IOException x) {
             throw new StorageError(StorageError.FILE_ACCESS_ERROR, x);
         }
     }
 
     public long length() {
-        try { 
+        try {
             return file.length();
-        } catch (IOException x) { 
+        } catch (IOException x) {
             return -1;
         }
     }

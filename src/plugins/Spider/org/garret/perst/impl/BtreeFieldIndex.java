@@ -4,7 +4,7 @@ import plugins.Spider.org.garret.perst.*;
 import java.lang.reflect.*;
 import java.util.*;
 
-class BtreeFieldIndex<T extends IPersistent> extends Btree<T> implements FieldIndex<T> { 
+class BtreeFieldIndex<T extends IPersistent> extends Btree<T> implements FieldIndex<T> {
     String className;
     String fieldName;
     long   autoincCount;
@@ -12,20 +12,20 @@ class BtreeFieldIndex<T extends IPersistent> extends Btree<T> implements FieldIn
     transient Field fld;
 
     BtreeFieldIndex() {}
-    
-    private final void locateField() 
+
+    private final void locateField()
     {
         fld = ClassDescriptor.locateField(cls, fieldName);
-        if (fld == null) { 
+        if (fld == null) {
            throw new StorageError(StorageError.INDEXED_FIELD_NOT_FOUND, className + "." + fieldName);
         }
     }
 
-    public Class getIndexedClass() { 
+    public Class getIndexedClass() {
         return cls;
     }
 
-    public Field[] getKeyFields() { 
+    public Field[] getKeyFields() {
         return new Field[]{fld};
     }
 
@@ -53,8 +53,8 @@ class BtreeFieldIndex<T extends IPersistent> extends Btree<T> implements FieldIn
         return fld.getType().getEnumConstants()[val];
     }
 
-    private Key extractKey(IPersistent obj) { 
-        try { 
+    private Key extractKey(IPersistent obj) {
+        try {
             Field f = fld;
             Key key = null;
             switch (type) {
@@ -72,7 +72,7 @@ class BtreeFieldIndex<T extends IPersistent> extends Btree<T> implements FieldIn
                 break;
               case ClassDescriptor.tpInt:
                 key = new Key(f.getInt(obj));
-                break;            
+                break;
               case ClassDescriptor.tpObject:
                 {
                     IPersistent ptr = (IPersistent)f.get(obj);
@@ -85,7 +85,7 @@ class BtreeFieldIndex<T extends IPersistent> extends Btree<T> implements FieldIn
                 }
               case ClassDescriptor.tpLong:
                 key = new Key(f.getLong(obj));
-                break;            
+                break;
               case ClassDescriptor.tpDate:
                 key = new Key((Date)f.get(obj));
                 break;
@@ -105,11 +105,11 @@ class BtreeFieldIndex<T extends IPersistent> extends Btree<T> implements FieldIn
                 Assert.failed("Invalid type");
             }
             return key;
-        } catch (Exception x) { 
+        } catch (Exception x) {
             throw new StorageError(StorageError.ACCESS_VIOLATION, x);
         }
     }
-            
+
     public boolean add(T obj) {
         return put(obj);
     }
@@ -128,12 +128,12 @@ class BtreeFieldIndex<T extends IPersistent> extends Btree<T> implements FieldIn
 
     public boolean containsObject(T obj) {
         Key key = extractKey(obj);
-        if (unique) { 
+        if (unique) {
             return super.get(key) != null;
-        } else { 
+        } else {
             IPersistent[] mbrs = get(key, key);
-            for (int i = 0; i < mbrs.length; i++) { 
-                if (mbrs[i] == obj) { 
+            for (int i = 0; i < mbrs.length; i++) {
+                if (mbrs[i] == obj) {
                     return true;
                 }
             }
@@ -143,12 +143,12 @@ class BtreeFieldIndex<T extends IPersistent> extends Btree<T> implements FieldIn
 
     public boolean contains(T obj) {
         Key key = extractKey(obj);
-        if (unique) { 
+        if (unique) {
             return super.get(key) != null;
-        } else { 
+        } else {
             IPersistent[] mbrs = get(key, key);
-            for (int i = 0; i < mbrs.length; i++) { 
-                if (mbrs[i].equals(obj)) { 
+            for (int i = 0; i < mbrs.length; i++) {
+                if (mbrs[i].equals(obj)) {
                     return true;
                 }
             }
@@ -158,20 +158,20 @@ class BtreeFieldIndex<T extends IPersistent> extends Btree<T> implements FieldIn
 
     public synchronized void append(T obj) {
         Key key;
-        try { 
+        try {
             switch (type) {
               case ClassDescriptor.tpInt:
                 key = new Key((int)autoincCount);
                 fld.setInt(obj, (int)autoincCount);
-                break;            
+                break;
               case ClassDescriptor.tpLong:
                 key = new Key(autoincCount);
                 fld.setLong(obj, autoincCount);
-                break;            
+                break;
               default:
                 throw new StorageError(StorageError.UNSUPPORTED_INDEX_TYPE, fld.getType());
             }
-        } catch (Exception x) { 
+        } catch (Exception x) {
             throw new StorageError(StorageError.ACCESS_VIOLATION, x);
         }
         autoincCount += 1;
@@ -179,19 +179,19 @@ class BtreeFieldIndex<T extends IPersistent> extends Btree<T> implements FieldIn
         super.insert(key, obj, false);
     }
 
-    public T[] getPrefix(String prefix) { 
+    public T[] getPrefix(String prefix) {
         ArrayList<T> list = getList(new Key(prefix, true), new Key(prefix + Character.MAX_VALUE, false));
-        return (T[])list.toArray((T[])Array.newInstance(cls, list.size()));        
+        return (T[])list.toArray((T[])Array.newInstance(cls, list.size()));
     }
 
-    public T[] prefixSearch(String key) { 
+    public T[] prefixSearch(String key) {
         ArrayList<T> list = prefixSearchList(key);
         return (T[])list.toArray((T[])Array.newInstance(cls, list.size()));
     }
 
     public T[] get(Key from, Key till) {
         ArrayList list = new ArrayList();
-        if (root != 0) { 
+        if (root != 0) {
             BtreePage.find((StorageImpl)getStorage(), root, checkKey(from), checkKey(till), this, height, list);
         }
         return (T[])list.toArray((T[])Array.newInstance(cls, list.size()));
@@ -199,7 +199,7 @@ class BtreeFieldIndex<T extends IPersistent> extends Btree<T> implements FieldIn
 
     public T[] toPersistentArray() {
         T[] arr = (T[])Array.newInstance(cls, nElems);
-        if (root != 0) { 
+        if (root != 0) {
             BtreePage.traverseForward((StorageImpl)getStorage(), root, type, height, arr, 0);
         }
         return arr;
@@ -209,18 +209,18 @@ class BtreeFieldIndex<T extends IPersistent> extends Btree<T> implements FieldIn
         Key key = extractKey(obj);
         return iterator(key, key, ASCENT_ORDER);
     }
-            
-    public IterableIterator<T> select(String predicate) { 
+
+    public IterableIterator<T> select(String predicate) {
         Query<T> query = new QueryImpl<T>(getStorage());
         return query.select(cls, iterator(), predicate);
     }
 
-    public boolean isCaseInsensitive() { 
+    public boolean isCaseInsensitive() {
         return false;
     }
 }
 
-class BtreeCaseInsensitiveFieldIndex<T extends IPersistent>  extends BtreeFieldIndex<T> {    
+class BtreeCaseInsensitiveFieldIndex<T extends IPersistent>  extends BtreeFieldIndex<T> {
     BtreeCaseInsensitiveFieldIndex() {}
 
     BtreeCaseInsensitiveFieldIndex(Class cls, String fieldName, boolean unique) {
@@ -231,14 +231,14 @@ class BtreeCaseInsensitiveFieldIndex<T extends IPersistent>  extends BtreeFieldI
         super(cls, fieldName, unique, autoincCount);
     }
 
-    Key checkKey(Key key) { 
-        if (key != null && key.oval instanceof String) { 
+    Key checkKey(Key key) {
+        if (key != null && key.oval instanceof String) {
             key = new Key(((String)key.oval).toLowerCase(), key.inclusion != 0);
         }
         return super.checkKey(key);
-    }  
+    }
 
-    public boolean isCaseInsensitive() { 
+    public boolean isCaseInsensitive() {
         return true;
     }
 }

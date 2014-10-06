@@ -20,7 +20,7 @@ public class ConfigPageToadlet extends Toadlet {
 
     final Spider spider;
     private final NodeClientCore core;
-    
+
     protected ConfigPageToadlet(HighLevelSimpleClient client, Spider spider, NodeClientCore core) {
         super(client);
         this.spider = spider;
@@ -32,7 +32,7 @@ public class ConfigPageToadlet extends Toadlet {
         return "/spider/config";
     }
 
-    public void handleMethodGET(URI uri, final HTTPRequest request, final ToadletContext ctx) 
+    public void handleMethodGET(URI uri, final HTTPRequest request, final ToadletContext ctx)
     throws ToadletContextClosedException, IOException, RedirectException {
         ClassLoader origClassLoader = Thread.currentThread().getContextClassLoader();
         Thread.currentThread().setContextClassLoader(Spider.class.getClassLoader());
@@ -64,12 +64,12 @@ public class ConfigPageToadlet extends Toadlet {
             PageNode p = ctx.getPageMaker().getPageNode(Spider.pluginName, ctx);
             HTMLNode pageNode = p.outer;
             HTMLNode contentNode = p.content;
-    
+
             WebPage page = new ConfigPage(spider);
-    
+
             page.processPostRequest(request, contentNode);
             page.writeContent(request, contentNode);
-    
+
             writeHTMLReply(ctx, 200, "OK", null, pageNode.generate());
         } finally {
             Thread.currentThread().setContextClassLoader(origClassLoader);

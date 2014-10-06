@@ -8,11 +8,11 @@ public class FullTextQueryBinaryOp extends FullTextQuery
 {
     public FullTextQuery left;
     public FullTextQuery right;
-    
+
     /**
      * Query node visitor.
      */
-    public void visit(FullTextQueryVisitor visitor) { 
+    public void visit(FullTextQueryVisitor visitor) {
         visitor.visit(this);
         left.visit(visitor);
         right.visit(visitor);
@@ -22,8 +22,8 @@ public class FullTextQueryBinaryOp extends FullTextQuery
      * This method checks that query can be executed by interection of keyword occurrences lists
      * @return true if quuery can be executed by FullTextIndex, false otherwise
      */
-    public boolean isConstrained() { 
-        return op == OR 
+    public boolean isConstrained() {
+        return op == OR
             ? left.isConstrained() && right.isConstrained()
             : left.isConstrained() || right.isConstrained();
     }
@@ -40,10 +40,10 @@ public class FullTextQueryBinaryOp extends FullTextQuery
      * @param left left operand
      * @param right right operand
      */
-    public FullTextQueryBinaryOp(int op, FullTextQuery left, FullTextQuery right) { 
+    public FullTextQueryBinaryOp(int op, FullTextQuery left, FullTextQuery right) {
         super(op);
         this.left = left;
         this.right = right;
     }
-}    
-    
+}
+

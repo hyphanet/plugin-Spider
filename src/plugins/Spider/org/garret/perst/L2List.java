@@ -8,7 +8,7 @@ import plugins.Spider.org.garret.perst.impl.QueryImpl;
  * Double linked list.
  */
 
-public class L2List extends L2ListElem implements ITable { 
+public class L2List extends L2ListElem implements ITable {
     private int nElems;
     private int updateCounter;
 
@@ -16,7 +16,7 @@ public class L2List extends L2ListElem implements ITable {
      * Get list head element
      * @return list head element or null if list is empty
      */
-    public synchronized L2ListElem head() { 
+    public synchronized L2ListElem head() {
         return next != this ? next : null;
     }
 
@@ -24,14 +24,14 @@ public class L2List extends L2ListElem implements ITable {
      * Get list tail element
      * @return list tail element or null if list is empty
      */
-    public synchronized L2ListElem tail() { 
+    public synchronized L2ListElem tail() {
         return prev != this ? prev : null;
     }
 
     /**
-     * Make list empty. 
+     * Make list empty.
      */
-    public synchronized void clear() { 
+    public synchronized void clear() {
         modify();
         next = prev = this;
         nElems = 0;
@@ -41,7 +41,7 @@ public class L2List extends L2ListElem implements ITable {
     /**
      * Insert element at the beginning of the list
      */
-    public synchronized void prepend(L2ListElem elem) { 
+    public synchronized void prepend(L2ListElem elem) {
         modify();
         next.modify();
         elem.modify();
@@ -56,10 +56,10 @@ public class L2List extends L2ListElem implements ITable {
     /**
      * Insert element at the end of the list
      */
-    public synchronized void append(L2ListElem elem) { 
+    public synchronized void append(L2ListElem elem) {
         modify();
         prev.modify();
-        elem.modify(); 
+        elem.modify();
         elem.next = this;
         elem.prev = prev;
         prev.next = elem;
@@ -71,7 +71,7 @@ public class L2List extends L2ListElem implements ITable {
     /**
      * Remove element from the list
      */
-    public synchronized void remove(L2ListElem elem) { 
+    public synchronized void remove(L2ListElem elem) {
         modify();
         elem.prev.modify();
         elem.next.modify();
@@ -85,7 +85,7 @@ public class L2List extends L2ListElem implements ITable {
      * Check if list is empty
      * @return <code>true</code> if list is empty
      */
-    public synchronized boolean isEmpty() { 
+    public synchronized boolean isEmpty() {
         return next == this;
     }
 
@@ -94,7 +94,7 @@ public class L2List extends L2ListElem implements ITable {
      * @param obj object added to the list
      * @return always returns <code>true</code>
      */
-    public synchronized boolean add(Object obj) { 
+    public synchronized boolean add(Object obj) {
         append((L2ListElem)obj);
         return true;
     }
@@ -104,7 +104,7 @@ public class L2List extends L2ListElem implements ITable {
      * @param o object to be removed from the list
      * @return always returns <code>true</code>
      */
-    public synchronized boolean remove(Object o) { 
+    public synchronized boolean remove(Object o) {
         remove((L2ListElem)o);
         return true;
     }
@@ -113,7 +113,7 @@ public class L2List extends L2ListElem implements ITable {
      * Get size of the list
      * @return number of elements in the list
      */
-    public int size() { 
+    public int size() {
         return nElems;
     }
 
@@ -123,45 +123,45 @@ public class L2List extends L2ListElem implements ITable {
      * @return <code>true</code> if there is an object in the collection which
      * is equals to the specified object
      */
-    public synchronized boolean contains(Object o) { 
-        for (L2ListElem e = next; e != this; e = e.next) { 
-            if (e.equals(o)) { 
+    public synchronized boolean contains(Object o) {
+        for (L2ListElem e = next; e != this; e = e.next) {
+            if (e.equals(o)) {
                 return true;
             }
         }
         return false;
     }
 
-    class L2ListIterator implements PersistentIterator, Iterator { 
+    class L2ListIterator implements PersistentIterator, Iterator {
         private L2ListElem curr;
         private int        counter;
 
-        L2ListIterator() { 
+        L2ListIterator() {
             curr = L2List.this;
             counter = updateCounter;
         }
 
-        public Object next() { 
-            if (!hasNext()) { 
+        public Object next() {
+            if (!hasNext()) {
                 throw new NoSuchElementException();
             }
             curr = curr.next;
             return curr;
         }
 
-        public int nextOid() { 
+        public int nextOid() {
             return ((IPersistent)next()).getOid();
         }
 
-        public boolean hasNext() { 
-            if (counter != updateCounter) { 
+        public boolean hasNext() {
+            if (counter != updateCounter) {
                 throw new IllegalStateException();
             }
             return curr.next != L2List.this;
-        } 
+        }
 
-        public void remove() { 
-            if (counter != updateCounter || curr == L2List.this) { 
+        public void remove() {
+            if (counter != updateCounter || curr == L2List.this) {
                 throw new IllegalStateException();
             }
             L2List.this.remove(curr);
@@ -169,15 +169,15 @@ public class L2List extends L2ListElem implements ITable {
             curr = curr.prev;
         }
     }
-            
-        
+
+
     /**
-     * Get list iterator. 
+     * Get list iterator.
      * This iterator supports remove() method put concurrent modifications of thje list
      * during iteration are not possible.
      * @return list iterator
      */
-    public synchronized Iterator iterator() { 
+    public synchronized Iterator iterator() {
         return new L2ListIterator();
     }
 
@@ -185,15 +185,15 @@ public class L2List extends L2ListElem implements ITable {
      * Get array of the list elements
      * @return array with list elements
      */
-    public synchronized Object[] toArray() { 
+    public synchronized Object[] toArray() {
         L2ListElem[] arr = new L2ListElem[nElems];
-        L2ListElem e = this; 
-        for (int i = 0; i < arr.length; i++) { 
+        L2ListElem e = this;
+        for (int i = 0; i < arr.length; i++) {
             arr[i] = e = e.next;
         }
         return arr;
     }
-                    
+
     /**
      * Returns an array containing all of the elements in this list in the
      * correct order; the runtime type of the returned array is that of the
@@ -215,17 +215,17 @@ public class L2List extends L2ListElem implements ITable {
      * @throws ArrayStoreException if the runtime type of a is not a supertype
      *         of the runtime type of every element in this list.
      */
-    public synchronized Object[] toArray(Object a[]) { 
+    public synchronized Object[] toArray(Object a[]) {
         int size = nElems;
-        if (a.length < size) { 
+        if (a.length < size) {
             a = (Object[])java.lang.reflect.Array.newInstance(
                 a.getClass().getComponentType(), size);
         }
-        L2ListElem e = this; 
-        for (int i = 0; i < size; i++) { 
+        L2ListElem e = this;
+        for (int i = 0; i < size; i++) {
             a[i] = e = e.next;
         }
-        if (a.length > size) { 
+        if (a.length > size) {
             a[size] = null;
         }
         return a;
@@ -244,13 +244,13 @@ public class L2List extends L2ListElem implements ITable {
      * @return <tt>true</tt> if this collection contains all of the elements
      *            in the specified collection.
      * @throws NullPointerException if the specified collection is null.
-     * 
+     *
      * @see #contains(Object)
      */
     public synchronized boolean containsAll(Collection c) {
     Iterator e = c.iterator();
-    while (e.hasNext()) { 
-        if (!contains(e.next())) { 
+    while (e.hasNext()) {
+        if (!contains(e.next())) {
         return false;
             }
         }
@@ -278,13 +278,13 @@ public class L2List extends L2ListElem implements ITable {
      * @throws UnsupportedOperationException if this collection does not
      *         support the <tt>addAll</tt> method.
      * @throws NullPointerException if the specified collection is null.
-     * 
+     *
      * @see #add(Object)
      */
     public synchronized boolean addAll(Collection c) {
     Iterator e = c.iterator();
     while (e.hasNext()) {
-        add(e.next()); 
+        add(e.next());
     }
     return true;
     }
@@ -367,13 +367,13 @@ public class L2List extends L2ListElem implements ITable {
 
     /**
      * Select members of the collection using search predicate
-     * This iterator doesn't support remove() method. It is not possible to update 
+     * This iterator doesn't support remove() method. It is not possible to update
      * list during iteration.
      * @param cls class of index members
      * @param predicate JSQL condition
      * @return iterator through members of the collection matching search condition
      */
-    public IterableIterator select(Class cls, String predicate) { 
+    public IterableIterator select(Class cls, String predicate) {
         Query query = new QueryImpl(getStorage());
         return query.select(cls, iterator(), predicate);
     }

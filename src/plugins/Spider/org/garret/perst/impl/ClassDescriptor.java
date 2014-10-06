@@ -4,31 +4,31 @@ import plugins.Spider.org.garret.perst.*;
 import  java.lang.reflect.*;
 import  java.util.*;
 
-public final class ClassDescriptor extends Persistent { 
+public final class ClassDescriptor extends Persistent {
     ClassDescriptor   next;
     String            name;
     boolean           hasReferences;
     FieldDescriptor[] allFields;
     CustomAllocator   allocator;
 
-    static class FieldDescriptor extends Persistent implements Comparable { 
+    static class FieldDescriptor extends Persistent implements Comparable {
         String          fieldName;
         String          className;
         int             type;
         ClassDescriptor valueDesc;
         transient Field field;
 
-        public int compareTo(Object o) { 
+        public int compareTo(Object o) {
             return fieldName.compareTo(((FieldDescriptor)o).fieldName);
         }
 
-        public boolean equals(FieldDescriptor fd) { 
-            return fieldName.equals(fd.fieldName) 
+        public boolean equals(FieldDescriptor fd) {
+            return fieldName.equals(fd.fieldName)
                 && className.equals(fd.className)
                 && valueDesc == fd.valueDesc
                 && type == fd.type;
         }
-    }    
+    }
 
     transient Class       cls;
     transient Constructor loadConstructor;
@@ -36,8 +36,8 @@ public final class ClassDescriptor extends Persistent {
     transient Object[]    constructorParams;
     transient boolean     hasSubclasses;
     transient boolean     resolved;
-    
-    static ReflectionProvider reflectionProvider; 
+
+    static ReflectionProvider reflectionProvider;
 
     static boolean            reverseMembersOrder;
 
@@ -74,7 +74,7 @@ public final class ClassDescriptor extends Persistent {
     public static final int tpArrayOfEnum      = 34;
 
     static final String signature[] = {
-        "boolean", 
+        "boolean",
         "byte",
         "char",
         "short",
@@ -89,12 +89,12 @@ public final class ClassDescriptor extends Persistent {
         "Raw",
         "Link",
         "enum",
-        "", 
-        "", 
-        "", 
-        "", 
-        "", 
-        "", 
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
         "ArrayOfBoolean",
         "ArrayOfByte",
         "ArrayOfChar",
@@ -112,7 +112,7 @@ public final class ClassDescriptor extends Persistent {
         "ArrayOfLink",
         "ArrayOfEnum"
     };
-        
+
 
     static final int sizeof[] = {
         1, // tpBoolean
@@ -134,76 +134,76 @@ public final class ClassDescriptor extends Persistent {
 
     static final Class[] perstConstructorProfile = new Class[]{ClassDescriptor.class};
 
-    static ReflectionProvider getReflectionProvider() { 
-        if (reflectionProvider == null) { 
+    static ReflectionProvider getReflectionProvider() {
+        if (reflectionProvider == null) {
             try {
                 Class.forName("sun.misc.Unsafe");
                 String cls = "plugins.Spider.org.garret.perst.impl.sun14.Sun14ReflectionProvider";
                 reflectionProvider = (ReflectionProvider)Class.forName(cls).newInstance();
-            } catch (Throwable x) { 
+            } catch (Throwable x) {
                 reflectionProvider = new StandardReflectionProvider();
             }
         }
         return reflectionProvider;
-    } 
-           
+    }
 
-    public boolean equals(ClassDescriptor cd) { 
-        if (cd == null || allFields.length != cd.allFields.length) { 
+
+    public boolean equals(ClassDescriptor cd) {
+        if (cd == null || allFields.length != cd.allFields.length) {
             return false;
         }
-        for (int i = 0; i < allFields.length; i++) { 
-            if (!allFields[i].equals(cd.allFields[i])) { 
+        for (int i = 0; i < allFields.length; i++) {
+            if (!allFields[i].equals(cd.allFields[i])) {
                 return false;
             }
         }
         return true;
     }
-        
+
 
     Object newInstance() {
-        if (factory != null) { 
+        if (factory != null) {
             return factory.create(this);
-        } else { 
-            try { 
+        } else {
+            try {
                 return loadConstructor.newInstance(constructorParams);
-            } catch (Exception x) { 
+            } catch (Exception x) {
                 throw new StorageError(StorageError.CONSTRUCTOR_FAILURE, cls, x);
             }
         }
     }
 
-    void buildFieldList(StorageImpl storage, Class cls, ArrayList list) { 
+    void buildFieldList(StorageImpl storage, Class cls, ArrayList list) {
         Class superclass = cls.getSuperclass();
-        if (superclass != null) { 
+        if (superclass != null) {
             buildFieldList(storage, superclass, list);
         }
         Field[] flds = cls.getDeclaredFields();
-        if (storage.getDatabaseFormatVersion() >= 2) { 
+        if (storage.getDatabaseFormatVersion() >= 2) {
             Arrays.sort(flds, new Comparator<Field>() { public int compare(Field f1, Field f2) { return f1.getName().compareTo(f2.getName()); } });
         } else { // preserve backward compatibility
-            if (ClassDescriptor.class.equals(cls)) { 
-                for (int i = 0; i < flds.length; i++) { 
+            if (ClassDescriptor.class.equals(cls)) {
+                for (int i = 0; i < flds.length; i++) {
                     if ((flds[i].getModifiers() & (Modifier.TRANSIENT|Modifier.STATIC)) == 0) {
-                        if (!"next".equals(flds[i].getName())) { 
+                        if (!"next".equals(flds[i].getName())) {
                             reverseMembersOrder = true;
                         }
                         break;
                     }
                 }
             }
-            if (reverseMembersOrder) { 
-                for (int i = 0, n = flds.length; i < (n >> 1); i++) { 
+            if (reverseMembersOrder) {
+                for (int i = 0, n = flds.length; i < (n >> 1); i++) {
                     Field f = flds[i];
                     flds[i] = flds[n-i-1];
                     flds[n-i-1] = f;
                 }
             }
         }
-        for (int i = 0; i < flds.length; i++) { 
+        for (int i = 0; i < flds.length; i++) {
             Field f = flds[i];
             if (!f.isSynthetic() && (f.getModifiers() & (Modifier.TRANSIENT|Modifier.STATIC)) == 0) {
-                try { 
+                try {
                     f.setAccessible(true);
                 } catch (Exception x) {}
                 FieldDescriptor fd = new FieldDescriptor();
@@ -219,7 +219,7 @@ public final class ClassDescriptor extends Persistent {
                     break;
                   case tpValue:
                     fd.valueDesc = storage.getClassDescriptor(f.getType());
-                    hasReferences |= fd.valueDesc.hasReferences;                    
+                    hasReferences |= fd.valueDesc.hasReferences;
                     break;
                   case tpArrayOfValue:
                     fd.valueDesc = storage.getClassDescriptor(f.getType().getComponentType());
@@ -231,9 +231,9 @@ public final class ClassDescriptor extends Persistent {
         }
     }
 
-    public static int getTypeCode(Class c) { 
+    public static int getTypeCode(Class c) {
         int type;
-        if (c.equals(byte.class)) { 
+        if (c.equals(byte.class)) {
             type = tpByte;
         } else if (c.equals(short.class)) {
             type = tpShort;
@@ -261,24 +261,24 @@ public final class ClassDescriptor extends Persistent {
             type = tpValue;
         } else if (c.equals(Link.class)) {
             type = tpLink;
-        } else if (c.isArray()) { 
+        } else if (c.isArray()) {
             type = getTypeCode(c.getComponentType());
-            if (type >= tpLink) { 
+            if (type >= tpLink) {
                 throw new StorageError(StorageError.UNSUPPORTED_TYPE, c);
             }
             type += tpArrayOfBoolean;
         } else if (CustomSerializable.class.isAssignableFrom(c)) {
-            type = tpCustom;            
+            type = tpCustom;
         } else if (c.equals(Object.class) || Comparable.class.isAssignableFrom(c)) {
             type = tpRaw;
         } else if (serializeNonPersistentObjects) {
-            type = tpRaw;            
+            type = tpRaw;
         } else if (treateAnyNonPersistentObjectAsValue) {
-            if (c.equals(Object.class)) { 
+            if (c.equals(Object.class)) {
                 throw new StorageError(StorageError.EMPTY_VALUE);
             }
-            type = tpValue;            
-        } else { 
+            type = tpValue;
+        } else {
             throw new StorageError(StorageError.UNSUPPORTED_TYPE, c);
         }
         return type;
@@ -289,38 +289,38 @@ public final class ClassDescriptor extends Persistent {
 
     ClassDescriptor() {}
 
-    private static Class loadClass(String name) throws ClassNotFoundException { 
+    private static Class loadClass(String name) throws ClassNotFoundException {
         ClassLoader loader = Thread.currentThread().getContextClassLoader();
-        if (loader != null) { 
+        if (loader != null) {
             return loader.loadClass(name);
-        } else { 
+        } else {
             return  Class.forName(name);
         }
     }
 
-    private void locateConstructor() { 
-        try { 
+    private void locateConstructor() {
+        try {
             Class c = loadClass(cls.getName() + "LoadFactory");
             factory = (LoadFactory)c.newInstance();
-        } catch (Exception x1) { 
-            try {             
+        } catch (Exception x1) {
+            try {
                 loadConstructor = cls.getDeclaredConstructor(perstConstructorProfile);
                 constructorParams = new Object[]{this};
             } catch (NoSuchMethodException x2) {
-                try { 
+                try {
                     loadConstructor = getReflectionProvider().getDefaultConstructor(cls);
                     constructorParams = null;
                 } catch (Exception x3) {
                     throw new StorageError(StorageError.DESCRIPTOR_FAILURE, cls, x3);
                 }
             }
-            try { 
+            try {
                 loadConstructor.setAccessible(true);
             } catch (Exception x) {}
         }
     }
 
-    ClassDescriptor(StorageImpl storage, Class cls) { 
+    ClassDescriptor(StorageImpl storage, Class cls) {
         this.cls = cls;
         name = getClassName(cls);
         ArrayList list = new ArrayList();
@@ -330,16 +330,16 @@ public final class ClassDescriptor extends Persistent {
         resolved = true;
     }
 
-    protected static Field locateField(Class scope, String name) { 
-        try { 
-            do { 
-                try { 
-                    Field fld = scope.getDeclaredField(name);                
-                    try { 
+    protected static Field locateField(Class scope, String name) {
+        try {
+            do {
+                try {
+                    Field fld = scope.getDeclaredField(name);
+                    try {
                         fld.setAccessible(true);
                     } catch (Exception e) {}
                     return fld;
-                } catch (NoSuchFieldException x) { 
+                } catch (NoSuchFieldException x) {
                     scope = scope.getSuperclass();
                 }
             } while (scope != null);
@@ -348,83 +348,83 @@ public final class ClassDescriptor extends Persistent {
         }
         return null;
     }
-        
-    public static String getClassName(Class cls) { 
+
+    public static String getClassName(Class cls) {
         ClassLoader loader = cls.getClassLoader();
-        return (loader instanceof INamedClassLoader) 
+        return (loader instanceof INamedClassLoader)
             ? ((INamedClassLoader)loader).getName() + ':' + cls.getName()
             : cls.getName();
     }
-        
-    public static Class loadClass(Storage storage, String name) { 
-        if (storage != null) { 
+
+    public static Class loadClass(Storage storage, String name) {
+        if (storage != null) {
             int col = name.indexOf(':');
             ClassLoader loader;
-            if (col >= 0) { 
+            if (col >= 0) {
                 loader = storage.findClassLoader(name.substring(0, col));
-                if (loader == null) { 
+                if (loader == null) {
                     // just ignore  this class
-                    return null; 
+                    return null;
                 }
                 name = name.substring(col+1);
-            } else { 
+            } else {
                 loader = storage.getClassLoader();
             }
-            if (loader != null) { 
-                try { 
+            if (loader != null) {
+                try {
                     return loader.loadClass(name);
                 } catch (ClassNotFoundException x) {}
             }
         }
-        try { 
+        try {
             return loadClass(name);
-        } catch (ClassNotFoundException x) { 
+        } catch (ClassNotFoundException x) {
             throw new StorageError(StorageError.CLASS_NOT_FOUND, name, x);
         }
     }
 
-    public void onLoad() {         
+    public void onLoad() {
         cls = loadClass(getStorage(), name);
         Class scope = cls;
         int n = allFields.length;
-        for (int i = n; --i >= 0;) { 
+        for (int i = n; --i >= 0;) {
             FieldDescriptor fd = allFields[i];
             fd.load();
             if (!fd.className.equals(scope.getName())) {
-                for (scope = cls; scope != null; scope = scope.getSuperclass()) { 
+                for (scope = cls; scope != null; scope = scope.getSuperclass()) {
                     if (fd.className.equals(scope.getName())) {
                         break;
                     }
                 }
             }
             if (scope != null) {
-                try { 
+                try {
                     Field f = scope.getDeclaredField(fd.fieldName);
                     if ((f.getModifiers() & (Modifier.TRANSIENT|Modifier.STATIC)) == 0) {
-                        try { 
+                        try {
                             f.setAccessible(true);
                         } catch (Exception e) {}
                         fd.field = f;
                     }
                 } catch (NoSuchFieldException x) {}
-            } else { 
+            } else {
                 scope = cls;
             }
         }
-        for (int i = n; --i >= 0;) { 
+        for (int i = n; --i >= 0;) {
             FieldDescriptor fd = allFields[i];
-            if (fd.field == null) { 
+            if (fd.field == null) {
             hierarchyLoop:
-                for (scope = cls; scope != null; scope = scope.getSuperclass()) { 
-                    try { 
+                for (scope = cls; scope != null; scope = scope.getSuperclass()) {
+                    try {
                         Field f = scope.getDeclaredField(fd.fieldName);
                         if ((f.getModifiers() & (Modifier.TRANSIENT|Modifier.STATIC)) == 0) {
-                            for (int j = 0; j < n; j++) { 
-                                if (allFields[j].field == f) { 
+                            for (int j = 0; j < n; j++) {
+                                if (allFields[j].field == f) {
                                     continue hierarchyLoop;
                                 }
                             }
-                            try { 
+                            try {
                                 f.setAccessible(true);
                             } catch (Exception e) {}
                             fd.field = f;
@@ -436,24 +436,24 @@ public final class ClassDescriptor extends Persistent {
         }
         locateConstructor();
         StorageImpl s = (StorageImpl)getStorage();
-        if (s.classDescMap.get(cls) == null) { 
+        if (s.classDescMap.get(cls) == null) {
             s.classDescMap.put(cls, this);
         }
     }
 
-       
+
     void resolve() {
-        if (!resolved) { 
+        if (!resolved) {
             StorageImpl classStorage = (StorageImpl)getStorage();
             ClassDescriptor desc = new ClassDescriptor(classStorage, cls);
             resolved = true;
-            if (!desc.equals(this)) { 
+            if (!desc.equals(this)) {
                 classStorage.registerClassDescriptor(desc);
             }
         }
-    }            
+    }
 
-    public boolean recursiveLoading() { 
+    public boolean recursiveLoading() {
         return false;
     }
 }

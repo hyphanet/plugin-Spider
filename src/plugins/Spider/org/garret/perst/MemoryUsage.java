@@ -1,9 +1,9 @@
 package plugins.Spider.org.garret.perst;
 
 /**
- * Information about memory usage for the correspondent class. 
+ * Information about memory usage for the correspondent class.
  * Instances of this class are created by Storage.getMemoryDump method.
- * Size of internal database structures (object index, memory allocation bitmap) is associated with 
+ * Size of internal database structures (object index, memory allocation bitmap) is associated with
  * <code>Storage</code> class. Size of class descriptors  - with <code>java.lang.Class</code> class.
  */
 public class MemoryUsage {
@@ -16,7 +16,7 @@ public class MemoryUsage {
      * Number of reachable instance of the particular class in the database.
      */
     public int nInstances;
-    
+
     /**
      * Total size of all reachable instances
      */
@@ -24,7 +24,7 @@ public class MemoryUsage {
 
     /**
      * Real allocated size of all instances. Database allocates space for th objects using quantums,
-     * for example object wilth size 25 bytes will use 32 bytes in the storage. 
+     * for example object wilth size 25 bytes will use 32 bytes in the storage.
      * In item associated with Storage class this field contains size of all allocated
      * space in the database (marked as used in bitmap)
      */
@@ -33,7 +33,7 @@ public class MemoryUsage {
     /**
      * MemoryUsage constructor
      */
-    public MemoryUsage(Class cls) { 
+    public MemoryUsage(Class cls) {
         this.cls = cls;
     }
 }

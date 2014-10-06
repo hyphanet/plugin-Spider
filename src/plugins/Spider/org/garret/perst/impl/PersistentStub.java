@@ -1,7 +1,7 @@
 package plugins.Spider.org.garret.perst.impl;
 import plugins.Spider.org.garret.perst.*;
 
-public class PersistentStub implements IPersistent { 
+public class PersistentStub implements IPersistent {
     public void load() {
         throw new StorageError(StorageError.ACCESS_TO_STUB);
     }
@@ -11,35 +11,35 @@ public class PersistentStub implements IPersistent {
         modify();
     }
 
-    public final boolean isRaw() { 
-        return true;
-    } 
-    
-    public final boolean isModified() { 
-        return false;
-    } 
-    
-    public final boolean isDeleted() { 
-        return false;
-    } 
-    
-    public final boolean isPersistent() { 
+    public final boolean isRaw() {
         return true;
     }
-    
-    public void makePersistent(Storage storage) { 
+
+    public final boolean isModified() {
+        return false;
+    }
+
+    public final boolean isDeleted() {
+        return false;
+    }
+
+    public final boolean isPersistent() {
+        return true;
+    }
+
+    public void makePersistent(Storage storage) {
         throw new StorageError(StorageError.ACCESS_TO_STUB);
     }
 
     public void store() {
         throw new StorageError(StorageError.ACCESS_TO_STUB);
     }
-  
-    public void modify() { 
+
+    public void modify() {
         throw new StorageError(StorageError.ACCESS_TO_STUB);
     }
 
-    public PersistentStub(Storage storage, int oid) { 
+    public PersistentStub(Storage storage, int oid) {
         this.storage = storage;
         this.oid = oid;
     }
@@ -48,19 +48,19 @@ public class PersistentStub implements IPersistent {
         return oid;
     }
 
-    public void deallocate() { 
+    public void deallocate() {
         throw new StorageError(StorageError.ACCESS_TO_STUB);
     }
 
     public boolean recursiveLoading() {
         return true;
     }
-    
+
     public final Storage getStorage() {
         return storage;
     }
-    
-    public boolean equals(Object o) { 
+
+    public boolean equals(Object o) {
         return o instanceof IPersistent && ((IPersistent)o).getOid() == oid;
     }
 
@@ -74,18 +74,18 @@ public class PersistentStub implements IPersistent {
     public void onStore() {
     }
 
-    public void invalidate() { 
+    public void invalidate() {
         throw new StorageError(StorageError.ACCESS_TO_STUB);
     }
 
     transient Storage storage;
     transient int     oid;
 
-    public void assignOid(Storage storage, int oid, boolean raw) { 
+    public void assignOid(Storage storage, int oid, boolean raw) {
         throw new StorageError(StorageError.ACCESS_TO_STUB);
     }
 
-    public Object clone() throws CloneNotSupportedException { 
+    public Object clone() throws CloneNotSupportedException {
         PersistentStub p = (PersistentStub)super.clone();
         p.oid = 0;
         return p;

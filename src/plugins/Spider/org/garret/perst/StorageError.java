@@ -3,7 +3,7 @@ package plugins.Spider.org.garret.perst;
 /**
  * Exception throw by storage implementation
  */
-public class StorageError extends RuntimeException { 
+public class StorageError extends RuntimeException {
     public static final int STORAGE_NOT_OPENED     = 1;
     public static final int STORAGE_ALREADY_OPENED = 2;
     public static final int FILE_ACCESS_ERROR      = 3;
@@ -44,26 +44,26 @@ public class StorageError extends RuntimeException {
         "Key not unique",
         "Key not found",
         "Database schema was changed for",
-        "Unsupported type", 
+        "Unsupported type",
         "Unsupported index type",
-        "Incompatible key type", 
-        "Not enough space", 
-        "Database file is corrupted", 
-        "Failed to instantiate the object of", 
+        "Incompatible key type",
+        "Not enough space",
+        "Database file is corrupted",
+        "Failed to instantiate the object of",
         "Failed to build descriptor for",
         "Stub object is accessed",
         "Invalid object reference",
         "Access to the deleted object",
         "Object access violation",
         "Failed to locate",
-        "Null value", 
+        "Null value",
         "Could not find indexed field",
         "Lock could not be granted",
         "No such database property",
         "Bad property value",
         "Attempt to store persistent object as raw object",
         "Attempt to store java.lang.Object as value",
-        "Unsupported encoding", 
+        "Unsupported encoding",
         "Storage is used by other application",
         "Invalid replication node port",
         "Connection failure",
@@ -74,13 +74,13 @@ public class StorageError extends RuntimeException {
     /**
      * Get exception error code (see definitions above)
      */
-    public int getErrorCode() { 
+    public int getErrorCode() {
         return errorCode;
     }
 
     /**
-     * Get original exception if StorageError excepotion was thrown as the result 
-     * of catching some other exception within Storage implementation. 
+     * Get original exception if StorageError excepotion was thrown as the result
+     * of catching some other exception within Storage implementation.
      * StorageError is used as wrapper of other exceptions to avoid cascade propagation
      * of throws and try/catch constructions.
      * @return original exception or <code>null</code> if there is no such exception
@@ -89,23 +89,23 @@ public class StorageError extends RuntimeException {
         return origEx;
     }
 
-    public StorageError(int errorCode) { 
+    public StorageError(int errorCode) {
         super(messageText[errorCode]);
         this.errorCode = errorCode;
     }
-    
-    public StorageError(int errorCode, Exception x) { 
+
+    public StorageError(int errorCode, Exception x) {
         super(messageText[errorCode] + ": " + x, x);
         this.errorCode = errorCode;
         origEx = x;
     }
 
-    public StorageError(int errorCode, Object param) { 
+    public StorageError(int errorCode, Object param) {
         super(messageText[errorCode] + " " + param);
         this.errorCode = errorCode;
     }
 
-    public StorageError(int errorCode, Object param, Exception x) { 
+    public StorageError(int errorCode, Object param, Exception x) {
         super(messageText[errorCode] + " " + param + ": " + x, x);
         this.errorCode = errorCode;
         origEx = x;

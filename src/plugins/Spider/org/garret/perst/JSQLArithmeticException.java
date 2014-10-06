@@ -13,11 +13,11 @@ package plugins.Spider.org.garret.perst;
 /**
  * Exception thown in case of incorect operands for integer operations
  */
-public class JSQLArithmeticException extends JSQLRuntimeException { 
+public class JSQLArithmeticException extends JSQLRuntimeException {
     /**
      * Constructor of exception
      */
-    public JSQLArithmeticException(String msg) { 
+    public JSQLArithmeticException(String msg) {
         super(msg, null, null);
     }
 }

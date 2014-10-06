@@ -7,26 +7,26 @@ package plugins.Spider.org.garret.perst;
  *
  * @see plugins.Spider.org.garret.perst.AssertionFailed
  */
-public class Assert { 
+public class Assert {
     /** Check specified condition and raise <code>AssertionFailed</code>
      *  exception if it is not true.
-     * 
-     * @param cond result of checked condition 
+     *
+     * @param cond result of checked condition
      */
-    public static final void that(boolean cond) { 
-        if (!cond) { 
+    public static final void that(boolean cond) {
+        if (!cond) {
             throw new AssertionFailed();
         }
     }
 
     /** Check specified condition and raise <code>AssertionFailed</code>
-     *  exception if it is not true. 
-     * 
+     *  exception if it is not true.
+     *
      * @param description string describing checked condition
-     * @param cond result of checked condition 
+     * @param cond result of checked condition
      */
-    public static final void that(String description, boolean cond) { 
-        if (!cond) { 
+    public static final void that(String description, boolean cond) {
+        if (!cond) {
             throw new AssertionFailed(description);
         }
     }
@@ -34,14 +34,14 @@ public class Assert {
     /**
      * Throw assertion failed exception.
      */
-    public static final void failed() { 
+    public static final void failed() {
         throw new AssertionFailed();
     }
 
     /**
      * Throw assertion failed exception with given description.
      */
-    public static final void failed(String description) { 
+    public static final void failed(String description) {
         throw new AssertionFailed(description);
     }
 }

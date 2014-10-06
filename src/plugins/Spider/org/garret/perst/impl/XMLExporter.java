@@ -6,17 +6,17 @@ import java.lang.reflect.Field;
 
 import plugins.Spider.org.garret.perst.*;
 
-public class XMLExporter { 
-    public XMLExporter(StorageImpl storage, Writer writer) { 
+public class XMLExporter {
+    public XMLExporter(StorageImpl storage, Writer writer) {
         this.storage = storage;
         this.writer = writer;
     }
 
-    public void exportDatabase(int rootOid) throws IOException 
-    { 
-        if (storage.encoding != null) { 
+    public void exportDatabase(int rootOid) throws IOException
+    {
+        if (storage.encoding != null) {
             writer.write("<?xml version=\"1.0\" encoding=\"" + storage.encoding + "\"?>\n");
-        } else { 
+        } else {
             writer.write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
         }
         writer.write("<database root=\"" + rootOid + "\">\n");
@@ -24,65 +24,65 @@ public class XMLExporter {
         markedBitmap = new int[(storage.currIndexSize + 31) / 32];
         markedBitmap[rootOid >> 5] |= 1 << (rootOid & 31);
         int nExportedObjects;
-        do { 
+        do {
             nExportedObjects = 0;
-            for (int i = 0; i < markedBitmap.length; i++) { 
+            for (int i = 0; i < markedBitmap.length; i++) {
                 int mask = markedBitmap[i];
-                if (mask != 0) { 
-                    for (int j = 0, bit = 1; j < 32; j++, bit <<= 1) { 
-                        if ((mask & bit) != 0) { 
+                if (mask != 0) {
+                    for (int j = 0, bit = 1; j < 32; j++, bit <<= 1) {
+                        if ((mask & bit) != 0) {
                             int oid = (i << 5) + j;
                             exportedBitmap[i] |= bit;
                             markedBitmap[i] &= ~bit;
-                            try { 
+                            try {
                                 byte[] obj = storage.get(oid);
-                                int typeOid = ObjectHeader.getType(obj, 0);                
+                                int typeOid = ObjectHeader.getType(obj, 0);
                                 ClassDescriptor desc = storage.findClassDescriptor(typeOid);
-                                if (desc.cls == Btree.class) { 
+                                if (desc.cls == Btree.class) {
                                     exportIndex(oid, obj, "plugins.Spider.org.garret.perst.impl.Btree");
-                                } else if (desc.cls == BitIndexImpl.class) { 
+                                } else if (desc.cls == BitIndexImpl.class) {
                                     exportIndex(oid, obj, "plugins.Spider.org.garret.perst.impl.BitIndexImpl");
-                                } else if (desc.cls == PersistentSet.class) { 
+                                } else if (desc.cls == PersistentSet.class) {
                                     exportSet(oid, obj);
-                                } else if (desc.cls == BtreeFieldIndex.class) { 
+                                } else if (desc.cls == BtreeFieldIndex.class) {
                                     exportFieldIndex(oid, obj, "plugins.Spider.org.garret.perst.impl.BtreeFieldIndex");
-                                } else if (desc.cls == BtreeCaseInsensitiveFieldIndex.class) { 
+                                } else if (desc.cls == BtreeCaseInsensitiveFieldIndex.class) {
                                     exportFieldIndex(oid, obj, "plugins.Spider.org.garret.perst.impl.BtreeCaseInsensitiveFieldIndex");
-                                } else if (desc.cls == BtreeMultiFieldIndex.class) { 
+                                } else if (desc.cls == BtreeMultiFieldIndex.class) {
                                     exportMultiFieldIndex(oid, obj, "plugins.Spider.org.garret.perst.impl.BtreeMultiFieldIndex");
-                                } else if (desc.cls == BtreeCaseInsensitiveMultiFieldIndex.class) { 
+                                } else if (desc.cls == BtreeCaseInsensitiveMultiFieldIndex.class) {
                                     exportMultiFieldIndex(oid, obj, "plugins.Spider.org.garret.perst.impl.BtreeCaseInsensitiveMultiFieldIndex");
-                                } else if (desc.cls == BtreeCompoundIndex.class) { 
+                                } else if (desc.cls == BtreeCompoundIndex.class) {
                                     exportCompoundIndex(oid, obj);
-                                } else { 
+                                } else {
                                     String className = exportIdentifier(desc.name);
                                     writer.write(" <" + className + " id=\"" + oid + "\">\n");
                                     exportObject(desc, obj, ObjectHeader.sizeof, 2);
                                     writer.write(" </" + className + ">\n");
                                 }
                                 nExportedObjects += 1;
-                            } catch (StorageError x) { 
+                            } catch (StorageError x) {
                                 if (storage.listener != null) {
                                     storage.listener.objectNotExported(oid, x);
-                                } else { 
+                                } else {
                                     System.err.println("XML export failed for object " + oid + ": " + x);
                                 }
                             }
                         }
                     }
                 }
-            }                            
+            }
         } while (nExportedObjects != 0);
-        writer.write("</database>\n");   
+        writer.write("</database>\n");
         writer.flush(); // writer should be closed by calling code
     }
 
-    final String exportIdentifier(String name) { 
+    final String exportIdentifier(String name) {
         return name.replace('$', '-');
     }
 
-    final void exportSet(int oid,  byte[] data) throws IOException 
-    { 
+    final void exportSet(int oid,  byte[] data) throws IOException
+    {
         Btree btree = new Btree(data, ObjectHeader.sizeof);
         storage.assignOid(btree, oid);
         writer.write(" <plugins.Spider.org.garret.perst.impl.PersistentSet id=\"" + oid + "\">\n");
@@ -90,18 +90,18 @@ public class XMLExporter {
         writer.write(" </plugins.Spider.org.garret.perst.impl.PersistentSet>\n");
     }
 
-    final void exportIndex(int oid, byte[] data, String name) throws IOException 
-    { 
+    final void exportIndex(int oid, byte[] data, String name) throws IOException
+    {
         Btree btree = new Btree(data, ObjectHeader.sizeof);
         storage.assignOid(btree, oid);
-        writer.write(" <" + name + " id=\"" + oid + "\" unique=\"" + (btree.unique ? '1' : '0') 
+        writer.write(" <" + name + " id=\"" + oid + "\" unique=\"" + (btree.unique ? '1' : '0')
                      + "\" type=\"" + ClassDescriptor.signature[btree.type] + "\">\n");
         btree.export(this);
         writer.write(" </" + name + ">\n");
     }
 
     final void exportFieldIndex(int oid,  byte[] data, String name) throws IOException
-    { 
+    {
         Btree btree = new Btree(data, ObjectHeader.sizeof);
         storage.assignOid(btree, oid);
         writer.write(" <" + name + " id=\"" + oid + "\" unique=\"" + (btree.unique ? '1' : '0') + "\"");
@@ -118,14 +118,14 @@ public class XMLExporter {
     }
 
     final void exportMultiFieldIndex(int oid,  byte[] data, String name) throws IOException
-    { 
+    {
         Btree btree = new Btree(data, ObjectHeader.sizeof);
         storage.assignOid(btree, oid);
         writer.write(" <" + name + " id=\"" + oid + "\" unique=\"" + (btree.unique ? '1' : '0') + "\" class=");
         int offs = exportString(data, Btree.sizeof);
         int nFields = Bytes.unpack4(data, offs);
         offs += 4;
-        for (int i = 0; i < nFields; i++) { 
+        for (int i = 0; i < nFields; i++) {
             writer.write(" field" + i + "=");
             offs = exportString(data, offs);
         }
@@ -133,17 +133,17 @@ public class XMLExporter {
         int nTypes = Bytes.unpack4(data, offs);
         offs += 4;
         compoundKeyTypes = new int[nTypes];
-        for (int i = 0; i < nTypes; i++) { 
+        for (int i = 0; i < nTypes; i++) {
             compoundKeyTypes[i] = Bytes.unpack4(data, offs);
             offs += 4;
         }
-        btree.export(this); 
+        btree.export(this);
         compoundKeyTypes = null;
         writer.write(" </" + name + ">\n");
     }
 
     final void exportCompoundIndex(int oid,  byte[] data) throws IOException
-    { 
+    {
         Btree btree = new Btree(data, ObjectHeader.sizeof);
         storage.assignOid(btree, oid);
         writer.write(" <plugins.Spider.org.garret.perst.impl.BtreeCompoundIndex id=\"" + oid + "\" unique=\"" + (btree.unique ? '1' : '0') + "\"");
@@ -151,22 +151,22 @@ public class XMLExporter {
         int nTypes = Bytes.unpack4(data, offs);
         offs += 4;
         compoundKeyTypes = new int[nTypes];
-        for (int i = 0; i < nTypes; i++) { 
-            int type = Bytes.unpack4(data, offs); 
+        for (int i = 0; i < nTypes; i++) {
+            int type = Bytes.unpack4(data, offs);
             writer.write(" type" + i + "=\"" + ClassDescriptor.signature[type] + "\"");
-             
+
             compoundKeyTypes[i] = type;
             offs += 4;
         }
         writer.write(">\n");
-        btree.export(this); 
+        btree.export(this);
         compoundKeyTypes = null;
         writer.write(" </plugins.Spider.org.garret.perst.impl.BtreeCompoundIndex>\n");
     }
 
     final int exportKey(byte[] body, int offs, int size, int type) throws IOException
     {
-        switch (type) { 
+        switch (type) {
             case ClassDescriptor.tpBoolean:
                 writer.write(body[offs++] != 0 ? "1" : "0");
                 break;
@@ -200,13 +200,13 @@ public class XMLExporter {
                 offs += 8;
                 break;
             case ClassDescriptor.tpString:
-                for (int i = 0; i < size; i++) { 
+                for (int i = 0; i < size; i++) {
                     exportChar((char)Bytes.unpack2(body, offs));
                     offs += 2;
                 }
                 break;
             case ClassDescriptor.tpArrayOfByte:
-                for (int i = 0; i < size; i++) { 
+                for (int i = 0; i < size; i++) {
                     byte b = body[offs++];
                     writer.write(hexDigit[(b >>> 4) & 0xF]);
                     writer.write(hexDigit[b & 0xF]);
@@ -216,9 +216,9 @@ public class XMLExporter {
             {
                 long msec = Bytes.unpack8(body, offs);
                 offs += 8;
-                if (msec >= 0) { 
+                if (msec >= 0) {
                     writer.write(XMLImporter.httpFormatter.format(new Date(msec)));
-                } else { 
+                } else {
                     writer.write("null");
                 }
                 break;
@@ -229,18 +229,18 @@ public class XMLExporter {
         return offs;
     }
 
-    final void exportCompoundKey(byte[] body, int offs, int size, int type) throws IOException 
-    { 
+    final void exportCompoundKey(byte[] body, int offs, int size, int type) throws IOException
+    {
         Assert.that(type == ClassDescriptor.tpArrayOfByte);
         int end = offs + size;
-        for (int i = 0; i < compoundKeyTypes.length; i++) { 
+        for (int i = 0; i < compoundKeyTypes.length; i++) {
             type = compoundKeyTypes[i];
-            if (type == ClassDescriptor.tpArrayOfByte || type == ClassDescriptor.tpString) { 
+            if (type == ClassDescriptor.tpArrayOfByte || type == ClassDescriptor.tpString) {
                 size = Bytes.unpack4(body, offs);
                 offs += 4;
             }
             writer.write(" key" + i + "=\"");
-            offs = exportKey(body, offs, size, type); 
+            offs = exportKey(body, offs, size, type);
             writer.write("\"");
         }
         Assert.that(offs == end);
@@ -249,12 +249,12 @@ public class XMLExporter {
     final void exportAssoc(int oid, byte[] body, int offs, int size, int type) throws IOException
     {
         writer.write("  <ref id=\"" + oid + "\"");
-        if ((exportedBitmap[oid >> 5] & (1 << (oid & 31))) == 0) { 
+        if ((exportedBitmap[oid >> 5] & (1 << (oid & 31))) == 0) {
             markedBitmap[oid >> 5] |= 1 << (oid & 31);
         }
-        if (compoundKeyTypes != null) { 
+        if (compoundKeyTypes != null) {
             exportCompoundKey(body, offs, size, type);
-        } else { 
+        } else {
             writer.write(" key=\"");
             exportKey(body, offs, size, type);
             writer.write("\"");
@@ -262,13 +262,13 @@ public class XMLExporter {
         writer.write("/>\n");
     }
 
-    final void indentation(int indent) throws IOException { 
-        while (--indent >= 0) { 
+    final void indentation(int indent) throws IOException {
+        while (--indent >= 0) {
             writer.write(' ');
         }
     }
 
-    final void exportChar(char ch) throws IOException { 
+    final void exportChar(char ch) throws IOException {
         switch (ch) {
           case '<':
             writer.write("&lt;");
@@ -287,32 +287,32 @@ public class XMLExporter {
         }
     }
 
-    final int exportString(byte[] body, int offs) throws IOException { 
+    final int exportString(byte[] body, int offs) throws IOException {
         int len = Bytes.unpack4(body, offs);
         offs += 4;
-        if (len >= 0) { 
-            writer.write("\"");                    
-            while (--len >= 0) { 
+        if (len >= 0) {
+            writer.write("\"");
+            while (--len >= 0) {
                 exportChar((char)Bytes.unpack2(body, offs));
                 offs += 2;
             }
-            writer.write("\"");                    
-        } else if (len < -1) { 
-            writer.write("\"");   
+            writer.write("\"");
+        } else if (len < -1) {
+            writer.write("\"");
             String s;
-            if (storage.encoding != null) { 
+            if (storage.encoding != null) {
                 s = new String(body, offs, -len-2, storage.encoding);
-            } else { 
+            } else {
                 s = new String(body, offs, -len-2);
             }
             offs -= len+2;
-            for (int i = 0, n = s.length(); i < n; i++) { 
+            for (int i = 0, n = s.length(); i < n; i++) {
                 exportChar(s.charAt(i));
             }
-            writer.write("\"");   
-        } else { 
+            writer.write("\"");
+        } else {
             writer.write("null");
-        }       
+        }
         return offs;
     }
 
@@ -320,14 +320,14 @@ public class XMLExporter {
         '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'
     };
 
-    final int exportBinary(byte[] body, int offs) throws IOException { 
+    final int exportBinary(byte[] body, int offs) throws IOException {
         int len = Bytes.unpack4(body, offs);
         offs += 4;
-        if (len < 0) { 
-            if (len == -2-ClassDescriptor.tpObject) { 
+        if (len < 0) {
+            if (len == -2-ClassDescriptor.tpObject) {
                 exportRef(Bytes.unpack4(body, offs));
                 offs += 4;
-            } else if (len < -1) { 
+            } else if (len < -1) {
                 writer.write("\"#");
                 writer.write(hexDigit[-2-len]);
                 len = ClassDescriptor.sizeof[-2-len];
@@ -337,7 +337,7 @@ public class XMLExporter {
                     writer.write(hexDigit[b & 0xF]);
                 }
                 writer.write('\"');
-            } else { 
+            } else {
                 writer.write("null");
             }
         } else {
@@ -351,10 +351,10 @@ public class XMLExporter {
         }
         return offs;
     }
-    
-    final void exportRef(int oid) throws IOException { 
+
+    final void exportRef(int oid) throws IOException {
         writer.write("<ref id=\"" + oid + "\"/>");
-        if (oid != 0 && (exportedBitmap[oid >> 5] & (1 << (oid & 31))) == 0) { 
+        if (oid != 0 && (exportedBitmap[oid >> 5] & (1 << (oid & 31))) == 0) {
             markedBitmap[oid >> 5] |= 1 << (oid & 31);
         }
     }
@@ -362,12 +362,12 @@ public class XMLExporter {
     final int exportObject(ClassDescriptor desc, byte[] body, int offs, int indent) throws IOException {
         ClassDescriptor.FieldDescriptor[] all = desc.allFields;
 
-        for (int i = 0, n = all.length; i < n; i++) { 
+        for (int i = 0, n = all.length; i < n; i++) {
             ClassDescriptor.FieldDescriptor fd = all[i];
             indentation(indent);
             String fieldName = exportIdentifier(fd.fieldName);
             writer.write("<" + fieldName + ">");
-            switch (fd.type) { 
+            switch (fd.type) {
                 case ClassDescriptor.tpBoolean:
                     writer.write(body[offs++] != 0 ? "1" : "0");
                     break;
@@ -399,11 +399,11 @@ public class XMLExporter {
                     offs += 8;
                     break;
                 case ClassDescriptor.tpEnum:
-                { 
+                {
                     int ordinal = Bytes.unpack4(body, offs);
-                    if (ordinal < 0) { 
+                    if (ordinal < 0) {
                         writer.write("null");
-                    } else { 
+                    } else {
                         writer.write("\"" + ((Enum)fd.field.getType().getEnumConstants()[ordinal]).name() + "\"");
                     }
                     offs += 4;
@@ -416,9 +416,9 @@ public class XMLExporter {
                 {
                     long msec = Bytes.unpack8(body, offs);
                     offs += 8;
-                    if (msec >= 0) { 
+                    if (msec >= 0) {
                         writer.write("\"" + XMLImporter.httpFormatter.format(new Date(msec)) + "\"");
-                    } else { 
+                    } else {
                         writer.write("null");
                     }
                     break;
@@ -441,11 +441,11 @@ public class XMLExporter {
                     ByteArrayInputStream in = new ByteArrayInputStream(body, offs, body.length - offs);
                     CustomSerializable obj = storage.serializer.unpack(in);
                     String str = obj.toString();
-                    writer.write("\"");   
-                    for (int j = 0, len = str.length(); j < len; j++) { 
+                    writer.write("\"");
+                    for (int j = 0, len = str.length(); j < len; j++) {
                         exportChar(str.charAt(j));
                     }
-                    writer.write("\"");   
+                    writer.write("\"");
                     offs = body.length - in.available();
                     break;
                 }
@@ -453,11 +453,11 @@ public class XMLExporter {
                 {
                     int len = Bytes.unpack4(body, offs);
                     offs += 4;
-                    if (len < 0) { 
+                    if (len < 0) {
                         writer.write("null");
                     } else {
                         writer.write('\n');
-                        while (--len >= 0) { 
+                        while (--len >= 0) {
                             indentation(indent+1);
                             writer.write("<element>" + (body[offs++] != 0 ? "1" : "0") + "</element>\n");
                         }
@@ -469,11 +469,11 @@ public class XMLExporter {
                 {
                     int len = Bytes.unpack4(body, offs);
                     offs += 4;
-                    if (len < 0) { 
+                    if (len < 0) {
                         writer.write("null");
                     } else {
                         writer.write('\n');
-                        while (--len >= 0) { 
+                        while (--len >= 0) {
                             indentation(indent+1);
                             writer.write("<element>" + (Bytes.unpack2(body, offs) & 0xFFFF) + "</element>\n");
                             offs += 2;
@@ -486,11 +486,11 @@ public class XMLExporter {
                 {
                     int len = Bytes.unpack4(body, offs);
                     offs += 4;
-                    if (len < 0) { 
+                    if (len < 0) {
                         writer.write("null");
                     } else {
                         writer.write('\n');
-                        while (--len >= 0) { 
+                        while (--len >= 0) {
                             indentation(indent+1);
                             writer.write("<element>" + Bytes.unpack2(body, offs) + "</element>\n");
                             offs += 2;
@@ -503,17 +503,17 @@ public class XMLExporter {
                 {
                     int len = Bytes.unpack4(body, offs);
                     offs += 4;
-                    if (len < 0) { 
+                    if (len < 0) {
                         writer.write("null");
                     } else {
                         writer.write('\n');
                         Enum[] enumConstants = (Enum[])fd.field.getType().getEnumConstants();
-                        while (--len >= 0) { 
+                        while (--len >= 0) {
                             indentation(indent+1);
                             int ordinal = Bytes.unpack4(body, offs);
-                            if (ordinal < 0) { 
+                            if (ordinal < 0) {
                                 writer.write("null");
-                            } else { 
+                            } else {
                                 writer.write("<element>\"" + enumConstants[ordinal].name() + "\"</element>\n");
                             }
                             offs += 4;
@@ -526,11 +526,11 @@ public class XMLExporter {
                 {
                     int len = Bytes.unpack4(body, offs);
                     offs += 4;
-                    if (len < 0) { 
+                    if (len < 0) {
                         writer.write("null");
                     } else {
                         writer.write('\n');
-                        while (--len >= 0) { 
+                        while (--len >= 0) {
                             indentation(indent+1);
                             writer.write("<element>" + Bytes.unpack4(body, offs) + "</element>\n");
                             offs += 4;
@@ -543,11 +543,11 @@ public class XMLExporter {
                 {
                     int len = Bytes.unpack4(body, offs);
                     offs += 4;
-                    if (len < 0) { 
+                    if (len < 0) {
                         writer.write("null");
                     } else {
                         writer.write('\n');
-                        while (--len >= 0) { 
+                        while (--len >= 0) {
                             indentation(indent+1);
                             writer.write("<element>" + Bytes.unpack8(body, offs) + "</element>\n");
                             offs += 8;
@@ -560,14 +560,14 @@ public class XMLExporter {
                 {
                     int len = Bytes.unpack4(body, offs);
                     offs += 4;
-                    if (len < 0) { 
+                    if (len < 0) {
                         writer.write("null");
                     } else {
                         writer.write('\n');
-                        while (--len >= 0) { 
+                        while (--len >= 0) {
                             indentation(indent+1);
-                            writer.write("<element>" 
-                                         + Float.intBitsToFloat(Bytes.unpack4(body, offs)) 
+                            writer.write("<element>"
+                                         + Float.intBitsToFloat(Bytes.unpack4(body, offs))
                                          + "</element>\n");
                             offs += 4;
                         }
@@ -579,14 +579,14 @@ public class XMLExporter {
                 {
                     int len = Bytes.unpack4(body, offs);
                     offs += 4;
-                    if (len < 0) { 
+                    if (len < 0) {
                         writer.write("null");
                     } else {
                         writer.write('\n');
-                        while (--len >= 0) { 
+                        while (--len >= 0) {
                             indentation(indent+1);
-                            writer.write("<element>" 
-                                         + Double.longBitsToDouble(Bytes.unpack8(body, offs)) 
+                            writer.write("<element>"
+                                         + Double.longBitsToDouble(Bytes.unpack8(body, offs))
                                          + "</element>\n");
                             offs += 8;
                         }
@@ -598,19 +598,19 @@ public class XMLExporter {
                 {
                     int len = Bytes.unpack4(body, offs);
                     offs += 4;
-                    if (len < 0) { 
+                    if (len < 0) {
                         writer.write("null");
                     } else {
                         writer.write('\n');
-                        while (--len >= 0) { 
+                        while (--len >= 0) {
                             indentation(indent+1);
                             long msec = Bytes.unpack8(body, offs);
                             offs += 8;
-                            if (msec >= 0) { 
+                            if (msec >= 0) {
                                 writer.write("<element>\"");
                                 writer.write(XMLImporter.httpFormatter.format(new Date(msec)));
                                 writer.write("\"</element>\n");
-                            } else { 
+                            } else {
                                 writer.write("<element>null</element>\n");
                             }
                         }
@@ -621,11 +621,11 @@ public class XMLExporter {
                 {
                     int len = Bytes.unpack4(body, offs);
                     offs += 4;
-                    if (len < 0) { 
+                    if (len < 0) {
                         writer.write("null");
                     } else {
                         writer.write('\n');
-                        while (--len >= 0) { 
+                        while (--len >= 0) {
                             indentation(indent+1);
                             writer.write("<element>");
                             offs = exportString(body, offs);
@@ -640,14 +640,14 @@ public class XMLExporter {
                 {
                     int len = Bytes.unpack4(body, offs);
                     offs += 4;
-                    if (len < 0) { 
+                    if (len < 0) {
                         writer.write("null");
                     } else {
                         writer.write('\n');
-                        while (--len >= 0) { 
+                        while (--len >= 0) {
                             indentation(indent+1);
                             int oid = Bytes.unpack4(body, offs);
-                            if (oid != 0 && (exportedBitmap[oid >> 5] & (1 << (oid & 31))) == 0) { 
+                            if (oid != 0 && (exportedBitmap[oid >> 5] & (1 << (oid & 31))) == 0) {
                                 markedBitmap[oid >> 5] |= 1 << (oid & 31);
                             }
                             writer.write("<element><ref id=\"" + oid + "\"/></element>\n");
@@ -661,11 +661,11 @@ public class XMLExporter {
                 {
                     int len = Bytes.unpack4(body, offs);
                     offs += 4;
-                    if (len < 0) { 
+                    if (len < 0) {
                         writer.write("null");
                     } else {
                         writer.write('\n');
-                        while (--len >= 0) { 
+                        while (--len >= 0) {
                             indentation(indent+1);
                             writer.write("<element>\n");
                             offs = exportObject(fd.valueDesc, body, offs, indent+2);
@@ -680,11 +680,11 @@ public class XMLExporter {
                 {
                     int len = Bytes.unpack4(body, offs);
                     offs += 4;
-                    if (len < 0) { 
+                    if (len < 0) {
                         writer.write("null");
                     } else {
                         writer.write('\n');
-                        while (--len >= 0) { 
+                        while (--len >= 0) {
                             indentation(indent+1);
                             writer.write("<element>");
                             offs = exportBinary(body, offs);
