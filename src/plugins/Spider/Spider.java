@@ -3,6 +3,7 @@
  * http://www.gnu.org/ for further details of the GPL. */
 package plugins.Spider;
 
+import static java.lang.System.currentTimeMillis;
 import static plugins.Spider.SearchUtil.isStopWord;
 
 import java.io.BufferedReader;
@@ -26,6 +27,7 @@ import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 import plugins.Spider.index.TermPageEntry;
 import plugins.Spider.db.Config;
@@ -110,7 +112,9 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 	private PluginRespirator pr;
 
 	private LibraryBuffer librarybuffer;
-	
+
+	private final AtomicLong lastRequestFinishedAt = new AtomicLong();
+
 	public int getLibraryBufferSize() {
 		return librarybuffer.bufferUsageEstimate();
 	}
@@ -121,6 +125,10 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 	
 	public long getNotStalledTime() {
 		return librarybuffer.getTimeNotStalled();
+	}
+
+	public long getLastRequestFinishedAt() {
+		return lastRequestFinishedAt.get();
 	}
 
 	public Config getConfig() {
@@ -397,7 +405,8 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 		synchronized (this) {
 			if (stopped) return;    				
 		}
-		
+
+		lastRequestFinishedAt.set(currentTimeMillis());
 		FreenetURI uri = state.getURI();
 		ClientMetadata cm = result.getMetadata();
 		Bucket data = result.asBucket();
@@ -495,6 +504,7 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 			if (stopped) return;
 		}
 
+		lastRequestFinishedAt.set(currentTimeMillis());
 		boolean dbTransactionEnded = false;
 		db.beginThreadTransaction(Storage.EXCLUSIVE_TRANSACTION);
 		try {

@@ -107,8 +107,11 @@ class MainPage implements WebPage {
 		statusContent.addChild("#", "Queued Event: " + spider.callbackExecutor.getQueue().size());
 		statusContent.addChild("br");
 		statusContent.addChild("#", "Library buffer size: "+spider.getLibraryBufferSize());
+		long lastRequestFinishedAt = spider.getLastRequestFinishedAt();
 		long tStalled = spider.getStalledTime();
 		long tNotStalled = spider.getNotStalledTime();
+		statusContent.addChild("br");
+		statusContent.addChild("#", "Last Activity: " + ((lastRequestFinishedAt == 0) ? "never" : (TimeUtil.formatTime(System.currentTimeMillis() - lastRequestFinishedAt) + " ago")));
 		statusContent.addChild("br");
 		statusContent.addChild("#", "Time stalled: "+TimeUtil.formatTime(tStalled));
 		statusContent.addChild("br");
