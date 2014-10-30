@@ -7,8 +7,8 @@ import java.io.Reader;
 /**
  * Interface for classes which are able to extract text and its language themselves.
  */
-public interface FullTextSearchable extends IPersistent
-{
+public interface FullTextSearchable extends IPersistent {
+
     /**
      * Get document text
      */

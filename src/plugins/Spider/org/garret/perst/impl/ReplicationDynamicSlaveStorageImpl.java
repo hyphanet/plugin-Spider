@@ -1,14 +1,13 @@
 package plugins.Spider.org.garret.perst.impl;
 
 import java.io.*;
+
 import java.net.*;
 
 import plugins.Spider.org.garret.perst.*;
 
-
-public class ReplicationDynamicSlaveStorageImpl extends ReplicationSlaveStorageImpl
-{
-    public ReplicationDynamicSlaveStorageImpl(String host, int port) { 
+public class ReplicationDynamicSlaveStorageImpl extends ReplicationSlaveStorageImpl {
+    public ReplicationDynamicSlaveStorageImpl(String host, int port) {
         this.host = host;
         this.port = port;
     }
@@ -20,16 +19,14 @@ public class ReplicationDynamicSlaveStorageImpl extends ReplicationSlaveStorageI
         super.open(file, pagePoolSize);
     }
 
-    Socket getSocket() throws IOException { 
+    Socket getSocket() throws IOException {
         if (opened) {
             throw new StorageError(StorageError.CONNECTION_FAILURE);
         }
+
         return new Socket(host, port);
     }
 
     protected String host;
-    protected int    port;
-}    
-
-    
-                                               
+    protected int port;
+}

@@ -8,133 +8,137 @@ import plugins.Spider.org.garret.perst.IterableIterator;
 import plugins.Spider.org.garret.perst.Key;
 import plugins.Spider.org.garret.perst.Persistent;
 import plugins.Spider.org.garret.perst.Storage;
+
 import freenet.keys.FreenetURI;
 
 public class PerstRoot extends Persistent {
+    protected FieldIndex<Page> idPage;
+    protected FieldIndex<Page> uriPage;
+    protected FieldIndex<Page> queuedPages;
+    protected FieldIndex<Page> failedPages;
+    protected FieldIndex<Page> succeededPages;
+    protected FieldIndex<Page> notPushedPages;
+    protected FieldIndex<Page> indexedPages;
+    private Config config;
 
-	protected FieldIndex<Page> idPage;
-	protected FieldIndex<Page> uriPage;
-	protected FieldIndex<Page> queuedPages;
-	protected FieldIndex<Page> failedPages;
-	protected FieldIndex<Page> succeededPages;
-	protected FieldIndex<Page> notPushedPages;
-	protected FieldIndex<Page> indexedPages;
+    public PerstRoot() {}
 
-	private Config config;
+    public static PerstRoot createRoot(Storage storage) {
+        PerstRoot root = new PerstRoot();
 
-	public PerstRoot() {
-	}
+        root.idPage = storage.createFieldIndex(Page.class, "id", true);
+        root.uriPage = storage.createFieldIndex(Page.class, "uri", true);
+        root.queuedPages = storage.createFieldIndex(Page.class, "lastChange", false);
+        root.failedPages = storage.createFieldIndex(Page.class, "lastChange", false);
+        root.succeededPages = storage.createFieldIndex(Page.class, "lastChange", false);
+        root.notPushedPages = storage.createFieldIndex(Page.class, "lastChange", false);
+        root.indexedPages = storage.createFieldIndex(Page.class, "lastChange", false);
+        root.config = new Config(storage);
+        storage.setRoot(root);
 
-	public static PerstRoot createRoot(Storage storage) {
-		PerstRoot root = new PerstRoot();
+        return root;
+    }
 
-		root.idPage = storage.createFieldIndex(Page.class, "id", true);
-		root.uriPage = storage.createFieldIndex(Page.class, "uri", true);
-		root.queuedPages = storage.createFieldIndex(Page.class, "lastChange", false);
-		root.failedPages = storage.createFieldIndex(Page.class, "lastChange", false);
-		root.succeededPages = storage.createFieldIndex(Page.class, "lastChange", false);
-		root.notPushedPages = storage.createFieldIndex(Page.class, "lastChange", false);
-		root.indexedPages = storage.createFieldIndex(Page.class, "lastChange", false);
+    public Page getPageByURI(FreenetURI uri, boolean create, String comment) {
+        idPage.exclusiveLock();
+        uriPage.exclusiveLock();
+        queuedPages.exclusiveLock();
 
-		root.config = new Config(storage);
+        try {
+            Page page = uriPage.get(new Key(uri.toString()));
 
-		storage.setRoot(root);
+            if (create && (page == null)) {
+                page = new Page(uri.toString(), comment, getStorage());
+                idPage.append(page);
+                uriPage.put(page);
+                queuedPages.put(page);
+            }
 
-		return root;
-	}
-	
-	public Page getPageByURI(FreenetURI uri, boolean create, String comment) {
-		idPage.exclusiveLock();
-		uriPage.exclusiveLock();
-		queuedPages.exclusiveLock();
-		try {
-			Page page = uriPage.get(new Key(uri.toString()));
+            return page;
+        } finally {
+            queuedPages.unlock();
+            uriPage.unlock();
+            idPage.unlock();
+        }
+    }
 
-			if (create && page == null) {
-				page = new Page(uri.toString(), comment, getStorage());
+    public Page getPageById(long id) {
+        idPage.sharedLock();
 
-				idPage.append(page);
-				uriPage.put(page);
-				queuedPages.put(page);
-			}
+        try {
+            Page page = idPage.get(id);
 
-			return page;
-		} finally {
-			queuedPages.unlock();
-			uriPage.unlock();
-			idPage.unlock();
-		}
-	}
+            return page;
+        } finally {
+            idPage.unlock();
+        }
+    }
 
-	public Page getPageById(long id) {
-		idPage.sharedLock();
-		try {
-			Page page = idPage.get(id);
-			return page;
-		} finally {
-			idPage.unlock();
-		}
-	}
+    FieldIndex<Page> getPageIndex(Status status) {
+        switch (status) {
+            case FAILED :
+                return failedPages;
+            case QUEUED :
+                return queuedPages;
+            case SUCCEEDED :
+                return succeededPages;
+            case NOT_PUSHED :
+                return notPushedPages;
+            case INDEXED :
+                return indexedPages;
+            default :
+                return null;
+        }
+    }
 
-	FieldIndex<Page> getPageIndex(Status status) {
-		switch (status) {
-		case FAILED:
-			return failedPages;
-		case QUEUED:
-			return queuedPages;
-		case SUCCEEDED:
-			return succeededPages;
-		case NOT_PUSHED:
-			return notPushedPages;
-		case INDEXED:
-			return indexedPages;
-		default:
-			return null;
-		}
-	}
+    public void exclusiveLock(Status status) {
+        FieldIndex<Page> index = getPageIndex(status);
 
-	public void exclusiveLock(Status status) {
-		FieldIndex<Page> index = getPageIndex(status);
-		index.exclusiveLock();
-	}
+        index.exclusiveLock();
+    }
 
-	public void sharedLockPages(Status status) {
-		FieldIndex<Page> index = getPageIndex(status);
-		index.sharedLock();
-	}
+    public void sharedLockPages(Status status) {
+        FieldIndex<Page> index = getPageIndex(status);
 
-	public void unlockPages(Status status) {
-		FieldIndex<Page> index = getPageIndex(status);
-		index.unlock();
-	}
-	
-	public Iterator<Page> getPages(Status status) {
-		FieldIndex<Page> index = getPageIndex(status);
-		index.sharedLock();
-		try {
-			return index.iterator();
-		} finally {
-			index.unlock();
-		}
-	}
+        index.sharedLock();
+    }
 
-	public int getPageCount(Status status) {
-		FieldIndex<Page> index = getPageIndex(status);
-		index.sharedLock();
-		try {
-			return index.size();
-		} finally {
-			index.unlock();
-		}
-	}
+    public void unlockPages(Status status) {
+        FieldIndex<Page> index = getPageIndex(status);
 
-	public synchronized void setConfig(Config config) {		
-		this.config = config;
-		modify();
-	}
+        index.unlock();
+    }
 
-	public synchronized Config getConfig() {
-		return config;
-	}
+    public Iterator<Page> getPages(Status status) {
+        FieldIndex<Page> index = getPageIndex(status);
 
+        index.sharedLock();
+
+        try {
+            return index.iterator();
+        } finally {
+            index.unlock();
+        }
+    }
+
+    public int getPageCount(Status status) {
+        FieldIndex<Page> index = getPageIndex(status);
+
+        index.sharedLock();
+
+        try {
+            return index.size();
+        } finally {
+            index.unlock();
+        }
+    }
+
+    public synchronized void setConfig(Config config) {
+        this.config = config;
+        modify();
+    }
+
+    public synchronized Config getConfig() {
+        return config;
+    }
 }

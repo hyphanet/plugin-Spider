@@ -1,10 +1,11 @@
 package plugins.Spider.org.garret.perst;
 
 /**
- * Storage reciving modified pages from replication master and 
- * been able to run read-only transactions 
+ * Storage reciving modified pages from replication master and
+ * been able to run read-only transactions
  */
-public interface ReplicationSlaveStorage extends Storage { 
+public interface ReplicationSlaveStorage extends Storage {
+
     /**
      * Check if socket is connected to the master host
      * @return <code>true</code> if connection between slave and master is sucessfully established

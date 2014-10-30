@@ -6,7 +6,8 @@ import java.util.*;
  * Interface of selectable collection.
  * Selectable collections allows to selct its memebers using JSQL query
  */
-public interface ITable<T> extends Collection<T> { 
+public interface ITable<T> extends Collection<T> {
+
     /**
      * Select members of the collection using search predicate
      * This iterator doesn't support remove() method.

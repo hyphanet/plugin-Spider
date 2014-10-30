@@ -5,11 +5,11 @@ package plugins.Spider.org.garret.perst;
  * You should derive your time series element from this class
  * and implement getTime method.
  */
-public interface TimeSeriesTick extends IValue { 
+public interface TimeSeriesTick extends IValue {
+
     /**
      * Get time series element timestamp
      * @return timestamp in milliseconds
      */
     long getTime();
 }
-    

@@ -5,7 +5,8 @@ import java.io.*;
 /**
  * Interface of custome serializer
  */
-public interface CustomSerializer { 
+public interface CustomSerializer {
+
     /**
      * Serialize object
      * @param obj object to be packed

@@ -1,26 +1,22 @@
 package plugins.Spider.org.garret.perst.impl;
 
-class LRU { 
+class LRU {
     LRU next;
     LRU prev;
 
-    LRU() 
-    { 
+    LRU() {
         next = prev = this;
     }
 
-    final void unlink() 
-    { 
+    final void unlink() {
         next.prev = prev;
         prev.next = next;
     }
 
-    final void link(LRU node) 
-    { 
+    final void link(LRU node) {
         node.next = next;
         node.prev = this;
         next.prev = node;
-        next      = node;
+        next = node;
     }
 }
-

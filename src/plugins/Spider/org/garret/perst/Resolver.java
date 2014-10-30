@@ -10,15 +10,16 @@
 // it will provide reference to the resolved object
 //-------------------------------------------------------------------*--------*
 
-package plugins.Spider.org.garret.perst;
 
+package plugins.Spider.org.garret.perst;
 
 /**
  * Abstraction of class resolver.
- * Resolver can be used to replaced SQL JOINs: given object ID, 
+ * Resolver can be used to replaced SQL JOINs: given object ID,
  * it will provide reference to the resolved object
  */
 public interface Resolver {
+
     /**
      * Resolve object
      * @param obj original object to be resolved
@@ -26,4 +27,3 @@ public interface Resolver {
      */
     public Object resolve(Object obj);
 }
-
