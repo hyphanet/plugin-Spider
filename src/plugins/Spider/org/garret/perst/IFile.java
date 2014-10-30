@@ -6,7 +6,8 @@ package plugins.Spider.org.garret.perst;
  * as support of flash cards, encrypted files,...
  * Implentation of this interface should throw StorageError exception in case of failure
  */
-public interface IFile { 
+public interface IFile {
+
     /**
      * Write data to the file
      * @param pos offset in the file
@@ -26,12 +27,12 @@ public interface IFile {
      * Flush all fiels changes to the disk
      */
     void sync();
-        
+
     /**
      * Try lock file
      * @param shared if lock is shared
      * @return <code>true</code> if file was successfully locked or locking in not implemented,
-     * <code>false</code> if file is locked by some other applciation     
+     * <code>false</code> if file is locked by some other applciation
      */
     boolean tryLock(boolean shared);
 

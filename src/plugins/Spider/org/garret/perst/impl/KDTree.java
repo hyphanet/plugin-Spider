@@ -4,43 +4,43 @@ import plugins.Spider.org.garret.perst.*;
 
 import java.util.*;
 
-public class KDTree<T extends IPersistent> extends PersistentCollection<T> implements MultidimensionalIndex<T>{
+public class KDTree<T extends IPersistent> extends PersistentCollection<T>
+        implements MultidimensionalIndex<T> {
     KDTreeNode root;
-    int        nMembers;
-    int        height;
+    int nMembers;
+    int height;
     MultidimensionalComparator<T> comparator;
 
-    private KDTree() {} 
+    private KDTree() {}
 
-    KDTree(Storage storage, MultidimensionalComparator<T> comparator) { 
+    KDTree(Storage storage, MultidimensionalComparator<T> comparator) {
         super(storage);
         this.comparator = comparator;
     }
 
-    KDTree(Storage storage, Class cls, String[] fieldNames, boolean treateZeroAsUndefinedValue) { 
+    KDTree(Storage storage, Class cls, String[] fieldNames, boolean treateZeroAsUndefinedValue) {
         super(storage);
-        this.comparator = new ReflectionMultidimensionalComparator<T>(storage, cls, fieldNames, treateZeroAsUndefinedValue);
+        this.comparator = new ReflectionMultidimensionalComparator<T>(storage, cls, fieldNames,
+                treateZeroAsUndefinedValue);
     }
 
-    public MultidimensionalComparator<T> getComparator() { 
+    public MultidimensionalComparator<T> getComparator() {
         return comparator;
     }
 
     static final int OK = 0;
     static final int NOT_FOUND = 1;
-    static final int TRUNCATE  = 2;
-    
+    static final int TRUNCATE = 2;
 
-    static class KDTreeNode<T extends IPersistent> extends Persistent 
-    {
-        KDTreeNode  left;
-        KDTreeNode  right;
-        T           obj;
-        boolean     deleted;
-        
-        KDTreeNode(T obj) { 
+    static class KDTreeNode<T extends IPersistent> extends Persistent {
+        KDTreeNode left;
+        KDTreeNode right;
+        T obj;
+        boolean deleted;
+
+        KDTreeNode(T obj) {
             this.obj = obj;
-        }        
+        }
 
         private KDTreeNode() {}
 
@@ -53,184 +53,219 @@ public class KDTree<T extends IPersistent> extends PersistentCollection<T> imple
             return false;
         }
 
-        int insert(T ins, MultidimensionalComparator<T> comparator, int level) 
-        { 
+        int insert(T ins, MultidimensionalComparator<T> comparator, int level) {
             load();
+
             int diff = comparator.compare(ins, obj, level % comparator.getNumberOfDimensions());
-            if (diff == MultidimensionalComparator.EQ && deleted) { 
+
+            if ((diff == MultidimensionalComparator.EQ) && deleted) {
                 obj.deallocate();
                 modify();
                 obj = ins;
                 deleted = false;
+
                 return level;
-            } else if (diff != MultidimensionalComparator.GT) { 
-                if (left == null) { 
+            } else if (diff != MultidimensionalComparator.GT) {
+                if (left == null) {
                     modify();
                     left = new KDTreeNode<T>(ins);
-                    return level+1;
-                } else { 
+
+                    return level + 1;
+                } else {
                     return left.insert(ins, comparator, level + 1);
                 }
-            } else { 
-                if (right == null) { 
+            } else {
+                if (right == null) {
                     modify();
                     right = new KDTreeNode<T>(ins);
-                    return level+1;
-                } else { 
+
+                    return level + 1;
+                } else {
                     return right.insert(ins, comparator, level + 1);
                 }
             }
         }
-        
-        int remove(T rem, MultidimensionalComparator<T> comparator, int level) 
-        { 
+
+        int remove(T rem, MultidimensionalComparator<T> comparator, int level) {
             load();
-            if (obj == rem) { 
-                if (left == null && right == null) { 
+
+            if (obj == rem) {
+                if ((left == null) && (right == null)) {
                     deallocate();
+
                     return TRUNCATE;
                 } else {
                     modify();
                     obj = comparator.cloneField(obj, level % comparator.getNumberOfDimensions());
                     deleted = true;
+
                     return OK;
-                }  
+                }
             }
+
             int diff = comparator.compare(rem, obj, level % comparator.getNumberOfDimensions());
-            if (diff != MultidimensionalComparator.GT && left != null) {
+
+            if ((diff != MultidimensionalComparator.GT) && (left != null)) {
                 int result = left.remove(rem, comparator, level + 1);
-                if (result == TRUNCATE) { 
+
+                if (result == TRUNCATE) {
                     modify();
                     left = null;
+
                     return OK;
-                } else if (result == OK) { 
+                } else if (result == OK) {
                     return OK;
                 }
-            } 
-            if (diff != MultidimensionalComparator.LT && right != null) { 
+            }
+
+            if ((diff != MultidimensionalComparator.LT) && (right != null)) {
                 int result = right.remove(rem, comparator, level + 1);
-                if (result == TRUNCATE) { 
+
+                if (result == TRUNCATE) {
                     modify();
                     right = null;
+
                     return OK;
-                } else if (result == OK) { 
+                } else if (result == OK) {
                     return OK;
                 }
             }
+
             return NOT_FOUND;
         }
-                
-        public void deallocate() { 
+
+        public void deallocate() {
             load();
-            if (deleted) { 
+
+            if (deleted) {
                 obj.deallocate();
             }
-            if (left != null) { 
+
+            if (left != null) {
                 left.deallocate();
             }
-            if (right != null) { 
+
+            if (right != null) {
                 right.deallocate();
             }
+
             super.deallocate();
         }
     }
 
-    public void optimize() { 
+
+    public void optimize() {
         Iterator<T> itr = iterator();
         int n = nMembers;
         IPersistent[] members = new IPersistent[n];
-        for (int i = 0; i < n; i++) { 
+
+        for (int i = 0; i < n; i++) {
             members[i] = itr.next();
         }
+
         Random rnd = new Random();
-        for (int i = 0; i < n; i++) { 
+
+        for (int i = 0; i < n; i++) {
             int j = rnd.nextInt(n);
             IPersistent tmp = members[j];
+
             members[j] = members[i];
             members[i] = tmp;
         }
-        clear();
-        for (int i = 0; i < n; i++) { 
-            add((T)members[i]);
-        }
-    }           
 
-    public boolean add(T obj) 
-    { 
+        clear();
+
+        for (int i = 0; i < n; i++) {
+            add((T) members[i]);
+        }
+    }
+
+    public boolean add(T obj) {
         modify();
+
         if (root == null) {
             root = new KDTreeNode<T>(obj);
             height = 1;
-        } else {  
+        } else {
             int level = root.insert(obj, comparator, 0);
-            if (level >= height) { 
-                height = level+1;
+
+            if (level >= height) {
+                height = level + 1;
             }
         }
+
         nMembers += 1;
+
         return true;
     }
 
-    public boolean remove(T obj) 
-    {
-        if (root == null) { 
+    public boolean remove(T obj) {
+        if (root == null) {
             return false;
         }
+
         int result = root.remove(obj, comparator, 0);
-        if (result == NOT_FOUND) { 
+
+        if (result == NOT_FOUND) {
             return false;
-        } 
+        }
+
         modify();
-        if (result == TRUNCATE) { 
+
+        if (result == TRUNCATE) {
             root = null;
         }
+
         nMembers -= 1;
+
         return true;
     }
 
-    public Iterator<T> iterator() { 
+    public Iterator<T> iterator() {
         return iterator(null, null);
     }
 
-    public IterableIterator<T> iterator(T pattern) { 
+    public IterableIterator<T> iterator(T pattern) {
         return iterator(pattern, pattern);
     }
 
-    public IterableIterator<T> iterator(T low, T high) { 
+    public IterableIterator<T> iterator(T low, T high) {
         return new KDTreeIterator(low, high);
     }
 
-    public ArrayList<T> queryByExample(T pattern) { 
+    public ArrayList<T> queryByExample(T pattern) {
         return queryByExample(pattern, pattern);
     }
 
-    public ArrayList<T> queryByExample(T low, T high) { 
+    public ArrayList<T> queryByExample(T low, T high) {
         Iterator<T> i = iterator(low, high);
         ArrayList<T> list = new ArrayList<T>();
-        while (i.hasNext()) { 
+
+        while (i.hasNext()) {
             list.add(i.next());
         }
+
         return list;
     }
 
     public Object[] toArray() {
-        return  queryByExample(null, null).toArray();
+        return queryByExample(null, null).toArray();
     }
 
     public <E> E[] toArray(E[] arr) {
         return queryByExample(null, null).toArray(arr);
     }
 
-    public int size() { 
+    public int size() {
         return nMembers;
     }
 
-    public int getHeight() { 
+    public int getHeight() {
         return height;
     }
 
     public void clear() {
-        if (root != null) { 
+        if (root != null) {
             root.deallocate();
             modify();
             root = null;
@@ -241,141 +276,157 @@ public class KDTree<T extends IPersistent> extends PersistentCollection<T> imple
 
     public boolean contains(T member) {
         Iterator<T> i = iterator(member);
-        while (i.hasNext()) { 
-            if (i.next() == member) { 
+
+        while (i.hasNext()) {
+            if (i.next() == member) {
                 return true;
             }
         }
+
         return false;
-    } 
+    }
 
     public void deallocate() {
-        if (root != null) { 
+        if (root != null) {
             root.deallocate();
         }
+
         super.deallocate();
     }
 
-    int compareAllComponents(T pattern, T obj) 
-    { 
+    int compareAllComponents(T pattern, T obj) {
         int n = comparator.getNumberOfDimensions();
         int result = MultidimensionalComparator.EQ;
-        for (int i = 0; i < n; i++) { 
+
+        for (int i = 0; i < n; i++) {
             int diff = comparator.compare(pattern, obj, i);
-            if (diff == MultidimensionalComparator.RIGHT_UNDEFINED) { 
+
+            if (diff == MultidimensionalComparator.RIGHT_UNDEFINED) {
                 return diff;
-            } else if (diff == MultidimensionalComparator.LT) { 
-                if (result == MultidimensionalComparator.GT) { 
+            } else if (diff == MultidimensionalComparator.LT) {
+                if (result == MultidimensionalComparator.GT) {
                     return MultidimensionalComparator.NE;
-                } else { 
+                } else {
                     result = MultidimensionalComparator.LT;
                 }
-            } else if (diff == MultidimensionalComparator.GT) { 
-                if (result == MultidimensionalComparator.LT) { 
+            } else if (diff == MultidimensionalComparator.GT) {
+                if (result == MultidimensionalComparator.LT) {
                     return MultidimensionalComparator.NE;
-                } else { 
+                } else {
                     result = MultidimensionalComparator.GT;
                 }
             }
         }
+
         return result;
     }
-                
 
-    public class KDTreeIterator extends IterableIterator<T> implements PersistentIterator
-    { 
+    public class KDTreeIterator extends IterableIterator<T> implements PersistentIterator {
         Stack<KDTreeNode<T>> stack;
-        int                  nDims;
-        T                    high;
-        T                    low;
-        KDTreeNode<T>        curr;
-        KDTreeNode<T>        next;
-        int                  currLevel;
- 
-        KDTreeIterator(T low, T high) { 
+        int nDims;
+        T high;
+        T low;
+        KDTreeNode<T> curr;
+        KDTreeNode<T> next;
+        int currLevel;
+
+        KDTreeIterator(T low, T high) {
             this.low = low;
             this.high = high;
             nDims = comparator.getNumberOfDimensions();
             stack = new Stack<KDTreeNode<T>>();
             getMin(root);
         }
-        
+
         public int getLevel() {
             return currLevel;
         }
 
-        private boolean getMin(KDTreeNode<T> node) { 
-            if (node != null) { 
-                while (true) { 
+        private boolean getMin(KDTreeNode<T> node) {
+            if (node != null) {
+                while (true) {
                     node.load();
                     stack.push(node);
-                    int diff = low == null 
-                        ? MultidimensionalComparator.LEFT_UNDEFINED 
-                        : comparator.compare(low, node.obj, (stack.size()-1) % nDims);
-                    if (diff != MultidimensionalComparator.GT && node.left != null) { 
+
+                    int diff = (low == null)
+                               ? MultidimensionalComparator.LEFT_UNDEFINED
+                               : comparator.compare(low, node.obj, (stack.size() - 1) % nDims);
+
+                    if ((diff != MultidimensionalComparator.GT) && (node.left != null)) {
                         node = node.left;
-                    } else { 
+                    } else {
                         return true;
                     }
                 }
-            }                         
+            }
+
             return false;
         }
 
         public boolean hasNext() {
-            if (next != null) { 
+            if (next != null) {
                 return true;
             }
-            while (!stack.empty()) { 
-                KDTreeNode<T> node = stack.pop();                    
-                if (node != null) { 
-                    if (!node.deleted) { 
+
+            while ( !stack.empty()) {
+                KDTreeNode<T> node = stack.pop();
+
+                if (node != null) {
+                    if ( !node.deleted) {
                         int result;
-                        if ((low == null 
-                             || (result = compareAllComponents(low, node.obj)) == MultidimensionalComparator.LT 
-                             || result == MultidimensionalComparator.EQ)
-                            && (high == null 
-                                || (result = compareAllComponents(high, node.obj)) == MultidimensionalComparator.GT 
-                                || result == MultidimensionalComparator.EQ))
-                        {
+
+                        if (((low == null) ||
+                                (result = compareAllComponents(low, node.obj)) ==
+                                MultidimensionalComparator.LT || (result ==
+                                    MultidimensionalComparator.EQ)) && ((high == null) ||
+                                        (result = compareAllComponents(high, node.obj)) ==
+                                        MultidimensionalComparator.GT || (result ==
+                                            MultidimensionalComparator.EQ))) {
                             next = node;
                             currLevel = stack.size();
                         }
                     }
-                    if (node.right != null 
-                        && (high == null 
-                            || comparator.compare(high, node.obj, stack.size() % nDims) != MultidimensionalComparator.LT)) 
-                    { 
+
+                    if ((node.right != null) &&
+                            ((high == null) ||
+                             (comparator.compare(high, node.obj, stack.size() % nDims) !=
+                              MultidimensionalComparator.LT))) {
                         stack.push(null);
-                        if (!getMin(node.right)) { 
+
+                        if ( !getMin(node.right)) {
                             stack.pop();
                         }
                     }
-                    if (next != null) { 
+
+                    if (next != null) {
                         return true;
                     }
                 }
             }
-            return false;
-        }                                
 
-        public T next() { 
-            if (!hasNext()) { 
+            return false;
+        }
+
+        public T next() {
+            if ( !hasNext()) {
                 throw new NoSuchElementException();
             }
+
             curr = next;
             next = null;
+
             return curr.obj;
         }
-        
-        public int nextOid() { 
+
+        public int nextOid() {
             return next().getOid();
         }
-        
-        public void remove() { 
-            if (curr == null) { 
+
+        public void remove() {
+            if (curr == null) {
                 throw new IllegalStateException();
             }
+
             curr.modify();
             curr.obj = comparator.cloneField(curr.obj, currLevel % nDims);
             curr.deleted = true;
@@ -383,4 +434,3 @@ public class KDTree<T extends IPersistent> extends PersistentCollection<T> imple
         }
     }
 }
-

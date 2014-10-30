@@ -1,7 +1,7 @@
 package plugins.Spider.org.garret.perst;
 
 /**
- * Custom allocator interface. Custom allocator can be used for more efficiently 
+ * Custom allocator interface. Custom allocator can be used for more efficiently
  * allocate space using application specific semantic of the object. For example,
  * application can place all BLOBs (images, texts, video,...) in separate file, located at separate disk
  * and keep file with the rest of the data (metadata describing this BLOBs) relatively small, improving
@@ -9,10 +9,11 @@ package plugins.Spider.org.garret.perst;
  * using custom allocator in conjunction with multifile. First segment is used for allocation of normal
  * (non-BLOB) objects. It's size can be set practically unlimited: 0x1000 0000 0000 0000.
  * And second segment should be used by custom allocator to allocate BLOBs. So BLOBs offsets are started
- * from 0x1000000000000000 and BLOB content will be stored in separate file which in turn can be located 
+ * from 0x1000000000000000 and BLOB content will be stored in separate file which in turn can be located
  * at separate disk.
  */
-public interface CustomAllocator extends IPersistent { 
+public interface CustomAllocator extends IPersistent {
+
     /**
      * Allocate object
      * @param size allocated object size
@@ -42,7 +43,7 @@ public interface CustomAllocator extends IPersistent {
     void free(long pos, long size);
 
     /**
-     * Make it possible to reused space of all previously deallocated shadow objects. 
+     * Make it possible to reused space of all previously deallocated shadow objects.
      */
     void commit();
 }

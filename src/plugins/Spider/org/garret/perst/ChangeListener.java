@@ -2,10 +2,11 @@ package plugins.Spider.org.garret.perst;
 
 /**
  * Listener for change is database files.
- * This interface can be used in Storage.propagateChanges to collect 
+ * This interface can be used in Storage.propagateChanges to collect
  * all changes since the observation period.
  */
-public interface ChangeListener { 
+public interface ChangeListener {
+
     /**
      * Propagate changed database page
      * @param position position of page in database file

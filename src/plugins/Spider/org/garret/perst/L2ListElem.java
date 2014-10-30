@@ -3,8 +3,7 @@ package plugins.Spider.org.garret.perst;
 /**
  * Double linked list element.
  */
-
-public class L2ListElem extends PersistentResource { 
+public class L2ListElem extends PersistentResource {
     protected L2ListElem next;
     protected L2ListElem prev;
 
@@ -13,28 +12,28 @@ public class L2ListElem extends PersistentResource {
     }
 
     /**
-     * Get next list element. 
-     * Been call for the last list element, this method will return first element of the list 
+     * Get next list element.
+     * Been call for the last list element, this method will return first element of the list
      * or list header
      */
-    public L2ListElem getNext() { 
+    public L2ListElem getNext() {
         return next;
     }
 
     /**
-     * Get previous list element. 
-     * Been call for the first list element, this method will return last element of the list 
+     * Get previous list element.
+     * Been call for the first list element, this method will return last element of the list
      * or list header
      */
-    public L2ListElem getPrev() { 
+    public L2ListElem getPrev() {
         return prev;
     }
 
     /**
-     * Make list empty. 
-     * This method should be applied to list header. 
+     * Make list empty.
+     * This method should be applied to list header.
      */
-    public void prune() { 
+    public void prune() {
         modify();
         next = prev = this;
     }
@@ -43,7 +42,7 @@ public class L2ListElem extends PersistentResource {
      * Link specified element in the list after this element
      * @param elem element to be linked in the list after this elemen
      */
-    public void linkAfter(L2ListElem elem) { 
+    public void linkAfter(L2ListElem elem) {
         modify();
         next.modify();
         elem.modify();
@@ -57,7 +56,7 @@ public class L2ListElem extends PersistentResource {
      * Link specified element in the list before this element
      * @param elem element to be linked in the list before this elemen
      */
-    public void linkBefore(L2ListElem elem) { 
+    public void linkBefore(L2ListElem elem) {
         modify();
         prev.modify();
         elem.modify();
@@ -70,7 +69,7 @@ public class L2ListElem extends PersistentResource {
     /**
      * Remove element from the list
      */
-    public void unlink() { 
+    public void unlink() {
         next.modify();
         prev.modify();
         next.prev = prev;

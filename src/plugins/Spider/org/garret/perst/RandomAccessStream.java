@@ -4,7 +4,8 @@ package plugins.Spider.org.garret.perst;
  * This interface extends nomal Java streams with seek capability.
  * This interface is implemented by Perst BLOB streams
  */
-public interface RandomAccessStream { 
+public interface RandomAccessStream {
+
     /**
      * Set position in the stream
      * @param pos new absolute poistion in the strwam

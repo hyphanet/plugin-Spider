@@ -1,21 +1,22 @@
 package plugins.Spider.org.garret.perst.impl;
+
 import plugins.Spider.org.garret.perst.*;
 
-import  java.util.*;
+import java.util.*;
 
-public class RelationImpl<M extends IPersistent, O extends IPersistent> extends Relation<M,O> {
+public class RelationImpl<M extends IPersistent, O extends IPersistent> extends Relation<M, O> {
     public int size() {
         return link.size();
     }
-    
+
     public void setSize(int newSize) {
         link.setSize(newSize);
     }
-    
+
     public boolean isEmpty() {
         return link.isEmpty();
     }
-    
+
     public boolean remove(Object o) {
         return link.remove(o);
     }
@@ -65,7 +66,7 @@ public class RelationImpl<M extends IPersistent, O extends IPersistent> extends 
     }
 
     public boolean addAll(Link<M> anotherLink) {
-        return link.addAll(anotherLink); 
+        return link.addAll(anotherLink);
     }
 
     public IPersistent[] toPersistentArray() {
@@ -99,7 +100,7 @@ public class RelationImpl<M extends IPersistent, O extends IPersistent> extends 
     public int lastIndexOf(Object obj) {
         return link.lastIndexOf(obj);
     }
-      
+
     public int indexOfObject(Object obj) {
         return link.indexOfObject(obj);
     }
@@ -107,7 +108,7 @@ public class RelationImpl<M extends IPersistent, O extends IPersistent> extends 
     public int lastIndexOfObject(Object obj) {
         return link.lastIndexOfObject(obj);
     }
-      
+
     public void clear() {
         link.clear();
     }
@@ -115,9 +116,8 @@ public class RelationImpl<M extends IPersistent, O extends IPersistent> extends 
     public Iterator<M> iterator() {
         return link.iterator();
     }
-    
 
-    public boolean containsAll(Collection<?> c) {        
+    public boolean containsAll(Collection<?> c) {
         return link.containsAll(c);
     }
 
@@ -141,14 +141,14 @@ public class RelationImpl<M extends IPersistent, O extends IPersistent> extends 
         return link.retainAll(c);
     }
 
-    public void pin() { 
+    public void pin() {
         link.pin();
     }
-    
-    public void unpin() { 
+
+    public void unpin() {
         link.unpin();
     }
-    
+
     public List<M> subList(int fromIndex, int toIndex) {
         return link.subList(fromIndex, toIndex);
     }
@@ -161,14 +161,15 @@ public class RelationImpl<M extends IPersistent, O extends IPersistent> extends 
         return link.listIterator();
     }
 
-    public IterableIterator<M> select(Class cls, String predicate) { 
+    public IterableIterator<M> select(Class cls, String predicate) {
         Query<M> query = new QueryImpl<M>(getStorage());
+
         return query.select(cls, link.iterator(), predicate);
     }
 
     RelationImpl() {}
 
-    RelationImpl(O owner) { 
+    RelationImpl(O owner) {
         super(owner);
         link = new LinkImpl<M>(8);
     }

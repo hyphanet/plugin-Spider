@@ -3,8 +3,8 @@ package plugins.Spider.org.garret.perst.fulltext;
 /**
  * Match node of full text query
  */
-public class FullTextQueryMatchOp extends FullTextQuery
-{
+public class FullTextQueryMatchOp extends FullTextQuery {
+
     /**
      * Matched word (shown be lowercvases and in normal form, unless used in quotes)
      */
@@ -13,32 +13,30 @@ public class FullTextQueryMatchOp extends FullTextQuery
     /**
      * Position of word in the query (zero based)
      */
-    public int    pos;
+    public int pos;
 
     /**
      * Index of the word in query (set and used internally, should not be accessed by application)
      */
-    public int    wno;
-
+    public int wno;
 
     /**
      * Query node visitor.
      */
-    public void visit(FullTextQueryVisitor visitor) { 
+    public void visit(FullTextQueryVisitor visitor) {
         visitor.visit(this);
     }
 
     /**
      * Match node provides query constraint
      */
-    public boolean isConstrained() { 
+    public boolean isConstrained() {
         return true;
     }
 
-    public String toString() { 
-        return op == MATCH ? word : '"' + word + '"';
+    public String toString() {
+        return (op == MATCH) ? word : '"' + word + '"';
     }
-
 
     /**
      * Match node constructor
@@ -46,9 +44,9 @@ public class FullTextQueryMatchOp extends FullTextQuery
      * @param word searched word
      * @param pos position of word in the query
      */
-    public FullTextQueryMatchOp(int op, String word, int pos) { 
+    public FullTextQueryMatchOp(int op, String word, int pos) {
         super(op);
         this.word = word;
         this.pos = pos;
     }
-}    
+}

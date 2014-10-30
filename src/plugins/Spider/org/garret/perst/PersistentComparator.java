@@ -3,8 +3,8 @@ package plugins.Spider.org.garret.perst;
 /**
  * Base class for persistent comparator used in SortedCollection class
  */
+public abstract class PersistentComparator<T extends IPersistent> extends Persistent {
 
-public abstract class PersistentComparator<T extends IPersistent> extends Persistent { 
     /**
      * Compare two members of collection
      * @param m1 first members
@@ -21,4 +21,3 @@ public abstract class PersistentComparator<T extends IPersistent> extends Persis
      */
     public abstract int compareMemberWithKey(T mbr, Object key);
 }
-

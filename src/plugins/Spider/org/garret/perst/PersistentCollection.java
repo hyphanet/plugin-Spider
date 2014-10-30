@@ -1,13 +1,14 @@
 package plugins.Spider.org.garret.perst;
+
 import plugins.Spider.org.garret.perst.*;
 import plugins.Spider.org.garret.perst.impl.QueryImpl;
 
-import  java.util.*;
+import java.util.*;
 
-public abstract class PersistentCollection<T> extends PersistentResource implements ITable<T>
-{
-    public IterableIterator<T> select(Class cls, String predicate) { 
+public abstract class PersistentCollection<T> extends PersistentResource implements ITable<T> {
+    public IterableIterator<T> select(Class cls, String predicate) {
         Query<T> query = new QueryImpl<T>(getStorage());
+
         return query.select(cls, iterator(), predicate);
     }
 
@@ -22,17 +23,21 @@ public abstract class PersistentCollection<T> extends PersistentResource impleme
      *
      * @param c collection to be checked for containment in this collection.
      * @return <tt>true</tt> if this collection contains all of the elements
-     * 	       in the specified collection.
+     *         in the specified collection.
      * @throws NullPointerException if the specified collection is null.
-     * 
+     *
      * @see #contains(Object)
      */
     public boolean containsAll(Collection<?> c) {
-	Iterator<?> e = c.iterator();
-	while (e.hasNext())
-	    if(!contains(e.next()))
-		return false;
-	return true;
+        Iterator<?> e = c.iterator();
+
+        while (e.hasNext()) {
+            if ( !contains(e.next())) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /**
@@ -56,17 +61,20 @@ public abstract class PersistentCollection<T> extends PersistentResource impleme
      * @throws UnsupportedOperationException if this collection does not
      *         support the <tt>addAll</tt> method.
      * @throws NullPointerException if the specified collection is null.
-     * 
+     *
      * @see #add(Object)
      */
     public boolean addAll(Collection<? extends T> c) {
-	boolean modified = false;
-	Iterator<? extends T> e = c.iterator();
-	while (e.hasNext()) {
-	    if (add(e.next()))
-		modified = true;
-	}
-	return modified;
+        boolean modified = false;
+        Iterator<? extends T> e = c.iterator();
+
+        while (e.hasNext()) {
+            if (add(e.next())) {
+                modified = true;
+            }
+        }
+
+        return modified;
     }
 
     /**
@@ -88,7 +96,7 @@ public abstract class PersistentCollection<T> extends PersistentResource impleme
      * @return <tt>true</tt> if this collection changed as a result of the
      *         call.
      * @throws UnsupportedOperationException if the <tt>removeAll</tt> method
-     * 	       is not supported by this collection.
+     *         is not supported by this collection.
      * @throws NullPointerException if the specified collection is null.
      *
      * @see #remove(Object)
@@ -97,9 +105,11 @@ public abstract class PersistentCollection<T> extends PersistentResource impleme
     public boolean removeAll(Collection<?> c) {
         boolean modified = false;
         Iterator<?> i = c.iterator();
+
         while (i.hasNext()) {
             modified |= remove(i.next());
         }
+
         return modified;
     }
 
@@ -124,7 +134,7 @@ public abstract class PersistentCollection<T> extends PersistentResource impleme
      * @return <tt>true</tt> if this collection changed as a result of the
      *         call.
      * @throws UnsupportedOperationException if the <tt>retainAll</tt> method
-     * 	       is not supported by this Collection.
+     *         is not supported by this Collection.
      * @throws NullPointerException if the specified collection is null.
      *
      * @see #remove(Object)
@@ -133,17 +143,22 @@ public abstract class PersistentCollection<T> extends PersistentResource impleme
     public boolean retainAll(Collection<?> c) {
         ArrayList<T> toBeRemoved = new ArrayList<T>();
         Iterator<T> i = iterator();
+
         while (i.hasNext()) {
             T o = i.next();
-            if (!c.contains(o)) {
+
+            if ( !c.contains(o)) {
                 toBeRemoved.add(o);
             }
         }
+
         int n = toBeRemoved.size();
-        for (int j = 0; j < n; j++) { 
+
+        for (int j = 0; j < n; j++) {
             remove(toBeRemoved.get(j));
         }
-        return n != 0;         
+
+        return n != 0;
     }
 
     /**
@@ -159,17 +174,23 @@ public abstract class PersistentCollection<T> extends PersistentResource impleme
      * @return <tt>true</tt> if this collection contains the specified element.
      */
     public boolean contains(Object o) {
-	Iterator<T> e = iterator();
-	if (o==null) {
-	    while (e.hasNext())
-		if (e.next()==null)
-		    return true;
-	} else {
-	    while (e.hasNext())
-		if (o.equals(e.next()))
-		    return true;
-	}
-	return false;
+        Iterator<T> e = iterator();
+
+        if (o == null) {
+            while (e.hasNext()) {
+                if (e.next() == null) {
+                    return true;
+                }
+            }
+        } else {
+            while (e.hasNext()) {
+                if (o.equals(e.next())) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -194,26 +215,30 @@ public abstract class PersistentCollection<T> extends PersistentResource impleme
      * @return <tt>true</tt> if the collection contained the specified
      *         element.
      * @throws UnsupportedOperationException if the <tt>remove</tt> method is
-     * 		  not supported by this collection.
+     *        not supported by this collection.
      */
     public boolean remove(Object o) {
-	Iterator<T> e = iterator();
-	if (o==null) {
-	    while (e.hasNext()) {
-		if (e.next()==null) {
-		    e.remove();
-		    return true;
-		}
-	    }
-	} else {
-	    while (e.hasNext()) {
-		if (o.equals(e.next())) {
-		    e.remove();
-		    return true;
-		}
-	    }
-	}
-	return false;
+        Iterator<T> e = iterator();
+
+        if (o == null) {
+            while (e.hasNext()) {
+                if (e.next() == null) {
+                    e.remove();
+
+                    return true;
+                }
+            }
+        } else {
+            while (e.hasNext()) {
+                if (o.equals(e.next())) {
+                    e.remove();
+
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -233,22 +258,22 @@ public abstract class PersistentCollection<T> extends PersistentResource impleme
      *
      * @param o element whose presence in this collection is to be ensured.
      * @return <tt>true</tt> if the collection changed as a result of the call.
-     * 
+     *
      * @throws UnsupportedOperationException if the <tt>add</tt> method is not
-     *		  supported by this collection.
-     * 
+     *        supported by this collection.
+     *
      * @throws NullPointerException if this collection does not permit
-     * 		  <tt>null</tt> elements, and the specified element is
-     * 		  <tt>null</tt>.
-     * 
+     *        <tt>null</tt> elements, and the specified element is
+     *        <tt>null</tt>.
+     *
      * @throws ClassCastException if the class of the specified element
-     * 		  prevents it from being added to this collection.
-     * 
+     *        prevents it from being added to this collection.
+     *
      * @throws IllegalArgumentException if some aspect of this element
      *            prevents it from being added to this collection.
      */
     public boolean add(T o) {
-	throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException();
     }
 
     /**
@@ -259,7 +284,7 @@ public abstract class PersistentCollection<T> extends PersistentResource impleme
      * @return <tt>true</tt> if this collection contains no elements.
      */
     public boolean isEmpty() {
-	return size() == 0;
+        return size() == 0;
     }
 
     /**
@@ -271,7 +296,7 @@ public abstract class PersistentCollection<T> extends PersistentResource impleme
      * Constructor of the collection associated with the specified storage
      * @param storage storage associated with the collection
      */
-    public PersistentCollection(Storage storage) { 
+    public PersistentCollection(Storage storage) {
         super(storage);
     }
-}    
+}
