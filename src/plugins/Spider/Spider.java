@@ -91,6 +91,11 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 	static int dbVersion = 45;
 	static int version = 52;
 
+	/** We use the standard http://127.0.0.1:8888/ for parsing HTML regardless of what the local
+	 * interface is actually configured to be. This will not affect the extracted FreenetURI's,
+	 * and if it did it would be a security risk. */
+	static final String ROOT_URI = "http://127.0.0.1:8888/";
+	
 	public static final String pluginName = "Spider " + version;
 
 	public String getVersion() {
@@ -437,15 +442,15 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 				if (!"text/plain".equals(mimeType)) {
 					filterInput = data.getInputStream();
 					filterOutput = new NullBucket().getOutputStream();
-					ContentFilter.filter(filterInput, filterOutput, mimeType,
-							uri.toURI(core.getToadletContainer().getURL()), pageCallBack, null, null);
+					ContentFilter.filter(filterInput, filterOutput, mimeType, uri.toURI(ROOT_URI), pageCallBack, 
+					        null, null);
 					filterInput.close();
 					filterOutput.close();
 				} else {
 					BufferedReader br = new BufferedReader(new InputStreamReader(data.getInputStream()));
 					String line;
 					while((line = br.readLine())!=null) {
-						pageCallBack.onText(line, mimeType, uri.toURI(core.getToadletContainer().getURL()));
+						pageCallBack.onText(line, mimeType, uri.toURI(ROOT_URI));
 					}
 				}
 				pageCallBack.finish();
