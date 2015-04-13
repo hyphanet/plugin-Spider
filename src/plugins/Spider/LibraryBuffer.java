@@ -179,7 +179,7 @@ public class LibraryBuffer implements FredPluginTalker {
 		// Robustness: Send SAVE_FILE *after* sending new data, because *it is already on disk*, whereas the new data is not.
 		if(SAVE_FILE.exists()) {
 			System.out.println("Restoring data from last time from "+SAVE_FILE);
-			Bucket bucket = new FileBucket(SAVE_FILE, true, false, false, false, true);
+			Bucket bucket = new FileBucket(SAVE_FILE, true, false, false, true);
 			innerSend(bucket);
 			System.out.println("Restored data from last time from "+SAVE_FILE);
 		}
@@ -266,7 +266,7 @@ public class LibraryBuffer implements FredPluginTalker {
 			bufferUsageEstimate = 0;
 		}
 		System.out.println("Writing pending data to "+SAVE_FILE);
-		FileBucket bucket = new FileBucket(SAVE_FILE, false, false, false, false, false);
+		FileBucket bucket = new FileBucket(SAVE_FILE, false, false, false, false);
 		long totalPagesIndexed;
 		try {
 			totalPagesIndexed = spider.getRoot().getPageCount(Status.INDEXED);
