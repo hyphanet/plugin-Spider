@@ -279,6 +279,7 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 			Logger.minor(this, "Queued OnFailure: " + page + " (q:" + callbackExecutor.getQueue().size() + ")");
 		}
 
+        @Override
 		public void onSuccess(final FetchResult result, final ClientGetter state) {
 			if (stopped) return;
 
@@ -650,6 +651,7 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 			//Logger.normal(this, "Parsing "+page.getURI());
 		}
 
+		@Override
 		public void foundURI(FreenetURI uri) {
 			// Ignore
 		}
@@ -659,6 +661,7 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 		 * @param uri
 		 * @param inline
 		 */
+		@Override
 		public void foundURI(FreenetURI uri, boolean inline) {
 			if (stopped) throw new RuntimeException("plugin stopping");
 			if (logDEBUG) Logger.debug(this, "foundURI " + uri + " on " + page);
@@ -673,6 +676,7 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 		 * @param type
 		 * @param baseURI
 		 */
+		@Override
 		public void onText(String s, String type, URI baseURI){
 			if (stopped) throw new RuntimeException("plugin stopping");
 			if (logDEBUG) Logger.debug(this, "onText on " + page.getId() + " (" + baseURI + ")");
@@ -783,6 +787,7 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 		return (short) Math.min(RequestStarter.MINIMUM_FETCHABLE_PRIORITY_CLASS, getRoot().getConfig().getRequestPriority() + 1);
 	}
 
+    @Override
 	public short getPollingPriorityProgress() {
 		return getRoot().getConfig().getRequestPriority();
 	}
