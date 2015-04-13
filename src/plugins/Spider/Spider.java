@@ -67,7 +67,6 @@ import freenet.support.api.Bucket;
 import freenet.support.io.Closer;
 import freenet.support.io.NativeThread;
 import freenet.support.io.NullBucket;
-import freenet.support.io.NullBucketFactory;
 import freenet.support.io.ResumeFailedException;
 
 /**
@@ -256,17 +255,6 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 	private class ClientGetterCallback implements ClientGetCallback {
 		final Page page;
 
-        final RequestClient rc = new RequestClient() {
-            @Override
-            public boolean persistent() {
-                return false;
-            }
-            @Override
-            public boolean realTimeFlag() {
-                return false;
-            }
-        };
-            
 		public ClientGetterCallback(Page page) {
 			this.page = page;
 		}
@@ -297,7 +285,7 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 
         @Override
         public RequestClient getRequestClient() {
-            return rc;
+            return Spider.this;
         }
 	}
 
