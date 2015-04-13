@@ -751,7 +751,7 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 	}
 
 	public short getPollingPriorityNormal() {
-		return (short) Math.min(RequestStarter.MINIMUM_PRIORITY_CLASS, getRoot().getConfig().getRequestPriority() + 1);
+		return (short) Math.min(RequestStarter.PAUSED_PRIORITY_CLASS, getRoot().getConfig().getRequestPriority() + 1);
 	}
 
 	public short getPollingPriorityProgress() {
