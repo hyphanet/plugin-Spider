@@ -753,7 +753,7 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 			return tp;
 		}
 
-		@Override
+		// @Override
 		public void onFinishedPage() {
 			// Ignore
 		}
