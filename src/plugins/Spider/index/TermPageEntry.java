@@ -3,13 +3,9 @@
  * http://www.gnu.org/ for further details of the GPL. */
 package plugins.Spider.index;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 import freenet.keys.FreenetURI;
-import freenet.support.SortedIntSet;
 
 /**
 ** A {@link TermEntry} that associates a subject term with a final target
@@ -27,8 +23,8 @@ public class TermPageEntry extends TermEntry {
 	final public FreenetURI page;
 
 	/** Positions where the term occurs. May be null if we don't have that data. */
-	private SortedIntSet positions;
-	
+	private Set<Integer> positions;
+
 	/**
 	** Map from positions in the text to a fragment of text around where it occurs.
 	** Only non-null if we have the fragments of text (we may have positions but not details), 
@@ -69,24 +65,16 @@ public class TermPageEntry extends TermEntry {
 		}
 		page = u.intern(); // OPT LOW make the translator use the same URI object as from the URI table?
 		title = t == null ? null : t.intern();
-		if(p == null) {
-			posFragments = null;
-			positions = null;
-		} else {
+		if (p != null) {
 			posFragments = p;
-			int[] pos = new int[p.size()];
-			int x = 0;
-			for(Integer i : p.keySet())
-				pos[x++] = i;
-			Arrays.sort(pos);
-			positions = new SortedIntSet(pos);
+			positions = p.keySet();
 		}
 	}
 
 	/**
 	** For serialisation.
 	*/
-	public TermPageEntry(String s, float r, FreenetURI u, SortedIntSet pos, Map<Integer, String> frags) {
+	public TermPageEntry(String s, float r, FreenetURI u, Set<Integer> pos, Map<Integer, String> frags) {
 		super(s, r);
 		if (u == null) {
 			throw new IllegalArgumentException("can't have a null page");
@@ -145,11 +133,11 @@ public class TermPageEntry extends TermEntry {
 	public Map<Integer, String> positionsMap() {
 		if(positions == null) return null;
 		if(posFragments != null) return posFragments;
-		HashMap<Integer, String> ret = new HashMap<Integer, String>(positions.size());
-		int[] array = positions.toArrayRaw();
-		for(int x : array)
-			ret.put(x, null);
-		return ret;
+		HashMap<Integer, String> positionsMap = new HashMap<>(positions.size());
+		for (Integer position : positions) {
+			positionsMap.put(position, null);
+		}
+		return positionsMap;
 	}
 
 	public boolean hasPosition(int i) {
@@ -157,15 +145,13 @@ public class TermPageEntry extends TermEntry {
 	}
 
 	public ArrayList<Integer> positions() {
-		int[] array = positions.toArrayRaw();
-		ArrayList<Integer> pos = new ArrayList<Integer>(array.length);
-		for(int x : array)
-			pos.add(x);
-		return pos;
+		ArrayList<Integer> positions = new ArrayList<>(this.positions);
+		Collections.sort(positions);
+		return positions;
 	}
 
 	public int[] positionsRaw() {
-		return positions.toArrayRaw();
+		return positions().stream().mapToInt(i->i).toArray();
 	}
 
 	public int positionsSize() {
@@ -178,10 +164,13 @@ public class TermPageEntry extends TermEntry {
 	}
 
 	public void putPosition(int position) {
-		if(positions == null) positions = new SortedIntSet();
+		if (positions == null) {
+			positions = new HashSet<>();
+		}
 		positions.add(position);
-		if(posFragments != null)
-			posFragments.put(position, null);
-	}
 
+		if (posFragments != null) {
+			posFragments.put(position, null);
+		}
+	}
 }
