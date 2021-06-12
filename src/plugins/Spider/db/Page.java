@@ -32,7 +32,7 @@ public class Page extends Persistent implements Comparable<Page> {
 	Page(String uri, String comment, Storage storage) {
 		this.uri = uri;
 		this.comment = comment;
-		this.status = Status.QUEUED;
+		this.status = Status.NEW;
 		this.lastChange = System.currentTimeMillis();
 		
 		storage.makePersistent(this);

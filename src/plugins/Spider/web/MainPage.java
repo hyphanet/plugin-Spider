@@ -79,6 +79,7 @@ class MainPage implements WebPage {
 		HTMLNode overviewTable = contentNode.addChild("table", "class", "column");
 		HTMLNode overviewTableRow = overviewTable.addChild("tr");
 
+		PageStatus newStatus = getPageStatus(Status.NEW);
 		PageStatus queuedStatus = getPageStatus(Status.QUEUED);
 		PageStatus indexedStatus = getPageStatus(Status.INDEXED);
 		PageStatus succeededStatus = getPageStatus(Status.SUCCEEDED);
@@ -93,6 +94,8 @@ class MainPage implements WebPage {
 		HTMLNode statusContent = pageMaker.getInfobox("#", "Spider Status", nextTableCell);
 		statusContent.addChild("#", "Running Request: " + runningFetch.size() + "/"
 		        + config.getMaxParallelRequests());
+		statusContent.addChild("br");
+		statusContent.addChild("#", "New: " + newStatus.count);
 		statusContent.addChild("br");
 		statusContent.addChild("#", "Queued: " + queuedStatus.count);
 		statusContent.addChild("br");
@@ -156,6 +159,13 @@ class MainPage implements WebPage {
 			}
 		}
 		contentNode.addChild(runningBox);
+
+		InfoboxNode newd = pageMaker.getInfobox("New URI");
+		HTMLNode newBox = newd.outer;
+		newBox.addAttribute("style", "right: 0; overflow: auto;");
+		HTMLNode newContent = newd.content;
+		listPages(newStatus, newContent);
+		contentNode.addChild(newBox);
 
 		InfoboxNode queued = pageMaker.getInfobox("Queued URI");
 		HTMLNode queuedBox = queued.outer;

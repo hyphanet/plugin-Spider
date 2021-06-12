@@ -14,6 +14,7 @@ public class PerstRoot extends Persistent {
 
 	protected FieldIndex<Page> idPage;
 	protected FieldIndex<Page> uriPage;
+	protected FieldIndex<Page> newPages;
 	protected FieldIndex<Page> queuedPages;
 	protected FieldIndex<Page> failedPages;
 	protected FieldIndex<Page> succeededPages;
@@ -30,6 +31,7 @@ public class PerstRoot extends Persistent {
 
 		root.idPage = storage.createFieldIndex(Page.class, "id", true);
 		root.uriPage = storage.createFieldIndex(Page.class, "uri", true);
+		root.newPages = storage.createFieldIndex(Page.class, "lastChange", false);
 		root.queuedPages = storage.createFieldIndex(Page.class, "lastChange", false);
 		root.failedPages = storage.createFieldIndex(Page.class, "lastChange", false);
 		root.succeededPages = storage.createFieldIndex(Page.class, "lastChange", false);
@@ -46,7 +48,7 @@ public class PerstRoot extends Persistent {
 	public Page getPageByURI(FreenetURI uri, boolean create, String comment) {
 		idPage.exclusiveLock();
 		uriPage.exclusiveLock();
-		queuedPages.exclusiveLock();
+		newPages.exclusiveLock();
 		try {
 			Page page = uriPage.get(new Key(uri.toString()));
 
@@ -55,12 +57,12 @@ public class PerstRoot extends Persistent {
 
 				idPage.append(page);
 				uriPage.put(page);
-				queuedPages.put(page);
+				newPages.put(page);
 			}
 
 			return page;
 		} finally {
-			queuedPages.unlock();
+			newPages.unlock();
 			uriPage.unlock();
 			idPage.unlock();
 		}
@@ -80,6 +82,8 @@ public class PerstRoot extends Persistent {
 		switch (status) {
 		case FAILED:
 			return failedPages;
+		case NEW:
+			return newPages;
 		case QUEUED:
 			return queuedPages;
 		case SUCCEEDED:

@@ -97,7 +97,7 @@ public class LibraryBuffer implements FredPluginTalker {
 	public void start() {
 		// Do in a transaction so it gets committed separately.
 		spider.db.beginThreadTransaction(Storage.EXCLUSIVE_TRANSACTION);
-		spider.resetPages(Status.NOT_PUSHED, Status.QUEUED);
+		spider.resetPages(Status.NOT_PUSHED, Status.NEW);
 		spider.db.endThreadTransaction();
 	}
 

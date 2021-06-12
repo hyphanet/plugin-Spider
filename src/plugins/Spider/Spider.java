@@ -88,7 +88,7 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 	 */
 	protected Set<String> allowedMIMETypes;
 
-	static int dbVersion = 45;
+	static int dbVersion = 46;
 	static int version = 53;
 
 	/** We use the standard http://127.0.0.1:8888/ for parsing HTML regardless of what the local
@@ -183,8 +183,10 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 		try {
 			Page page = getRoot().getPageByURI(uri, true, comment);
 			if (force && page.getStatus() != Status.QUEUED) {
-				page.setStatus(Status.QUEUED);
 				page.setComment(comment);
+				if (page.getStatus() != Status.NEW) { 
+					page.setStatus(Status.QUEUED);
+				}
 			}
 
 			db.endThreadTransaction();
@@ -216,6 +218,31 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 
 				// Prepare to start
 				toStart = new ArrayList<ClientGetter>(maxParallelRequests - running);
+				db.beginThreadTransaction(Storage.COOPERATIVE_TRANSACTION);
+				getRoot().sharedLockPages(Status.NEW);
+				try {
+					Iterator<Page> it = getRoot().getPages(Status.NEW);
+
+					while (running + toStart.size() < maxParallelRequests && it.hasNext()) {
+						Page page = it.next();
+						// Skip if getting this page already
+						if (runningFetch.containsKey(page)) continue;
+						
+						try {
+							ClientGetter getter = makeGetter(page);
+
+							Logger.minor(this, "Starting " + getter + " " + page);
+							toStart.add(getter);
+							runningFetch.put(page, getter);
+						} catch (MalformedURLException e) {
+							Logger.error(this, "IMPOSSIBLE-Malformed URI: " + page, e);
+							page.setStatus(Status.FAILED);
+						}
+					}
+				} finally {
+					getRoot().unlockPages(Status.NEW);
+					db.endThreadTransaction();
+				}
 				db.beginThreadTransaction(Storage.COOPERATIVE_TRANSACTION);
 				getRoot().sharedLockPages(Status.QUEUED);
 				try {
