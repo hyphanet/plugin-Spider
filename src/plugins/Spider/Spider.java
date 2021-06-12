@@ -237,6 +237,7 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 						} catch (MalformedURLException e) {
 							Logger.error(this, "IMPOSSIBLE-Malformed URI: " + page, e);
 							page.setStatus(Status.FAILED);
+							page.setComment("MalformedURLException");
 						}
 					}
 				} finally {
@@ -262,6 +263,7 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 						} catch (MalformedURLException e) {
 							Logger.error(this, "IMPOSSIBLE-Malformed URI: " + page, e);
 							page.setStatus(Status.FAILED);
+							page.setComment("MalformedURLException");
 						}
 					}
 				} finally {
@@ -484,6 +486,7 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 			} catch (UnsafeContentTypeException e) {
 				// wrong mime type
 				page.setStatus(Status.SUCCEEDED);
+				page.setComment("UnsafeContentTypeException");
 				db.endThreadTransaction();
 				dbTransactionEnded = true;
 
@@ -523,7 +526,10 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 					db.beginThreadTransaction(Storage.EXCLUSIVE_TRANSACTION);
 					// page is now invalidated.
 					page = getRoot().getPageByURI(uri, false, "");
-					if(page != null) page.setStatus(Status.FAILED);
+					if(page != null) {
+						page.setStatus(Status.FAILED);
+						page.setComment("could not complete operation dbTransaction not ended");
+					}
 					db.endThreadTransaction();
 				}
 			}
@@ -546,9 +552,11 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 					// redirect, mark as succeeded
 					queueURI(fe.newURI, "redirect from " + getter.getURI(), false);
 					page.setStatus(Status.SUCCEEDED);
+					page.setComment("Redirected");
 				} else if (fe.isFatal()) {
 					// too many tries or fatal, mark as failed
 					page.setStatus(Status.FAILED);
+					page.setComment("Fatal");
 				} else {
 					// requeue at back
 					page.setStatus(Status.QUEUED);
