@@ -219,6 +219,15 @@ class MainPage implements WebPage {
 			for (Page page : pageStatus.pages) {
 				HTMLNode litem = list.addChild("li", "title", page.getComment());
 				litem.addChild("a", "href", "/freenet:" + page.getURI(), page.getURI());
+				String title = page.getPageTitle();
+				if (title == null) {
+					title = "";
+				}
+				litem.addChild("p",
+						" " +
+						page.getLastChange() + " " +
+						title + " " +
+						"(" + page.getComment() + ")");
 			}
 		}
 	}

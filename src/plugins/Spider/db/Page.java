@@ -3,6 +3,8 @@
  */
 package plugins.Spider.db;
 
+import java.util.Date;
+
 import freenet.support.Logger;
 import plugins.Spider.org.garret.perst.FieldIndex;
 import plugins.Spider.org.garret.perst.IPersistentMap;
@@ -72,6 +74,10 @@ public class Page extends Persistent implements Comparable<Page> {
 
 	public String getPageTitle() {
 		return pageTitle;
+	}
+
+	public String getLastChange() {
+		return new Date(lastChange).toString();
 	}
 
 	@Override
