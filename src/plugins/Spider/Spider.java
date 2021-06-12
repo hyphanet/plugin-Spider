@@ -503,8 +503,8 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 		}
 	}
 
-	protected void onFailure(FetchException fe, ClientGetter state, Page page) {
-		Logger.minor(this, "Failed: " + page + " : " + state, fe);
+	protected void onFailure(FetchException fe, ClientGetter getter, Page page) {
+		Logger.minor(this, "Failed: " + page + " : " + getter, fe);
 
 		synchronized (this) {
 			if (stopped) return;
@@ -517,7 +517,7 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 			synchronized (page) {
 				if (fe.newURI != null) {
 					// redirect, mark as succeeded
-					queueURI(fe.newURI, "redirect from " + state.getURI(), false);
+					queueURI(fe.newURI, "redirect from " + getter.getURI(), false);
 					page.setStatus(Status.SUCCEEDED);
 				} else if (fe.isFatal()) {
 					// too many tries or fatal, mark as failed
