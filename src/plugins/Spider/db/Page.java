@@ -76,8 +76,12 @@ public class Page extends Persistent implements Comparable<Page> {
 		return pageTitle;
 	}
 
-	public String getLastChange() {
+	public String getLastChangeAsString() {
 		return new Date(lastChange).toString();
+	}
+
+	public Date getLastChange() {
+		return new Date(lastChange);
 	}
 
 	@Override

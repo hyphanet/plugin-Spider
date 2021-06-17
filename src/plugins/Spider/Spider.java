@@ -27,6 +27,7 @@ import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import plugins.Spider.index.TermPageEntry;
@@ -117,6 +118,10 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 	private LibraryBuffer librarybuffer;
 
 	private final AtomicLong lastRequestFinishedAt = new AtomicLong();
+	private final AtomicInteger subscribedToUSKs = new AtomicInteger();
+	private final AtomicInteger editionsFound = new AtomicInteger();
+
+	private Map<USK, Set<FreenetURI>> urisToReplace = Collections.synchronizedMap(new HashMap<USK, Set<FreenetURI>>());
 
 	public int getLibraryBufferSize() {
 		return librarybuffer.bufferUsageEstimate();
@@ -132,6 +137,18 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 
 	public long getLastRequestFinishedAt() {
 		return lastRequestFinishedAt.get();
+	}
+
+	public int getSubscribedUSKs() {
+		return subscribedToUSKs.get() - editionsFound.get();
+	}
+
+	public int getSubscribedToUSKs() {
+		return subscribedToUSKs.get();
+	}
+
+	public int getEditionsFound() {
+		return editionsFound.get();
 	}
 
 	public Config getConfig() {

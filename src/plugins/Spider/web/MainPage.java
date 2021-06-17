@@ -109,6 +109,11 @@ class MainPage implements WebPage {
 		statusContent.addChild("br");
 		statusContent.addChild("#", "Queued Event: " + spider.callbackExecutor.getQueue().size());
 		statusContent.addChild("br");
+		statusContent.addChild("#", "Subscribed USKs: " + spider.getSubscribedUSKs() +
+				" (subscribed: " + spider.getSubscribedToUSKs() +
+				" found " + spider.getEditionsFound() +
+				")");
+		statusContent.addChild("br");
 		statusContent.addChild("#", "Library buffer size: "+spider.getLibraryBufferSize());
 		long lastRequestFinishedAt = spider.getLastRequestFinishedAt();
 		long tStalled = spider.getStalledTime();
@@ -235,7 +240,7 @@ class MainPage implements WebPage {
 				}
 				litem.addChild("p",
 						" " +
-						page.getLastChange() + " " +
+						page.getLastChangeAsString() + " " +
 						title + " " +
 						"(" + page.getComment() + ")");
 			}
