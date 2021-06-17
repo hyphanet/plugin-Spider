@@ -857,17 +857,25 @@ public class Spider implements FredPlugin, FredPluginThreadless,
     @Override
 	public void onFoundEdition(long l, USK key, ClientContext context, boolean metadata,
             short codec, byte[] data, boolean newKnownGood, boolean newSlotToo) {
-		FreenetURI uri = key.getURI();
-		/*-
-		 * FIXME this code don't make sense 
-		 *  (1) runningFetchesByURI contain SSK, not USK
-		 *  (2) onFoundEdition always have the edition set
-		 *  
-		if(runningFetchesByURI.containsKey(uri)) runningFetchesByURI.remove(uri);
-		uri = key.getURI().setSuggestedEdition(l);
-		 */
-		queueURI(uri, "USK found edition", true);
-		startSomeRequests();
+		if (newKnownGood) {
+			Logger.minor(this, "Known Good. Found new Edition for " + key + ".");
+			Set<FreenetURI> uris = urisToReplace.remove(key);
+			if (uris != null) {
+				for (FreenetURI uri : uris) {
+					Page page = getRoot().getPageByURI(uri, false, "");
+					if (page != null) {
+						page.setComment("Replaced by new edition " + key);
+						page.setStatus(Status.SUCCEEDED);
+					}
+				}
+			}
+			FreenetURI uri = key.getURI();
+			queueURI(uri, "USK found edition", true);
+			startSomeRequests();
+			editionsFound.getAndIncrement();
+		} else {
+			Logger.minor(this, "Not Known Good. Edition search continues for " + key + ".");
+		}
 	}
 
     @Override
