@@ -245,9 +245,10 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 		synchronized (this) {
 			if (stopped) return;
 
+			int maxParallelRequests = getRoot().getConfig().getMaxParallelRequests();
+
 			synchronized (runningFetch) {
 				int running = runningFetch.size();
-				int maxParallelRequests = getRoot().getConfig().getMaxParallelRequests();
 
 				if (running >= maxParallelRequests * 0.8) return;
 
@@ -305,6 +306,35 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 					getRoot().unlockPages(Status.QUEUED);
 					db.endThreadTransaction();
 				}
+			}
+
+			db.beginThreadTransaction(Storage.EXCLUSIVE_TRANSACTION);
+			getRoot().exclusiveLock(Status.INDEXED);
+			try {
+				Iterator<Page> it = getRoot().getPages(Status.INDEXED);
+				int started = 0;
+				while (started < maxParallelRequests && it.hasNext()) {
+					Page page = it.next();
+//					if (page.getLastChange().after(new Date().) {
+//						break;
+//					}
+					FreenetURI uri;
+					try {
+						uri = new FreenetURI(page.getURI());
+						if (uri.isSSKForUSK()) {
+							USK usk = USK.create(uri.uskForSSK());
+							if (urisToReplace.containsKey(usk)) continue;
+							subscribeUSK(usk.getURI(), uri);
+							page.setStatus(Status.INDEXED);
+							started++;
+						}
+					} catch (MalformedURLException e) {
+						// This could not be converted.
+					}
+				}
+			} finally {
+				getRoot().unlockPages(Status.INDEXED);
+				db.endThreadTransaction();
 			}
 		}
 
