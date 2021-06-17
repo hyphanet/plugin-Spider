@@ -11,7 +11,7 @@ public enum Status {
 	 * so they get re-run. */
 	QUEUED,
 	INDEXED, // The information is sent to library.
-	SUCCEEDED, // The fetch "succeeded" but we will ignore or not include the result.
+	SUCCEEDED, // The fetch "succeeded" but we will ignore or not include the result. Also when replaced with a new edition.
 	FAILED, // The fetch "failed" fatally and we will ignore the result.
 	NOT_PUSHED
 }

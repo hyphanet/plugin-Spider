@@ -185,14 +185,15 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 		}
 
 		if (uri.isUSK()) {
-			if (uri.getSuggestedEdition() < 0) {
-				uri = uri.setSuggestedEdition((-1) * uri.getSuggestedEdition());
-			}
+			FreenetURI usk = uri;
 			try {
+				if (uri.getSuggestedEdition() < 0) {
+					uri = uri.setSuggestedEdition((-1) * uri.getSuggestedEdition());
+				}
 				uri = ((USK.create(uri)).getSSK()).getURI();
-				(clientContext.uskManager).subscribe(USK.create(uri), this, false, this);
-			} catch (Exception e) {
+			} catch (MalformedURLException e) {
 			}
+			subscribeUSK(usk, uri);
 		}
 
 		db.beginThreadTransaction(Storage.EXCLUSIVE_TRANSACTION);
@@ -217,6 +218,23 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 				db.rollbackThreadTransaction();
 			}
 		}
+	}
+
+	private void subscribeUSK(FreenetURI uri, FreenetURI uriToReplace) {
+		USK usk;
+		try {
+			usk = USK.create(uri);
+		} catch (MalformedURLException e) {
+			return;
+		}
+		Set<FreenetURI> uris = urisToReplace.get(usk);
+		if (uris == null) {
+			subscribedToUSKs.getAndIncrement();
+			(clientContext.uskManager).subscribe(usk, this, false, this);
+			uris = new HashSet<FreenetURI>();
+		}
+		uris.add(uriToReplace);
+		urisToReplace.put(usk, uris);
 	}
 
 	/**
