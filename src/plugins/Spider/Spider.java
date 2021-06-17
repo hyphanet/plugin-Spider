@@ -242,6 +242,7 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 	 */
 	public void startSomeRequests() {
 		ArrayList<ClientGetter> toStart = null;
+		List<FreenetURI> toSubscribe = new ArrayList<FreenetURI>();
 		synchronized (this) {
 			if (stopped) return;
 
@@ -322,9 +323,7 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 					try {
 						uri = new FreenetURI(page.getURI());
 						if (uri.isSSKForUSK()) {
-							USK usk = USK.create(uri.uskForSSK());
-							if (urisToReplace.containsKey(usk)) continue;
-							subscribeUSK(usk.getURI(), uri);
+							toSubscribe.add(uri);
 							page.setStatus(Status.INDEXED);
 							started++;
 						}
@@ -345,6 +344,19 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 			} catch (FetchException e) {
 				g.getClientCallback().onFailure(e, g);
 			}
+		}
+
+		for (FreenetURI uri : toSubscribe) {
+			USK usk;
+			try {
+				usk = USK.create(uri.uskForSSK());
+			} catch (MalformedURLException e1) {
+				continue;
+			}
+			if (urisToReplace.containsKey(usk)) {
+				continue;
+			}
+			subscribeUSK(usk.getURI(), uri);
 		}
 	}
 
