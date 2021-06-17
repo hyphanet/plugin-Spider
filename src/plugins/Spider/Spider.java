@@ -905,6 +905,10 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 
 		PerstRoot root = (PerstRoot) db.getRoot();
 		if (root == null) PerstRoot.createRoot(db);
+		else {
+			// Not working:
+			// PerstRoot.patchRoot(db);
+		}
 
 		return db;
 	}

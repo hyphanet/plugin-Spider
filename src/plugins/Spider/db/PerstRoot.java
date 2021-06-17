@@ -141,4 +141,12 @@ public class PerstRoot extends Persistent {
 		return config;
 	}
 
+	public static void patchRoot(Storage storage) {
+		PerstRoot root = (PerstRoot) storage.getRoot();
+		root.newPages = storage.createFieldIndex(Page.class, "lastChange", false);
+
+		root.config = new Config(storage);
+		storage.setRoot(root);
+	}
+
 }
