@@ -65,7 +65,6 @@ class MainPage implements WebPage {
 					addChild("#", e.getMessage());
 				Logger.normal(this, "Manual added URI cause exception", e);
 			}
-			spider.startSomeRequests();
 		}
 	}
 

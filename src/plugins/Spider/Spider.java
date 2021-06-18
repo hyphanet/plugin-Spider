@@ -23,9 +23,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.PriorityBlockingQueue;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -240,20 +239,17 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 	}
 
 	/**
-	 * Start requests from the queue if less than 80% of the max requests are running until the max requests are running.
+	 * Start requests from new and queued.
 	 */
-	public void startSomeRequests() {
+	private void startFetches() {
 		ArrayList<ClientGetter> toStart = null;
 		List<FreenetURI> toSubscribe = new ArrayList<FreenetURI>();
 		synchronized (this) {
 			if (stopped) return;
 
-			int maxParallelRequests = getRoot().getConfig().getMaxParallelRequests();
-
 			synchronized (runningFetch) {
+				int maxParallelRequests = getRoot().getConfig().getMaxParallelRequests();
 				int running = runningFetch.size();
-
-				if (running >= maxParallelRequests * 0.8) return;
 
 				// Prepare to start
 				toStart = new ArrayList<ClientGetter>(maxParallelRequests - running);
@@ -310,6 +306,27 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 					db.endThreadTransaction();
 				}
 			}
+		}
+
+		for (ClientGetter g : toStart) {
+			try {
+				g.start(clientContext);
+				Logger.minor(this, g + " started");
+			} catch (FetchException e) {
+				g.getClientCallback().onFailure(e, g);
+			}
+		}
+	}
+
+	/**
+	 * Subscribe to USKs for indexed.
+	 */
+	private void startSubscribeUSKs() {
+		List<FreenetURI> toSubscribe = new ArrayList<FreenetURI>();
+		synchronized (this) {
+			if (stopped) return;
+
+			int maxParallelRequests = 2 * getRoot().getConfig().getMaxParallelRequests();
 
 			db.beginThreadTransaction(Storage.EXCLUSIVE_TRANSACTION);
 			getRoot().exclusiveLock(Status.INDEXED);
@@ -318,9 +335,6 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 				int started = 0;
 				while (started < maxParallelRequests && it.hasNext()) {
 					Page page = it.next();
-//					if (page.getLastChange().after(new Date().) {
-//						break;
-//					}
 					FreenetURI uri;
 					try {
 						uri = new FreenetURI(page.getURI());
@@ -336,15 +350,6 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 			} finally {
 				getRoot().unlockPages(Status.INDEXED);
 				db.endThreadTransaction();
-			}
-		}
-
-		for (ClientGetter g : toStart) {
-			try {
-				g.start(clientContext);
-				Logger.minor(this, g + " started");
-			} catch (FetchException e) {
-				g.getClientCallback().onFailure(e, g);
 			}
 		}
 
@@ -457,55 +462,17 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 		public void run() {
 			synchronized (getRoot()) {
 				getRoot().setConfig(config);
-				startSomeRequests();
 			}
-		}
-	}
-
-	protected class StartSomeRequestsCallback implements Runnable {
-		StartSomeRequestsCallback() {
-		}
-
-		public void run() {
-			try {
-				Thread.sleep(30000);
-			} catch (InterruptedException e) {
-				// ignore
-			}
-			startSomeRequests();
-		}
-	}
-
-	protected static class CallbackPrioritizer implements Comparator<Runnable> {
-		public int compare(Runnable o1, Runnable o2) {
-			if (o1.getClass() == o2.getClass()) return 0;
-
-			return getPriority(o1) - getPriority(o2);
-		}
-
-		private int getPriority(Runnable r) {
-			if (r instanceof SetConfigCallback) {
-				return 0;
-			} else if (r instanceof OnFailureCallback) {
-				return 2;
-			} else if (r instanceof OnSuccessCallback) {
-				return 3;
-			} else if (r instanceof StartSomeRequestsCallback) {
-				return 4;
-			}
-
-			return -1;
 		}
 	}
 
 	// this is java.util.concurrent.Executor, not freenet.support.Executor
 	// always run with one thread --> more thread cause contention and slower!
-	public ThreadPoolExecutor callbackExecutor = new ThreadPoolExecutor( //
-			1, 1, 600, TimeUnit.SECONDS, //
-	        new PriorityBlockingQueue<Runnable>(5, new CallbackPrioritizer()), //
+	public ScheduledThreadPoolExecutor callbackExecutor = new ScheduledThreadPoolExecutor(
+			1,
 	        new ThreadFactory() {
 		        public Thread newThread(Runnable r) {
-			        Thread t = new NativeThread(r, "Spider", NativeThread.NORM_PRIORITY - 1, true);
+			        Thread t = new NativeThread(r, "Spider", NativeThread.PriorityLevel.NORM_PRIORITY.value - 1, true);
 			        t.setDaemon(true);
 			        t.setContextClassLoader(Spider.this.getClass().getClassLoader());
 			        return t;
@@ -597,7 +564,6 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 				synchronized (this) {
 					runningFetch.remove(page);
 				}
-				if (!stopped) startSomeRequests();
 			} finally {
 				if (!dbTransactionEnded) {
 					Logger.minor(this, "rollback transaction", new Exception("debug"));
@@ -653,8 +619,6 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 				db.rollbackThreadTransaction();
 			}
 		}
-
-		startSomeRequests();
 	} 
 
 	private boolean garbageCollecting = false;
@@ -724,7 +688,28 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 		librarybuffer = new LibraryBuffer(pr, this);
 		librarybuffer.start();
 
-		callbackExecutor.execute(new StartSomeRequestsCallback());
+		callbackExecutor.scheduleWithFixedDelay(new Runnable() {
+			@Override
+			public void run() {
+				try {
+					startFetches();
+				} catch (Throwable e) {
+					Logger.error(this, "startFetches throws", e);
+				}
+			}
+			
+		}, 30, 30, TimeUnit.SECONDS);
+		callbackExecutor.scheduleWithFixedDelay(new Runnable() {
+			@Override
+			public void run() {
+				try {
+					startSubscribeUSKs();
+				} catch (Throwable e) {
+					Logger.error(this, "startSubscribeUSKs throws", e);
+				}
+			}
+			
+		}, 130, 60, TimeUnit.SECONDS);
 	}
 
 	private WebInterface webInterface;
@@ -885,7 +870,6 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 			}
 			FreenetURI uri = key.getURI();
 			queueURI(uri, "USK found edition", true);
-			startSomeRequests();
 			editionsFound.getAndIncrement();
 		} else {
 			Logger.minor(this, "Not Known Good. Edition search continues for " + key + ".");
