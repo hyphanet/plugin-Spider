@@ -119,6 +119,7 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 
 	private final AtomicLong lastRequestFinishedAt = new AtomicLong();
 	private final AtomicInteger subscribedToUSKs = new AtomicInteger();
+	private final AtomicInteger replacedByUSKs = new AtomicInteger();
 	private final AtomicInteger editionsFound = new AtomicInteger();
 
 	private Map<USK, Set<FreenetURI>> urisToReplace = Collections.synchronizedMap(new HashMap<USK, Set<FreenetURI>>());
@@ -139,12 +140,12 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 		return lastRequestFinishedAt.get();
 	}
 
-	public int getSubscribedUSKs() {
-		return subscribedToUSKs.get() - editionsFound.get();
-	}
-
 	public int getSubscribedToUSKs() {
 		return subscribedToUSKs.get();
+	}
+
+	public int getReplacedByUSKs() {
+		return replacedByUSKs.get();
 	}
 
 	public int getEditionsFound() {
@@ -228,6 +229,7 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 			return;
 		}
 		Set<FreenetURI> uris = urisToReplace.get(usk);
+		replacedByUSKs.getAndIncrement();
 		if (uris == null) {
 			subscribedToUSKs.getAndIncrement();
 			(clientContext.uskManager).subscribe(usk, this, false, this);
