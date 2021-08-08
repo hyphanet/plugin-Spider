@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
@@ -82,6 +83,8 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 
 	/** Document ID of fetching documents */
 	protected Map<Page, ClientGetter> runningFetch = Collections.synchronizedMap(new HashMap<Page, ClientGetter>());
+
+	private Map<ClientGetter, ScheduledFuture<?>> runningFutures = Collections.synchronizedMap(new HashMap<ClientGetter, ScheduledFuture<?>>());
 
 	/**
 	 * Lists the allowed mime types of the fetched page. 
@@ -308,13 +311,25 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 			}
 		}
 
-		for (ClientGetter g : toStart) {
+		for (final ClientGetter g : toStart) {
 			try {
 				g.start(clientContext);
 				Logger.minor(this, g + " started");
 			} catch (FetchException e) {
 				g.getClientCallback().onFailure(e, g);
+				continue;
 			}
+			ScheduledFuture<?> future = callbackExecutor.scheduleWithFixedDelay(new Runnable() {
+				long lapsLeft = 10 * 60 * 60;
+				@Override
+				public void run() {
+					if (lapsLeft-- <= 0) {
+						g.cancel(clientContext);
+						Logger.minor(this, g + " aborted because of time-out");
+					}
+				}
+			}, 10, 1, TimeUnit.SECONDS);
+			runningFutures.put(g, future);
 		}
 	}
 
@@ -377,20 +392,31 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 			this.page = page;
 		}
 
-        @Override
+		@Override
 		public void onFailure(FetchException e, ClientGetter state) {
+			Logger.minor(this, "onFailure: " + page + " (q:" + callbackExecutor.getQueue().size() + ")");
+			removeFuture(state);
+
 			if (stopped) return;
 
 			callbackExecutor.execute(new OnFailureCallback(e, state, page));
-			Logger.minor(this, "Queued OnFailure: " + page + " (q:" + callbackExecutor.getQueue().size() + ")");
 		}
 
-        @Override
+		@Override
 		public void onSuccess(final FetchResult result, final ClientGetter state) {
+			Logger.minor(this, "onSuccess: " + page + " (q:" + callbackExecutor.getQueue().size() + ")");
+			removeFuture(state);
+
 			if (stopped) return;
 
 			callbackExecutor.execute(new OnSuccessCallback(result, state, page));
-			Logger.minor(this, "Queued OnSuccess: " + page + " (q:" + callbackExecutor.getQueue().size() + ")");
+		}
+
+		private void removeFuture(ClientGetter getter) {
+			ScheduledFuture<?> future = runningFutures.remove(getter);
+			if (future != null) {
+				future.cancel(false);
+			}
 		}
 
 		public String toString() {
