@@ -59,6 +59,7 @@ public class LibraryBuffer implements FredPluginTalker {
 	/** We only consider sending the data after a file has been parsed, not mid way through. */
 	public void maybeSend() {
 		boolean push = false;
+		int bufferUsageEstimated = 0;
 		synchronized(this) {
 			if (bufferMax == 0) return;
 			if (bufferUsageEstimate > bufferMax) {
@@ -68,10 +69,11 @@ public class LibraryBuffer implements FredPluginTalker {
 				pushing = termPageBuffer.values();
 				push = true;
 				termPageBuffer = new TreeMap();
+				bufferUsageEstimated = bufferUsageEstimate;
 				bufferUsageEstimate = 0;
 			}
 		}
-		if(push) sendBuffer();
+		if(push) sendBuffer(bufferUsageEstimated);
 	}
 	
 	/**
@@ -155,10 +157,10 @@ public class LibraryBuffer implements FredPluginTalker {
 	 *
 	 * FIXME : I think there is something wrong with the way it writes to the bucket, I may be using the wrong kind of buffer
 	 */
-	private void sendBuffer() {
+	private void sendBuffer(int bufferUsageEstimated) {
 		long tStart = System.currentTimeMillis();
 		try {
-			Logger.normal(this, "Sending buffer of estimated size "+bufferUsageEstimate+" bytes to Library");
+			Logger.normal(this, "Sending buffer of estimated size " + bufferUsageEstimated + " bytes to Library");
 			long totalPagesIndexed = spider.getRoot().getPageCount(Status.INDEXED);
 			Bucket bucket = pr.getNode().clientCore.tempBucketFactory.makeBucket(3000000);
 			writeToPush(totalPagesIndexed, bucket);
