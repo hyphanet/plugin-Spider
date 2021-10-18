@@ -436,21 +436,19 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 			PageCallBack pageCallBack = new PageCallBack(page);
 			Logger.minor(this, "Successful: " + uri + " : " + page.getId());
 
-			InputStream filterInput = null;
-			OutputStream filterOutput = null;
 			try {
-				if (!"text/plain".equals(mimeType)) {
-					filterInput = data.getInputStream();
-					filterOutput = new NullBucket().getOutputStream();
-					ContentFilter.filter(filterInput, filterOutput, mimeType, uri.toURI(ROOT_URI), pageCallBack, 
-					        null, null);
-					filterInput.close();
-					filterOutput.close();
+				if ("text/plain".equals(mimeType)) {
+					try (BufferedReader br = new BufferedReader(new InputStreamReader(data.getInputStream()))) {
+						String line;
+						while ((line = br.readLine()) != null) {
+							pageCallBack.onText(line, mimeType, uri.toURI(ROOT_URI));
+						}
+					}
 				} else {
-					BufferedReader br = new BufferedReader(new InputStreamReader(data.getInputStream()));
-					String line;
-					while((line = br.readLine())!=null) {
-						pageCallBack.onText(line, mimeType, uri.toURI(ROOT_URI));
+					try (InputStream filterInput = data.getInputStream();
+						 OutputStream filterOutput = new NullBucket().getOutputStream()) {
+						ContentFilter.filter(filterInput, filterOutput, mimeType, uri.toURI(ROOT_URI), pageCallBack,
+								null, null);
 					}
 				}
 				pageCallBack.finish();
@@ -472,9 +470,6 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 				// we have lots of invalid html on net - just normal, not error
 				Logger.normal(this, "exception on content filter for " + page, e);
 				return;
-			} finally {
-				Closer.close(filterInput);
-				Closer.close(filterOutput);
 			}
 
 			page.setStatus(Status.NOT_PUSHED);
