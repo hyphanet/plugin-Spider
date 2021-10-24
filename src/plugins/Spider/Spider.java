@@ -89,7 +89,7 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 	protected Set<String> allowedMIMETypes;
 
 	static int dbVersion = 45;
-	static int version = 52;
+	static int version = 53;
 
 	/** We use the standard http://127.0.0.1:8888/ for parsing HTML regardless of what the local
 	 * interface is actually configured to be. This will not affect the extracted FreenetURI's,
