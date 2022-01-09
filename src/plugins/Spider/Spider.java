@@ -22,6 +22,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
@@ -337,14 +338,14 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 	 * Subscribe to USKs for indexed.
 	 */
 	private void startSubscribeUSKs() {
-		List<FreenetURI> toSubscribe = new ArrayList<FreenetURI>();
+		Map<FreenetURI, Page> toSubscribe = new HashMap<FreenetURI, Page>();
 		synchronized (this) {
 			if (stopped) return;
 
 			int maxParallelRequests = 2 * getRoot().getConfig().getMaxParallelRequests();
 
 			db.beginThreadTransaction(Storage.EXCLUSIVE_TRANSACTION);
-			getRoot().exclusiveLock(Status.INDEXED);
+			getRoot().sharedLockPages(Status.INDEXED);
 			try {
 				Iterator<Page> it = getRoot().getPages(Status.INDEXED);
 				int started = 0;
@@ -354,12 +355,11 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 					try {
 						uri = new FreenetURI(page.getURI());
 						if (uri.isSSKForUSK()) {
-							toSubscribe.add(uri);
-							page.setStatus(Status.INDEXED);
+							toSubscribe.put(uri, page);
 							started++;
 						}
 					} catch (MalformedURLException e) {
-						// This could not be converted.
+						// This could not be converted - ignore.
 					}
 				}
 			} finally {
@@ -368,17 +368,23 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 			}
 		}
 
-		for (FreenetURI uri : toSubscribe) {
+		for (Entry<FreenetURI, Page> entry : toSubscribe.entrySet()) {
+			FreenetURI uri = entry.getKey();
+			Page page = entry.getValue();
 			USK usk;
 			try {
 				usk = USK.create(uri.uskForSSK());
 			} catch (MalformedURLException e1) {
+				page.setComment("MalformedURL in SubscribeUSK");
 				continue;
 			}
 			if (urisToReplace.containsKey(usk)) {
+				// Everything is subscribed to.
 				continue;
 			}
+
 			subscribeUSK(usk.getURI(), uri);
+			page.setStatus(Status.INDEXED); // Move last.
 		}
 	}
 
