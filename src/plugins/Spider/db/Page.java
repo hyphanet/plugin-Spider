@@ -127,8 +127,10 @@ public class Page extends Persistent implements Comparable<Page> {
 					Logger.error(this, "Page: Key not found in index: "+this, e);
 					System.err.println("Page: Key not found in index: "+this);
 					e.printStackTrace();
-				} else
+				} else {
+					Logger.error(this, "remove from index " + status + " failed", e);
 					throw e;
+				}
 			} finally {
 				coll.unlock();
 			}

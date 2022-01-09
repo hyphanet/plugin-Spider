@@ -269,7 +269,7 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 						try {
 							ClientGetter getter = makeGetter(page);
 
-							Logger.minor(this, "Starting " + getter + " " + page);
+							Logger.minor(this, "Starting new " + getter + " " + page);
 							toStart.add(getter);
 							runningFetch.put(page, getter);
 						} catch (MalformedURLException e) {
@@ -295,7 +295,7 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 						try {
 							ClientGetter getter = makeGetter(page);
 
-							Logger.minor(this, "Starting " + getter + " " + page);
+							Logger.minor(this, "Starting queued " + getter + " " + page);
 							toStart.add(getter);
 							runningFetch.put(page, getter);
 						} catch (MalformedURLException e) {
