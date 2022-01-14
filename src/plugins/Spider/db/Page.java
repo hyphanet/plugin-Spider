@@ -39,6 +39,7 @@ public class Page extends Persistent implements Comparable<Page> {
 	}
 	
 	public synchronized void setStatus(Status status) {
+		Logger.debug(this, "New status " + status + " for " + this);
 		preModify();
 		this.status = status;
 		postModify();
@@ -49,6 +50,7 @@ public class Page extends Persistent implements Comparable<Page> {
 	}
 
 	public synchronized void setComment(String comment) {
+		Logger.debug(this, "New comment for " + this);
 		preModify();
 		this.comment = comment;
 		postModify();
@@ -67,6 +69,7 @@ public class Page extends Persistent implements Comparable<Page> {
 	}
 	
 	public void setPageTitle(String pageTitle) {
+		Logger.debug(this, "New page title for " + this);
 		preModify();
 		this.pageTitle = pageTitle;
 		postModify();
@@ -146,6 +149,44 @@ public class Page extends Persistent implements Comparable<Page> {
 
 		if (storage != null) {
 			PerstRoot root = (PerstRoot) storage.getRoot();
+			FieldIndex<Page> coll = root.getPageIndex(status);
+			coll.exclusiveLock();
+			try {
+				coll.put(this);
+			} finally {
+				coll.unlock();
+			}
+		}
+	}
+
+	/**
+	 * Called when we find the page in the wrong list.
+	 * 
+	 * This should never happen but it has and is a major problem since it
+	 * locks up the search.
+	 */
+	public void pageFoundInWrongList() {
+		Storage storage = getStorage();
+
+		if (storage != null) {
+			PerstRoot root = (PerstRoot) storage.getRoot();
+			Logger.error(this, "Page " + this + " found in wrong list. Will remove from all lists and put back.");
+			for (Status status : Status.values()) {
+				FieldIndex<Page> coll = root.getPageIndex(status);
+				coll.exclusiveLock();
+				try {
+					coll.remove(this);
+					Logger.minor(this, "Page " + this + " was removed from " + status);
+				} catch (StorageError e) {
+					if(e.getErrorCode() == StorageError.KEY_NOT_FOUND) {
+						// This is the normal case.
+					} else {
+						Logger.error(this, "Error in storage when removing " + this + " from " + status + ".", e);
+					}
+				} finally {
+					coll.unlock();
+				}
+			}
 			FieldIndex<Page> coll = root.getPageIndex(status);
 			coll.exclusiveLock();
 			try {

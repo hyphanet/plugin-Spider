@@ -259,16 +259,23 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 
 				// Prepare to start
 				toStart = new ArrayList<ClientGetter>(maxParallelRequests - running);
-				db.beginThreadTransaction(Storage.COOPERATIVE_TRANSACTION);
-				getRoot().sharedLockPages(Status.NEW);
+				Page pageInWrongList = null;
+				db.beginThreadTransaction(Storage.EXCLUSIVE_TRANSACTION);
 				try {
 					Iterator<Page> it = getRoot().getPages(Status.NEW);
 
 					while (running + toStart.size() < maxParallelRequests && it.hasNext()) {
 						Page page = it.next();
+						Logger.debug(this, "Page " + page + " found in NEW.");
 						// Skip if getting this page already
 						if (runningFetch.containsKey(page)) continue;
 						
+						final Status status = page.getStatus();
+						if (status != Status.NEW) {
+							pageInWrongList = page;
+							continue;
+						}
+
 						try {
 							ClientGetter getter = makeGetter(page);
 
@@ -282,19 +289,28 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 						}
 					}
 				} finally {
-					getRoot().unlockPages(Status.NEW);
+					if (pageInWrongList != null) {
+						pageInWrongList.pageFoundInWrongList();
+					}
 					db.endThreadTransaction();
 				}
-				db.beginThreadTransaction(Storage.COOPERATIVE_TRANSACTION);
-				getRoot().sharedLockPages(Status.QUEUED);
+				db.beginThreadTransaction(Storage.EXCLUSIVE_TRANSACTION);
+				pageInWrongList = null;
 				try {
 					Iterator<Page> it = getRoot().getPages(Status.QUEUED);
 
 					while (running + toStart.size() < maxParallelRequests && it.hasNext()) {
 						Page page = it.next();
+						Logger.debug(this, "Page " + page + " found in QUEUED.");
 						// Skip if getting this page already
 						if (runningFetch.containsKey(page)) continue;
 						
+						final Status status = page.getStatus();
+						if (status != Status.QUEUED) {
+							pageInWrongList = page;
+							continue;
+						}
+
 						try {
 							ClientGetter getter = makeGetter(page);
 
@@ -308,7 +324,9 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 						}
 					}
 				} finally {
-					getRoot().unlockPages(Status.QUEUED);
+					if (pageInWrongList != null) {
+						pageInWrongList.pageFoundInWrongList();
+					}
 					db.endThreadTransaction();
 				}
 			}
@@ -347,12 +365,12 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 			int maxParallelRequests = 2 * getRoot().getConfig().getMaxParallelRequests();
 
 			db.beginThreadTransaction(Storage.EXCLUSIVE_TRANSACTION);
-			getRoot().sharedLockPages(Status.INDEXED);
 			try {
 				Iterator<Page> it = getRoot().getPages(Status.INDEXED);
 				int started = 0;
 				while (started < maxParallelRequests && it.hasNext()) {
 					Page page = it.next();
+					Logger.debug(this, "Page " + page + " found in INDEXED.");
 					FreenetURI uri;
 					try {
 						uri = new FreenetURI(page.getURI());
@@ -365,7 +383,6 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 					}
 				}
 			} finally {
-				getRoot().unlockPages(Status.INDEXED);
 				db.endThreadTransaction();
 			}
 		}
@@ -377,7 +394,12 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 			try {
 				usk = USK.create(uri.uskForSSK());
 			} catch (MalformedURLException e1) {
-				page.setComment("MalformedURL in SubscribeUSK");
+				db.beginThreadTransaction(Storage.EXCLUSIVE_TRANSACTION);
+				try {
+					page.setComment("MalformedURL in SubscribeUSK");
+				} finally {
+					db.endThreadTransaction();
+				}					
 				continue;
 			}
 			if (urisToReplace.containsKey(usk)) {
@@ -386,7 +408,13 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 			}
 
 			subscribeUSK(usk.getURI(), uri);
-			page.setStatus(Status.INDEXED); // Move last.
+			db.beginThreadTransaction(Storage.EXCLUSIVE_TRANSACTION);
+			try {
+				page.setStatus(Status.INDEXED); // Move last.
+			} finally {
+				db.endThreadTransaction();
+			}
+
 		}
 	}
 
@@ -894,16 +922,21 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 			Logger.minor(this, "Known Good. Found new Edition for " + key + ".");
 			Set<FreenetURI> uris = urisToReplace.remove(key);
 			if (uris != null) {
-				for (FreenetURI uri : uris) {
-					Page page = getRoot().getPageByURI(uri, false, "");
-					if (page != null) {
-						page.setComment("Replaced by new edition " + key);
-						page.setStatus(Status.SUCCEEDED);
+				db.beginThreadTransaction(Storage.EXCLUSIVE_TRANSACTION);
+				try {
+					for (FreenetURI uri : uris) {
+						Page page = getRoot().getPageByURI(uri, false, "");
+						if (page != null) {
+							page.setComment("Replaced by new edition " + key);
+							page.setStatus(Status.SUCCEEDED);
+						}
 					}
+				} finally {
+					db.endThreadTransaction();
 				}
 			}
 			FreenetURI uri = key.getURI();
-			queueURI(uri, "USK found edition", true);
+			queueURI(uri, "USK found edition " + uri, true);
 			editionsFound.getAndIncrement();
 		} else {
 			Logger.minor(this, "Not Known Good. Edition search continues for " + key + ".");
@@ -990,7 +1023,9 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 		int count = 0;
 		Iterator<Page> pages = getRoot().getPages(from);
 		while(pages.hasNext()) {
-			pages.next().setStatus(to);
+			Page page = pages.next();
+			Logger.debug(this, "Page " + page + " found in " + from + ".");
+			page.setStatus(to);
 			count++;
 		}
 		System.out.println("Reset "+count+" pages status from "+from+" to "+to);

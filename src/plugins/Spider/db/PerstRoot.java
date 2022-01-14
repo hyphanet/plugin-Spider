@@ -9,6 +9,7 @@ import plugins.Spider.org.garret.perst.Key;
 import plugins.Spider.org.garret.perst.Persistent;
 import plugins.Spider.org.garret.perst.Storage;
 import freenet.keys.FreenetURI;
+import freenet.support.Logger;
 
 public class PerstRoot extends Persistent {
 
@@ -53,6 +54,7 @@ public class PerstRoot extends Persistent {
 			Page page = uriPage.get(new Key(uri.toString()));
 
 			if (create && page == null) {
+				Logger.debug(this, "New page created for " + uri.toString());
 				page = new Page(uri.toString(), comment, getStorage());
 
 				idPage.append(page);
