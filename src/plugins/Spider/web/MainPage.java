@@ -5,7 +5,6 @@
 package plugins.Spider.web;
 
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 
@@ -78,13 +77,6 @@ class MainPage implements WebPage {
 		HTMLNode overviewTable = contentNode.addChild("table", "class", "column");
 		HTMLNode overviewTableRow = overviewTable.addChild("tr");
 
-		PageStatus newStatus = getPageStatus(Status.NEW);
-		PageStatus queuedStatus = getPageStatus(Status.QUEUED);
-		PageStatus indexedStatus = getPageStatus(Status.INDEXED);
-		PageStatus succeededStatus = getPageStatus(Status.SUCCEEDED);
-		PageStatus failedStatus = getPageStatus(Status.FAILED);
-		PageStatus notPushedStatus = getPageStatus(Status.NOT_PUSHED);
-
 		List<Page> runningFetch = spider.getRunningFetch();
 		Config config = spider.getConfig();
 
@@ -94,18 +86,10 @@ class MainPage implements WebPage {
 		statusContent.addChild("#", "Running Request: " + runningFetch.size() + "/"
 		        + config.getMaxParallelRequests());
 		statusContent.addChild("br");
-		statusContent.addChild("#", "New: " + newStatus.count);
-		statusContent.addChild("br");
-		statusContent.addChild("#", "Queued: " + queuedStatus.count);
-		statusContent.addChild("br");
-		statusContent.addChild("#", "Indexed: " + indexedStatus.count);
-		statusContent.addChild("br");
-		statusContent.addChild("#", "Succeeded: " + succeededStatus.count);
-		statusContent.addChild("br");
-		statusContent.addChild("#", "Not pushed: " + notPushedStatus.count);
-		statusContent.addChild("br");
-		statusContent.addChild("#", "Failed: " + failedStatus.count);
-		statusContent.addChild("br");
+		for (Status status : Status.values()) {
+			statusContent.addChild("#", status + ": " + getPageStatus(status).count);
+			statusContent.addChild("br");
+		}
 		statusContent.addChild("#", "Queued Event: " + spider.callbackExecutor.getQueue().size());
 		statusContent.addChild("br");
 		statusContent.addChild("#", "Subscribed USKs: " + spider.getSubscribedToUSKs());
@@ -165,47 +149,14 @@ class MainPage implements WebPage {
 		}
 		contentNode.addChild(runningBox);
 
-		InfoboxNode newd = pageMaker.getInfobox("New URI");
-		HTMLNode newBox = newd.outer;
-		newBox.addAttribute("style", "right: 0; overflow: auto;");
-		HTMLNode newContent = newd.content;
-		listPages(newStatus, newContent);
-		contentNode.addChild(newBox);
-
-		InfoboxNode queued = pageMaker.getInfobox("Queued URI");
-		HTMLNode queuedBox = queued.outer;
-		queuedBox.addAttribute("style", "right: 0; overflow: auto;");
-		HTMLNode queuedContent = queued.content;
-		listPages(queuedStatus, queuedContent);
-		contentNode.addChild(queuedBox);
-
-		InfoboxNode indexed = pageMaker.getInfobox("Indexed URI");
-		HTMLNode indexedBox = indexed.outer;
-		indexedBox.addAttribute("style", "right: 0;");
-		HTMLNode indexedContent = indexed.content;
-		listPages(indexedStatus, indexedContent);
-		contentNode.addChild(indexedBox);
-
-		InfoboxNode succeeded = pageMaker.getInfobox("Succeeded URI");
-		HTMLNode succeededBox = succeeded.outer;
-		succeededBox.addAttribute("style", "right: 0;");
-		HTMLNode succeededContent = succeeded.content;
-		listPages(succeededStatus, succeededContent);
-		contentNode.addChild(succeededBox);
-
-		InfoboxNode notPushed = pageMaker.getInfobox("Not pushed URI");
-		HTMLNode notPushedBox = notPushed.outer;
-		notPushedBox.addAttribute("style", "right: 0;");
-		HTMLNode notPushedContent = notPushed.content;
-		listPages(notPushedStatus, notPushedContent);
-		contentNode.addChild(notPushedBox);
-
-		InfoboxNode failed = pageMaker.getInfobox("Failed URI");
-		HTMLNode failedBox = failed.outer;
-		failedBox.addAttribute("style", "right: 0;");
-		HTMLNode failedContent = failed.content;
-		listPages(failedStatus, failedContent);
-		contentNode.addChild(failedBox);
+		for (Status status : Status.values()) {
+			InfoboxNode d = pageMaker.getInfobox(status + " URIs");
+			HTMLNode box = d.outer;
+			box.addAttribute("style", "right: 0; overflow: auto;");
+			HTMLNode content = d.content;
+			listPages(getPageStatus(status), content);
+			contentNode.addChild(box);
+		}
 	}
 
 	//-- Utilities
@@ -216,7 +167,7 @@ class MainPage implements WebPage {
 			Iterator<Page> it = root.getPages(status);
 
 			int showURI = spider.getConfig().getMaxShownURIs();
-			List<Page> page = new ArrayList();
+			List<Page> page = new ArrayList<Page>();
 			while (page.size() < showURI && it.hasNext()) {
 				page.add(it.next());
 			}
