@@ -255,6 +255,10 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 				int maxParallelRequests = getRoot().getConfig().getMaxParallelRequests();
 				int running = runningFetch.size();
 
+				if (maxParallelRequests <= running) {
+					return;
+				}
+
 				// Prepare to start
 				toStart = new ArrayList<ClientGetter>(maxParallelRequests - running);
 				db.beginThreadTransaction(Storage.COOPERATIVE_TRANSACTION);
