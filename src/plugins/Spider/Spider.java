@@ -15,7 +15,6 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -247,7 +246,6 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 	 */
 	private void startFetches() {
 		ArrayList<ClientGetter> toStart = null;
-		List<FreenetURI> toSubscribe = new ArrayList<FreenetURI>();
 		synchronized (this) {
 			if (stopped) return;
 
@@ -850,7 +848,7 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 			}
 		}
 
-		HashMap<String, TermPageEntry> tpes = new HashMap();
+		HashMap<String, TermPageEntry> tpes = new HashMap<String, TermPageEntry>();
 
 		/**
 		 * Add a word to the database for this page
