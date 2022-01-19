@@ -91,7 +91,7 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 	 */
 	protected Set<String> allowedMIMETypes;
 
-	static int dbVersion = 46;
+	static int dbVersion = 47;
 	static int version = 53;
 
 	/** We use the standard http://127.0.0.1:8888/ for parsing HTML regardless of what the local
@@ -169,15 +169,15 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 	}
 	
 	/**
-	 * Adds the found uri to the list of to-be-retrieved uris. <p>Every usk uri added as ssk.
+	 * Adds the found uri to the list of to-be-retrieved uris. <p>
 	 * @param uri the new uri that needs to be fetched for further indexing
 	 */
-	public void queueURI(FreenetURI uri, String comment, boolean force) {
+	public void queueURI(FreenetURI uri, String comment) {
 		String sURI = uri.toString();
 		String lowerCaseURI = sURI.toLowerCase(Locale.US);
 		for (String ext : getRoot().getConfig().getBadlistedExtensions()) {
 			if (lowerCaseURI.endsWith(ext)) {
-				return; // be smart
+				return; // be smart, don't fetch certain files
 			}
 		}
 		
@@ -187,29 +187,10 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 			}
 		}
 
-		if (uri.isUSK()) {
-			FreenetURI usk = uri;
-			try {
-				if (uri.getSuggestedEdition() < 0) {
-					uri = uri.setSuggestedEdition((-1) * uri.getSuggestedEdition());
-				}
-				uri = ((USK.create(uri)).getSSK()).getURI();
-			} catch (MalformedURLException e) {
-			}
-			subscribeUSK(usk, uri);
-		}
-
 		db.beginThreadTransaction(Storage.EXCLUSIVE_TRANSACTION);
 		boolean dbTransactionEnded = false;
 		try {
-			Page page = getRoot().getPageByURI(uri, true, comment);
-			if (force && page.getStatus() != Status.QUEUED) {
-				page.setComment(comment);
-				if (page.getStatus() != Status.NEW) { 
-					page.setStatus(Status.QUEUED);
-				}
-			}
-
+			getRoot().getPageByURI(uri, true, comment);
 			db.endThreadTransaction();
 			dbTransactionEnded = true;
 		} catch (RuntimeException e) {
@@ -284,7 +265,7 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 							runningFetch.put(page, getter);
 						} catch (MalformedURLException e) {
 							Logger.error(this, "IMPOSSIBLE-Malformed URI: " + page, e);
-							page.setStatus(Status.FAILED);
+							page.setStatus(Status.FATALLY_FAILED);
 							page.setComment("MalformedURLException");
 						}
 					}
@@ -297,16 +278,16 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 				db.beginThreadTransaction(Storage.EXCLUSIVE_TRANSACTION);
 				pageInWrongList = null;
 				try {
-					Iterator<Page> it = getRoot().getPages(Status.QUEUED);
+					Iterator<Page> it = getRoot().getPages(Status.FAILED);
 
 					while (running + toStart.size() < maxParallelRequests && it.hasNext()) {
 						Page page = it.next();
-						Logger.debug(this, "Page " + page + " found in QUEUED.");
+						Logger.debug(this, "Page " + page + " found in FAILED.");
 						// Skip if getting this page already
 						if (runningFetch.containsKey(page)) continue;
 						
 						final Status status = page.getStatus();
-						if (status != Status.QUEUED) {
+						if (status != Status.FAILED) {
 							pageInWrongList = page;
 							continue;
 						}
@@ -319,7 +300,7 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 							runningFetch.put(page, getter);
 						} catch (MalformedURLException e) {
 							Logger.error(this, "IMPOSSIBLE-Malformed URI: " + page, e);
-							page.setStatus(Status.FAILED);
+							page.setStatus(Status.FATALLY_FAILED);
 							page.setComment("MalformedURLException");
 						}
 					}
@@ -366,20 +347,17 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 
 			db.beginThreadTransaction(Storage.EXCLUSIVE_TRANSACTION);
 			try {
-				Iterator<Page> it = getRoot().getPages(Status.INDEXED);
+				Iterator<Page> it = getRoot().getPages(Status.PROCESSED_USK);
 				int started = 0;
 				while (started < maxParallelRequests && it.hasNext()) {
 					Page page = it.next();
-					Logger.debug(this, "Page " + page + " found in INDEXED.");
-					FreenetURI uri;
+					Logger.debug(this, "Page " + page + " found in PROCESSED_USK.");
 					try {
-						uri = new FreenetURI(page.getURI());
-						if (uri.isSSKForUSK()) {
-							toSubscribe.put(uri, page);
-							started++;
-						}
+						toSubscribe.put(new FreenetURI(page.getURI()), page);
+						started++;
 					} catch (MalformedURLException e) {
 						// This could not be converted - ignore.
+						page.setStatus(Status.FATALLY_FAILED);
 					}
 				}
 			} finally {
@@ -410,7 +388,7 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 			subscribeUSK(usk.getURI(), uri);
 			db.beginThreadTransaction(Storage.EXCLUSIVE_TRANSACTION);
 			try {
-				page.setStatus(Status.INDEXED); // Move last.
+				page.setStatus(Status.DONE); // Move last.
 			} finally {
 				db.endThreadTransaction();
 			}
@@ -593,7 +571,7 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 
 			} catch (UnsafeContentTypeException e) {
 				// wrong mime type
-				page.setStatus(Status.SUCCEEDED);
+				page.setStatus(Status.PROCESSED_USK);
 				page.setComment("UnsafeContentTypeException");
 				db.endThreadTransaction();
 				dbTransactionEnded = true;
@@ -634,7 +612,7 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 					// page is now invalidated.
 					page = getRoot().getPageByURI(uri, false, "");
 					if(page != null) {
-						page.setStatus(Status.FAILED);
+						page.setStatus(Status.FATALLY_FAILED);
 						page.setComment("could not complete operation dbTransaction not ended");
 					}
 					db.endThreadTransaction();
@@ -657,16 +635,16 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 			synchronized (page) {
 				if (fe.newURI != null) {
 					// redirect, mark as succeeded
-					queueURI(fe.newURI, "redirect from " + getter.getURI(), false);
-					page.setStatus(Status.SUCCEEDED);
+					queueURI(fe.newURI, "redirect from " + getter.getURI());
+					page.setStatus(Status.PROCESSED_USK);
 					page.setComment("Redirected");
 				} else if (fe.isFatal()) {
 					// too many tries or fatal, mark as failed
-					page.setStatus(Status.FAILED);
+					page.setStatus(Status.FATALLY_FAILED);
 					page.setComment("Fatal");
 				} else {
 					// requeue at back
-					page.setStatus(Status.QUEUED);
+					page.setStatus(Status.FAILED);
 				}
 			}
 			db.endThreadTransaction();
@@ -744,7 +722,7 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 
 		FreenetURI[] initialURIs = core.getBookmarkURIs();
 		for (int i = 0; i < initialURIs.length; i++) {
-			queueURI(initialURIs[i], "bookmark", false);
+			queueURI(initialURIs[i], "bookmark");
 		}
 
 		librarybuffer = new LibraryBuffer(pr, this);
@@ -814,7 +792,7 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 		public void foundURI(FreenetURI uri, boolean inline) {
 			if (stopped) throw new RuntimeException("plugin stopping");
 			if (logDEBUG) Logger.debug(this, "foundURI " + uri + " on " + page);
-			queueURI(uri, "Added from " + page.getURI(), false);
+			queueURI(uri, "Added from " + page.getURI());
 		}
 
 		protected Integer lastPosition = null;
@@ -928,7 +906,7 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 						Page page = getRoot().getPageByURI(uri, false, "");
 						if (page != null) {
 							page.setComment("Replaced by new edition " + key);
-							page.setStatus(Status.SUCCEEDED);
+							page.setStatus(Status.PROCESSED_USK);
 						}
 					}
 				} finally {
@@ -936,7 +914,7 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 				}
 			}
 			FreenetURI uri = key.getURI();
-			queueURI(uri, "USK found edition " + uri, true);
+			queueURI(uri, "USK found edition " + uri);
 			editionsFound.getAndIncrement();
 		} else {
 			Logger.minor(this, "Not Known Good. Edition search continues for " + key + ".");
@@ -970,10 +948,6 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 
 		PerstRoot root = (PerstRoot) db.getRoot();
 		if (root == null) PerstRoot.createRoot(db);
-		else {
-			// Not working:
-			// PerstRoot.patchRoot(db);
-		}
 
 		return db;
 	}
@@ -1029,6 +1003,39 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 			count++;
 		}
 		System.out.println("Reset "+count+" pages status from "+from+" to "+to);
+	}
+
+	public void donePages() {
+		// Not a separate transaction, commit with the index updates.
+		Status from = Status.NOT_PUSHED;
+		int count = 0;
+		Iterator<Page> pages = getRoot().getPages(from);
+		while(pages.hasNext()) {
+			Page page = pages.next();
+			Status to;
+			FreenetURI uri;
+			try {
+				uri = new FreenetURI(page.getURI());
+				if (uri.isCHK()) {
+					to = Status.DONE;
+				} else if (uri.isKSK()) {
+					to = Status.PROCESSED_KSK;
+				} else if (uri.isSSK()) {
+					to = Status.DONE;
+				} else if (uri.isUSK()) {
+					to = Status.PROCESSED_USK;
+				} else {
+					Logger.error(this, "Cannot understand the type of the key " + uri);
+					to = Status.DONE;
+				}
+			} catch (MalformedURLException e) {
+				to = Status.DONE;
+			}
+			Logger.debug(this, "Page " + page + " found in " + from + ".");
+			page.setStatus(to);
+			count++;
+		}
+		Logger.minor(this, "Considered " + count + " pages processed.");
 	}
 
 	public boolean realTimeFlag() {

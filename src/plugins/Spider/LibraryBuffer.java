@@ -161,13 +161,12 @@ public class LibraryBuffer implements FredPluginTalker {
 		long tStart = System.currentTimeMillis();
 		try {
 			Logger.normal(this, "Sending buffer of estimated size " + bufferUsageEstimated + " bytes to Library");
-			long totalPagesIndexed = spider.getRoot().getPageCount(Status.INDEXED);
 			Bucket bucket = pr.getNode().clientCore.tempBucketFactory.makeBucket(3000000);
-			writeToPush(totalPagesIndexed, bucket);
+			writeToPush(totalPagesIndexed(), bucket);
 			innerSend(bucket);
 			Logger.normal(this, "Buffer successfully sent to Library, size = "+bucket.size());
 			// Not a separate transaction, commit with the index updates.
-			spider.resetPages(Status.NOT_PUSHED, Status.INDEXED);
+			spider.donePages();
 		} catch (IOException ex) {
 			Logger.error(this, "Could not make bucket to transfer buffer", ex);
 		}
@@ -185,6 +184,12 @@ public class LibraryBuffer implements FredPluginTalker {
 			innerSend(bucket);
 			System.out.println("Restored data from last time from "+SAVE_FILE);
 		}
+	}
+
+	private long totalPagesIndexed() {
+		return spider.getRoot().getPageCount(Status.DONE)
+				+ spider.getRoot().getPageCount(Status.PROCESSED_KSK)
+				+ spider.getRoot().getPageCount(Status.PROCESSED_USK);
 	}
 	
 	private synchronized Bucket writeToPush(long totalPagesIndexed, Bucket bucket) throws IOException {
@@ -271,7 +276,7 @@ public class LibraryBuffer implements FredPluginTalker {
 		FileBucket bucket = new FileBucket(SAVE_FILE, false, false, false, false);
 		long totalPagesIndexed;
 		try {
-			totalPagesIndexed = spider.getRoot().getPageCount(Status.INDEXED);
+			totalPagesIndexed = totalPagesIndexed();
 		} catch (Throwable t) {
 			totalPagesIndexed = -1;
 			// FIXME I don't understand why this (ClassNotFoundException) happens, we have not closed the class loader yet.

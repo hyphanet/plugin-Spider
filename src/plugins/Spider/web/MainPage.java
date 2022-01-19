@@ -55,7 +55,7 @@ class MainPage implements WebPage {
 		if (addURI != null && addURI.length() != 0) {
 			try {
 				FreenetURI uri = new FreenetURI(addURI);
-				spider.queueURI(uri, "manually", true);
+				spider.queueURI(uri, "manually");
 
 				pageMaker.getInfobox("infobox infobox-success", "URI Added", contentNode).
 					addChild("#", "Added " + uri);
