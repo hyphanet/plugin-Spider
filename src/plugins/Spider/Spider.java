@@ -64,6 +64,7 @@ import freenet.pluginmanager.FredPluginThreadless;
 import freenet.pluginmanager.FredPluginVersioned;
 import freenet.pluginmanager.PluginRespirator;
 import freenet.support.Logger;
+import freenet.support.Logger.LogLevel;
 import freenet.support.api.Bucket;
 import freenet.support.io.Closer;
 import freenet.support.io.NativeThread;
@@ -766,7 +767,7 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 		private String title;
 		private int totalWords;
 
-		protected final boolean logDEBUG = Logger.shouldLog(Logger.DEBUG, this); // per instance, allow changing on the fly
+		protected final boolean logDEBUG = Logger.shouldLog(LogLevel.DEBUG, this); // per instance, allow changing on the fly
 
 		PageCallBack(Page page) {
 			this.page = page;
@@ -960,8 +961,6 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 		return getRoot().getPageById(id);
 	}
 
-	// language for I10N
-	private LANGUAGE language;
 
     @Override
 	public String getString(String key) {
@@ -971,7 +970,7 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 
     @Override
 	public void setLanguage(LANGUAGE newLanguage) {
-		language = newLanguage;
+		Logger.debug(this, "New language set " + newLanguage + " - ignored.");
 	}
 
 	public PageMaker getPageMaker() {
