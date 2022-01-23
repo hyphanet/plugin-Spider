@@ -778,6 +778,7 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 			this.page = page;
 			try {
 				this.uri = new FreenetURI(page.getURI());
+				Logger.debug(this, "New PageCallBack for " + this.page + " (" + this.uri + ").");
 			} catch (MalformedURLException ex) {
 				Logger.error(this, "Error creating uri from '"+page.getURI()+"'", ex);
 			}
@@ -858,6 +859,7 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 				// Which is equal to log ( total count of files ) - log ( count of files with this word in )
 				librarybuffer.setRelevance(termPageEntry, ((float)termPageEntry.positionsSize()) / ((float)totalWords));
 			}
+			Logger.debug(this, "Finished PageCallBack for " + this.page + " (" + this.uri + ").");
 		}
 
 		HashMap<String, TermPageEntry> tpes = new HashMap<String, TermPageEntry>();
