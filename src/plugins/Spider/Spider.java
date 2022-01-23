@@ -188,6 +188,11 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 			}
 		}
 
+		// Always add an USK page without the '-' to trigger search of versions.
+		if (uri.isUSK() && uri.getSuggestedEdition() < 0) {
+			uri = uri.setSuggestedEdition(-uri.getSuggestedEdition());
+		}
+
 		db.beginThreadTransaction(Storage.EXCLUSIVE_TRANSACTION);
 		boolean dbTransactionEnded = false;
 		try {
@@ -542,7 +547,7 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 		boolean dbTransactionEnded = false;
 		db.beginThreadTransaction(Storage.EXCLUSIVE_TRANSACTION);
 		try {
-			librarybuffer.setBufferSize(getConfig().getNewFormatIndexBufferLimit()*1024*1024);
+			librarybuffer.setBufferSize(1 + getConfig().getNewFormatIndexBufferLimit()*1024*1024);
 			/*
 			 * instead of passing the current object, the pagecallback object for every page is
 			 * passed to the content filter this has many benefits to efficiency, and allows us to
