@@ -1,8 +1,6 @@
 package plugins.Spider.db;
 
-import java.util.HashMap;
 import java.util.Iterator;
-import java.util.Map;
 
 import plugins.Spider.org.garret.perst.FieldIndex;
 import plugins.Spider.org.garret.perst.Key;
@@ -15,7 +13,7 @@ public class PerstRoot extends Persistent {
 
 	protected FieldIndex<Page> idPage;
 	protected FieldIndex<Page> uriPage;
-	Map<Status, FieldIndex<Page>> statusPages = new HashMap<Status, FieldIndex<Page>>();
+	FieldIndex[] statusPages;
 
 	private Config config;
 
@@ -35,8 +33,9 @@ public class PerstRoot extends Persistent {
 	private void create(Storage storage) {
 		idPage = storage.createFieldIndex(Page.class, "id", true);
 		uriPage = storage.createFieldIndex(Page.class, "uri", true);
+		statusPages = new FieldIndex[Status.values().length];
 		for (Status status : Status.values()) {
-			statusPages.put(status, storage.<Page>createFieldIndex(Page.class, "lastChange", true));
+			statusPages[status.ordinal()] = storage.<Page>createFieldIndex(Page.class, "lastChange", true);
 		}
 
 		config = new Config(storage);
@@ -45,7 +44,7 @@ public class PerstRoot extends Persistent {
 	public Page getPageByURI(FreenetURI uri, boolean create, String comment) {
 		idPage.exclusiveLock();
 		uriPage.exclusiveLock();
-		statusPages.get(Status.NEW).exclusiveLock();
+		getPageIndex(Status.NEW).exclusiveLock();
 		try {
 			Page page = uriPage.get(new Key(uri.toString()));
 
@@ -55,12 +54,12 @@ public class PerstRoot extends Persistent {
 
 				idPage.append(page);
 				uriPage.put(page);
-				statusPages.get(Status.NEW).put(page);
+				getPageIndex(Status.NEW).put(page);
 			}
 
 			return page;
 		} finally {
-			statusPages.get(Status.NEW).unlock();
+			getPageIndex(Status.NEW).unlock();
 			uriPage.unlock();
 			idPage.unlock();
 		}
@@ -77,7 +76,7 @@ public class PerstRoot extends Persistent {
 	}
 
 	FieldIndex<Page> getPageIndex(Status status) {
-		return statusPages.get(status);
+		return statusPages[status.ordinal()];
 	}
 
 	public void exclusiveLock(Status status) {
