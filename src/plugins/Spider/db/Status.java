@@ -17,7 +17,7 @@ public enum Status {
 	 * so they get re-run. */
 	DONE, // The information is sent to library or there was no result. There is no more work to do.
 	PROCESSED_KSK, // The KSK has been sent to the library. We will rescan this later.
-	PROCESSED_USK, // The USK has been sent to the library. We will rescan this later.
+	PROCESSED_USK, // The USK has been sent to the library. Subscriptions are set up for these.
 	FAILED,
 	FATALLY_FAILED, // The fetch "failed" fatally and we will ignore the result and never try again.
 }

@@ -94,7 +94,7 @@ class MainPage implements WebPage {
 		statusContent.addChild("br");
 		statusContent.addChild("#", "Subscribed USKs: " + spider.getSubscribedToUSKs());
 		statusContent.addChild("br");
-		statusContent.addChild("#", "URIs replaced by the subscribed USKs: " + spider.getReplacedByUSKs());
+		statusContent.addChild("#", "URIs replaced by new USKs: " + spider.getNewUSKs());
 		statusContent.addChild("br");
 		statusContent.addChild("#", "Found editions: " + spider.getEditionsFound());
 		statusContent.addChild("br");

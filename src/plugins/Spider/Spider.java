@@ -21,7 +21,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
@@ -80,7 +79,7 @@ import freenet.support.io.ResumeFailedException;
  *  
  */
 public class Spider implements FredPlugin, FredPluginThreadless,
-		FredPluginVersioned, FredPluginRealVersioned, FredPluginL10n, USKCallback, RequestClient {
+		FredPluginVersioned, FredPluginRealVersioned, FredPluginL10n, RequestClient {
 
 	/** Document ID of fetching documents */
 	protected Map<Page, ClientGetter> runningFetch = Collections.synchronizedMap(new HashMap<Page, ClientGetter>());
@@ -121,11 +120,10 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 	private LibraryBuffer librarybuffer;
 
 	private final AtomicLong lastRequestFinishedAt = new AtomicLong();
-	private final AtomicInteger subscribedToUSKs = new AtomicInteger();
-	private final AtomicInteger replacedByUSKs = new AtomicInteger();
+	private final AtomicInteger newUSKs = new AtomicInteger();
 	private final AtomicInteger editionsFound = new AtomicInteger();
 
-	private Map<USK, Set<FreenetURI>> urisToReplace = Collections.synchronizedMap(new HashMap<USK, Set<FreenetURI>>());
+	private final Set<SubscribedToUSK> subscribedToUSKs = new HashSet<SubscribedToUSK>();
 
 	public int getLibraryBufferSize() {
 		return librarybuffer.bufferUsageEstimate();
@@ -144,11 +142,11 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 	}
 
 	public int getSubscribedToUSKs() {
-		return subscribedToUSKs.get();
+		return subscribedToUSKs.size();
 	}
 
-	public int getReplacedByUSKs() {
-		return replacedByUSKs.get();
+	public int getNewUSKs() {
+		return newUSKs.get();
 	}
 
 	public int getEditionsFound() {
@@ -171,6 +169,11 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 	
 	/**
 	 * Adds the found uri to the list of to-be-retrieved uris. <p>
+	 *
+	 * SSKs are added as their corresponding USK.
+	 *
+	 * Uris already in the database are not added.
+	 *
 	 * @param uri the new uri that needs to be fetched for further indexing
 	 */
 	public void queueURI(FreenetURI uri, String comment) {
@@ -193,6 +196,11 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 			uri = uri.setSuggestedEdition(-uri.getSuggestedEdition());
 		}
 
+		// Never add an SSK if there could be a corresponding USK
+		if (uri.isSSKForUSK()) {
+			uri = uri.uskForSSK();
+		}
+
 		db.beginThreadTransaction(Storage.EXCLUSIVE_TRANSACTION);
 		boolean dbTransactionEnded = false;
 		try {
@@ -210,22 +218,49 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 		}
 	}
 
-	private void subscribeUSK(FreenetURI uri, FreenetURI uriToReplace) {
+	private class SubscribedToUSK implements USKCallback {
+		private FreenetURI uri;
 		USK usk;
-		try {
-			usk = USK.create(uri);
-		} catch (MalformedURLException e) {
-			return;
+
+		SubscribedToUSK(FreenetURI theURI) {
+			uri = theURI;
+			try {
+				usk = USK.create(uri);
+			} catch (MalformedURLException e) {
+				return;
+			}
+			(clientContext.uskManager).subscribe(usk, this, false, Spider.this);
 		}
-		Set<FreenetURI> uris = urisToReplace.get(usk);
-		replacedByUSKs.getAndIncrement();
-		if (uris == null) {
-			subscribedToUSKs.getAndIncrement();
-			(clientContext.uskManager).subscribe(usk, this, false, this);
-			uris = new HashSet<FreenetURI>();
+
+		@Override
+		public void onFoundEdition(long l, USK key, ClientContext context, boolean metadata,
+				short codec, byte[] data, boolean newKnownGood, boolean newSlot) {
+			Logger.minor(this, "Found new Edition for " + key + ", newKnownGood=" + newKnownGood + " newSlot=" + newSlot + ".");
+			newUSKs.getAndIncrement();
+			subscribedToUSKs.remove(this);
+			FreenetURI uri = key.getURI();
+
+			queueURI(uri, "USK found edition " + uri);
 		}
-		uris.add(uriToReplace);
-		urisToReplace.put(usk, uris);
+
+		public void unsubscribe() {
+			(clientContext.uskManager).unsubscribe(usk, this);
+			subscribedToUSKs.remove(this);
+		}
+
+		@Override
+		public short getPollingPriorityNormal() {
+			return (short) Math.min(RequestStarter.MINIMUM_FETCHABLE_PRIORITY_CLASS, getRoot().getConfig().getRequestPriority() + 1);
+		}
+
+		@Override
+		public short getPollingPriorityProgress() {
+			return getRoot().getConfig().getRequestPriority();
+		}
+	}
+
+	private void subscribeUSK(FreenetURI uri) {
+		subscribedToUSKs.add(new SubscribedToUSK(uri));
 	}
 
 	/**
@@ -328,12 +363,14 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 				continue;
 			}
 			ScheduledFuture<?> future = callbackExecutor.scheduleWithFixedDelay(new Runnable() {
-				long lapsLeft = 10 * 60 * 60;
+				long lapsLeft = 10 * 60 * 60; // Ten hours
 				@Override
 				public void run() {
 					if (lapsLeft-- <= 0) {
 						g.cancel(clientContext);
 						Logger.minor(this, g + " aborted because of time-out");
+						ScheduledFuture<?> f = runningFutures.get(g);
+						f.cancel(false);
 					}
 				}
 			}, 10, 1, TimeUnit.SECONDS);
@@ -342,63 +379,37 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 	}
 
 	/**
-	 * Subscribe to USKs for indexed.
+	 * Subscribe to USKs for PROCESSED_USKs.
 	 */
-	private void startSubscribeUSKs() {
-		Map<FreenetURI, Page> toSubscribe = new HashMap<FreenetURI, Page>();
+	private void subscribeAllUSKs() {
 		synchronized (this) {
 			if (stopped) return;
-
-			int maxParallelRequests = 2 * getRoot().getConfig().getMaxParallelRequests();
 
 			db.beginThreadTransaction(Storage.EXCLUSIVE_TRANSACTION);
 			try {
 				Iterator<Page> it = getRoot().getPages(Status.PROCESSED_USK);
-				int started = 0;
-				while (started < maxParallelRequests && it.hasNext()) {
+				while (it.hasNext()) {
 					Page page = it.next();
 					Logger.debug(this, "Page " + page + " found in PROCESSED_USK.");
+					FreenetURI uri; 
 					try {
-						toSubscribe.put(new FreenetURI(page.getURI()), page);
-						started++;
+						uri = new FreenetURI(page.getURI());
 					} catch (MalformedURLException e) {
 						// This could not be converted - ignore.
+						Logger.error(this, "USK could not be converted to uri " + page);
+						page.setStatus(Status.FATALLY_FAILED);
+						continue;
+					}
+					if (uri.isUSK()) {
+						subscribeUSK(uri);
+					} else {
+						Logger.error(this, "USK was not USK " + page);
 						page.setStatus(Status.FATALLY_FAILED);
 					}
 				}
 			} finally {
 				db.endThreadTransaction();
 			}
-		}
-
-		for (Entry<FreenetURI, Page> entry : toSubscribe.entrySet()) {
-			FreenetURI uri = entry.getKey();
-			Page page = entry.getValue();
-			USK usk;
-			try {
-				usk = USK.create(uri.uskForSSK());
-			} catch (MalformedURLException e1) {
-				db.beginThreadTransaction(Storage.EXCLUSIVE_TRANSACTION);
-				try {
-					page.setComment("MalformedURL in SubscribeUSK");
-				} finally {
-					db.endThreadTransaction();
-				}					
-				continue;
-			}
-			if (urisToReplace.containsKey(usk)) {
-				// Everything is subscribed to.
-				continue;
-			}
-
-			subscribeUSK(usk.getURI(), uri);
-			db.beginThreadTransaction(Storage.EXCLUSIVE_TRANSACTION);
-			try {
-				page.setStatus(Status.DONE); // Move last.
-			} finally {
-				db.endThreadTransaction();
-			}
-
 		}
 	}
 
@@ -573,11 +584,12 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 					}
 				}
 				pageCallBack.finish();
+				page.setStatus(Status.NOT_PUSHED);
 				librarybuffer.maybeSend();
 
 			} catch (UnsafeContentTypeException e) {
 				// wrong mime type
-				page.setStatus(Status.PROCESSED_USK);
+				page.setStatus(Status.FATALLY_FAILED);
 				page.setComment("UnsafeContentTypeException");
 				db.endThreadTransaction();
 				dbTransactionEnded = true;
@@ -594,7 +606,6 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 				return;
 			}
 
-			page.setStatus(Status.NOT_PUSHED);
 			db.endThreadTransaction();
 			dbTransactionEnded  = true;
 
@@ -640,14 +651,30 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 		try {
 			synchronized (page) {
 				if (fe.newURI != null) {
+					// Cases are noticed when the USK is redirected,
+					// because of the missing meta-string, to its SSK.
+					// That is not good from the purpose of maintaining the USK
+					// in the index.
+					FreenetURI newURI = fe.newURI;
+					if (fe.mode == FetchException.FetchExceptionMode.NOT_ENOUGH_PATH_COMPONENTS) {
+						try {
+							FreenetURI uri;
+							uri = new FreenetURI(page.getURI());
+							if (uri.isUSK() && !uri.hasMetaStrings()) {
+								newURI = uri.pushMetaString("");
+							}
+						} catch (MalformedURLException e) {
+							// Ignore problems in the URI of the page.
+						}
+					}
 					// redirect, mark as succeeded
-					queueURI(fe.newURI, "redirect from " + getter.getURI());
-					page.setStatus(Status.PROCESSED_USK);
-					page.setComment("Redirected");
+					queueURI(newURI, "redirect from " + getter.getURI());
+					page.setStatus(Status.DONE);
+					page.setComment("Redirected to " + newURI + " because of " + fe.getMode());
 				} else if (fe.isFatal()) {
 					// too many tries or fatal, mark as failed
 					page.setStatus(Status.FATALLY_FAILED);
-					page.setComment("Fatal");
+					page.setComment("Fatal: " + fe.getMode());
 				} else {
 					// requeue at back
 					page.setStatus(Status.FAILED);
@@ -682,6 +709,9 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 				ClientGetter getter = me.getValue();
 				Logger.minor(this, "Canceling request" + getter);
 				getter.cancel(clientContext);
+			}
+			for (SubscribedToUSK stu : new HashSet<SubscribedToUSK>(subscribedToUSKs)) {
+				stu.unsubscribe();
 			}
 			runningFetch.clear();
 			callbackExecutor.shutdownNow();
@@ -745,17 +775,17 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 			}
 			
 		}, 30, 30, TimeUnit.SECONDS);
-		callbackExecutor.scheduleWithFixedDelay(new Runnable() {
+		callbackExecutor.schedule(new Runnable() {
 			@Override
 			public void run() {
 				try {
-					startSubscribeUSKs();
+					subscribeAllUSKs();
 				} catch (Throwable e) {
 					Logger.error(this, "startSubscribeUSKs throws", e);
 				}
 			}
 			
-		}, 130, 60, TimeUnit.SECONDS);
+		}, 10L, TimeUnit.SECONDS);
 	}
 
 	private WebInterface webInterface;
@@ -901,40 +931,6 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 		}
 	}
 
-    @Override
-	public void onFoundEdition(long l, USK key, ClientContext context, boolean metadata,
-            short codec, byte[] data, boolean newKnownGood, boolean newSlotToo) {
-		if (newKnownGood) {
-			Logger.minor(this, "Known Good. Found new Edition for " + key + ".");
-			Set<FreenetURI> uris = urisToReplace.remove(key);
-			if (uris != null) {
-				db.beginThreadTransaction(Storage.EXCLUSIVE_TRANSACTION);
-				try {
-					for (FreenetURI uri : uris) {
-						Page page = getRoot().getPageByURI(uri, false, "");
-						if (page != null) {
-							page.setComment("Replaced by new edition " + key);
-							page.setStatus(Status.PROCESSED_USK);
-						}
-					}
-				} finally {
-					db.endThreadTransaction();
-				}
-			}
-			FreenetURI uri = key.getURI();
-			queueURI(uri, "USK found edition " + uri);
-			editionsFound.getAndIncrement();
-		} else {
-			Logger.minor(this, "Not Known Good. Edition search continues for " + key + ".");
-		}
-	}
-
-    @Override
-	public short getPollingPriorityNormal() {
-		return (short) Math.min(RequestStarter.MINIMUM_FETCHABLE_PRIORITY_CLASS, getRoot().getConfig().getRequestPriority() + 1);
-	}
-
-    @Override
 	public short getPollingPriorityProgress() {
 		return getRoot().getConfig().getRequestPriority();
 	}
@@ -1030,6 +1026,7 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 					to = Status.DONE;
 				} else if (uri.isUSK()) {
 					to = Status.PROCESSED_USK;
+					subscribeUSK(uri);
 				} else {
 					Logger.error(this, "Cannot understand the type of the key " + uri);
 					to = Status.DONE;

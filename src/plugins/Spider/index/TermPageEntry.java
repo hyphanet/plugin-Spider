@@ -63,7 +63,9 @@ public class TermPageEntry extends TermEntry {
 		if (u == null) {
 			throw new IllegalArgumentException("can't have a null page");
 		}
-		page = u.intern(); // OPT LOW make the translator use the same URI object as from the URI table?
+		// intern forgets the suggested edition for USKs
+		// page = u.intern(); // OPT LOW make the translator use the same URI object as from the URI table?
+		page = u;
 		title = t == null ? null : t.intern();
 		if (p != null) {
 			posFragments = p;
@@ -79,7 +81,9 @@ public class TermPageEntry extends TermEntry {
 		if (u == null) {
 			throw new IllegalArgumentException("can't have a null page");
 		}
-		page = u.intern(); // OPT LOW make the translator use the same URI object as from the URI table?
+		// intern forgets the suggested edition for USKs
+		// page = u.intern(); // OPT LOW make the translator use the same URI object as from the URI table?
+		page = u;
 		title = null;
 		this.positions = pos;
 		this.posFragments = frags;

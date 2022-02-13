@@ -50,7 +50,7 @@ public class Page extends Persistent implements Comparable<Page> {
 	}
 
 	public synchronized void setComment(String comment) {
-		Logger.debug(this, "New comment for " + this);
+		Logger.debug(this, "New comment " + comment + " for " + this);
 		preModify();
 		this.comment = comment;
 		postModify();
