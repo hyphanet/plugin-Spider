@@ -15,9 +15,12 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Date;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -124,6 +127,9 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 	private final AtomicInteger editionsFound = new AtomicInteger();
 
 	private final Set<SubscribedToUSK> subscribedToUSKs = new HashSet<SubscribedToUSK>();
+
+	private BulkPageIterator newPages;
+	private BulkPageIterator failedPages;
 
 	public int getLibraryBufferSize() {
 		return librarybuffer.bufferUsageEstimate();
@@ -264,12 +270,77 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 	}
 
 	/**
+	 * Fetches pages from a queue, many at the time to avoid locking
+	 * the database on every fetch.
+	 */
+	class BulkPageIterator implements Iterator<Page> {
+		private Status queue;
+		private Deque<Page> list = new LinkedList<Page>();
+		private int BULK_FETCH_SIZE = 1000;
+		private long TIME_TO_DEFER_DATABASE_READ = TimeUnit.SECONDS.toMillis(30);
+		private Date lastPoll = new Date();
+
+		BulkPageIterator(Status status) {
+			queue = status;
+		}
+
+		/**
+		 * Fills the cache with pages.
+		 * If the consumer went through the cache to quickly, don't
+		 * fill it, emulating an empty iterator. This addresses the
+		 * case when all the found pages are in progress. It also sets
+		 * a cap on the amount of pages processed per time unit.
+		 * @param extraFetches is amount of pages to fetch on top of 
+		 * 						BULK_FETCH_SIZE.
+		 */
+		private void fill(int extraFetches) {
+			Date now = new Date();
+			if (list.isEmpty() && now.after(new Date(lastPoll.getTime() + TIME_TO_DEFER_DATABASE_READ))) {
+				lastPoll = now;
+				db.beginThreadTransaction(Storage.EXCLUSIVE_TRANSACTION);
+				try {
+					Iterator<Page> it = getRoot().getPages(queue);
+					int i = 0;
+					while (it.hasNext()) {
+						list.offer(it.next());
+						if (++i > BULK_FETCH_SIZE + extraFetches) {
+							break;
+						}
+					}
+				} finally {
+					db.endThreadTransaction();
+				}
+			}
+		}
+
+		public boolean hasNext(int extraFetches) {
+			fill(extraFetches);
+			return !list.isEmpty();
+		}
+
+		@Override
+		public boolean hasNext() {
+			fill(0);
+			return !list.isEmpty();
+		}
+
+		@Override
+		public Page next() {
+			return list.poll();
+		}
+	}
+
+	/**
 	 * Start requests from new and queued.
 	 */
 	private void startFetches() {
 		ArrayList<ClientGetter> toStart = null;
 		synchronized (this) {
-			if (stopped) return;
+			if (stopped) {
+				newPages = null;
+				failedPages = null;
+				return;
+			}
 
 			synchronized (runningFetch) {
 				int maxParallelRequests = getRoot().getConfig().getMaxParallelRequests();
@@ -279,59 +350,40 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 					return;
 				}
 
-				// Prepare to start
-				toStart = new ArrayList<ClientGetter>(maxParallelRequests - running);
-				Page pageInWrongList = null;
-				db.beginThreadTransaction(Storage.EXCLUSIVE_TRANSACTION);
-				try {
-					Iterator<Page> it = getRoot().getPages(Status.NEW);
-
-					while (running + toStart.size() < maxParallelRequests && it.hasNext()) {
-						Page page = it.next();
-						Logger.debug(this, "Page " + page + " found in NEW.");
-						// Skip if getting this page already
-						if (runningFetch.containsKey(page)) continue;
-						
-						final Status status = page.getStatus();
-						if (status != Status.NEW) {
-							pageInWrongList = page;
-							continue;
-						}
-
-						try {
-							ClientGetter getter = makeGetter(page);
-
-							Logger.minor(this, "Starting new " + getter + " " + page);
-							toStart.add(getter);
-							runningFetch.put(page, getter);
-						} catch (MalformedURLException e) {
-							Logger.error(this, "IMPOSSIBLE-Malformed URI: " + page, e);
-							page.setStatus(Status.FATALLY_FAILED);
-							page.setComment("MalformedURLException");
-						}
-					}
-				} finally {
-					if (pageInWrongList != null) {
-						pageInWrongList.pageFoundInWrongList();
-					}
-					db.endThreadTransaction();
+				if (newPages == null) {
+					newPages = new BulkPageIterator(Status.NEW);
 				}
-				db.beginThreadTransaction(Storage.EXCLUSIVE_TRANSACTION);
-				pageInWrongList = null;
-				try {
-					Iterator<Page> it = getRoot().getPages(Status.FAILED);
 
-					while (running + toStart.size() < maxParallelRequests && it.hasNext()) {
-						Page page = it.next();
+				toStart = new ArrayList<ClientGetter>(maxParallelRequests - running);
+				while (running + toStart.size() < maxParallelRequests && newPages.hasNext(maxParallelRequests)) {
+					Page page = newPages.next();
+					Logger.debug(this, "Page " + page + " found in NEW.");
+					// Skip if getting this page already
+					if (runningFetch.containsKey(page)) continue;
+
+					try {
+						ClientGetter getter = makeGetter(page);
+
+						Logger.minor(this, "Starting new " + getter + " " + page);
+						toStart.add(getter);
+						runningFetch.put(page, getter);
+					} catch (MalformedURLException e) {
+						Logger.error(this, "IMPOSSIBLE-Malformed URI: " + page, e);
+						page.setStatus(Status.FATALLY_FAILED);
+						page.setComment("MalformedURLException");
+					}
+				}
+
+				if (running + toStart.size() < maxParallelRequests) {
+					if (failedPages == null) {
+						failedPages = new BulkPageIterator(Status.FAILED);
+					}
+
+					while (running + toStart.size() < maxParallelRequests && failedPages.hasNext(maxParallelRequests)) {
+						Page page = failedPages.next();
 						Logger.debug(this, "Page " + page + " found in FAILED.");
-						// Skip if getting this page already
+						// 	Skip if getting this page already
 						if (runningFetch.containsKey(page)) continue;
-						
-						final Status status = page.getStatus();
-						if (status != Status.FAILED) {
-							pageInWrongList = page;
-							continue;
-						}
 
 						try {
 							ClientGetter getter = makeGetter(page);
@@ -345,11 +397,8 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 							page.setComment("MalformedURLException");
 						}
 					}
-				} finally {
-					if (pageInWrongList != null) {
-						pageInWrongList.pageFoundInWrongList();
-					}
-					db.endThreadTransaction();
+				} else {
+					failedPages = null;
 				}
 			}
 		}
@@ -774,7 +823,7 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 				}
 			}
 			
-		}, 30, 30, TimeUnit.SECONDS);
+		}, 30L, 1L, TimeUnit.SECONDS);
 		callbackExecutor.schedule(new Runnable() {
 			@Override
 			public void run() {
