@@ -4,6 +4,11 @@
  */
 package plugins.Spider.web;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -128,6 +133,40 @@ class MainPage implements WebPage {
 		addForm.addChild("label", "for", "addURI", "Add URI:");
 		addForm.addChild("input", new String[] { "name", "style" }, new String[] { "addURI", "width: 20em;" });
 		addForm.addChild("input", new String[] { "type", "value" }, new String[] { "submit", "Add" });
+		mainContent.addChild("p");
+		final File file = new File(".", "library.info");
+		FileReader fr = null;
+		BufferedReader br = null;
+		try {
+			fr = new FileReader(file);
+			br = new BufferedReader(fr);
+			String line;
+			while ((line = br.readLine()) != null) {
+				mainContent.addChild("#", line);
+				mainContent.addChild("br");
+			}
+			br.close();
+		} catch (FileNotFoundException e) {
+			// There is no such file. That is fine.
+		} catch (IOException e) {
+			// We suddenly couldn't read this file. Strange problem.
+			throw new RuntimeException(e);
+		} finally {
+			if (br != null) {
+				try {
+					br.close();
+				} catch (IOException e) {
+					// Ignore.
+				}
+			}
+			if (fr != null) {
+				try {
+					fr.close();
+				} catch (IOException e) {
+					// Ignore.
+				}
+			} 
+		}
 
 		InfoboxNode running = pageMaker.getInfobox("Running URI");
 		HTMLNode runningBox = running.outer;
