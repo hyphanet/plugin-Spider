@@ -128,8 +128,6 @@ public class Page extends Persistent implements Comparable<Page> {
 				if(e.getErrorCode() == StorageError.KEY_NOT_FOUND) {
 					// No serious consequences, so just log it, rather than killing the whole thing.
 					Logger.error(this, "Page: Key not found in index: "+this, e);
-					System.err.println("Page: Key not found in index: "+this);
-					e.printStackTrace();
 				} else {
 					Logger.error(this, "remove from index " + status + " failed", e);
 					throw e;
