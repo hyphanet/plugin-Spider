@@ -12,6 +12,9 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.NoSuchElementException;
+
+import javax.naming.SizeLimitExceededException;
 
 import plugins.Spider.Spider;
 import plugins.Spider.db.Config;
@@ -56,7 +59,12 @@ class MainPage implements WebPage {
 	 */
 	public void processPostRequest(HTTPRequest request, HTMLNode contentNode) {
 		// Queue URI
-		String addURI = request.getPartAsString("addURI", 512);
+		String addURI = null;
+		try {
+			addURI = request.getPartAsStringThrowing("addURI", 512);
+		} catch (SizeLimitExceededException e1) {
+		} catch (NoSuchElementException e1) {
+		}
 		if (addURI != null && addURI.length() != 0) {
 			try {
 				FreenetURI uri = new FreenetURI(addURI);
@@ -82,7 +90,7 @@ class MainPage implements WebPage {
 		HTMLNode overviewTable = contentNode.addChild("table", "class", "column");
 		HTMLNode overviewTableRow = overviewTable.addChild("tr");
 
-		List<Page> runningFetch = spider.getRunningFetch();
+		List<String> runningFetch = spider.getRunningFetch();
 		Config config = spider.getConfig();
 
 		// Column 1
@@ -176,14 +184,15 @@ class MainPage implements WebPage {
 		if (runningFetch.isEmpty()) {
 			runningContent.addChild("#", "NO URI");
 		} else {
+			runningContent.addChild("#", "USKs shown without edition.");
 			HTMLNode list = runningContent.addChild("ol", "style", "overflow: auto; white-space: nowrap;");
 
-			Iterator<Page> pi = runningFetch.iterator();
+			Iterator<String> pi = runningFetch.iterator();
 			int maxURI = config.getMaxShownURIs();
 			for (int i = 0; i < maxURI && pi.hasNext(); i++) {
-				Page page = pi.next();
-				HTMLNode litem = list.addChild("li", "title", page.getComment());
-				litem.addChild("a", "href", "/freenet:" + page.getURI(), page.getURI());
+				String runningURI = pi.next();
+				HTMLNode litem = list.addChild("li");
+				litem.addChild("a", "href", "/freenet:" + runningURI, runningURI);
 			}
 		}
 		contentNode.addChild(runningBox);
@@ -206,12 +215,12 @@ class MainPage implements WebPage {
 			Iterator<Page> it = root.getPages(status);
 
 			int showURI = spider.getConfig().getMaxShownURIs();
-			List<Page> page = new ArrayList<Page>();
-			while (page.size() < showURI && it.hasNext()) {
-				page.add(it.next());
+			List<Page> pages = new ArrayList<Page>();
+			while (pages.size() < showURI && it.hasNext()) {
+				pages.add(it.next());
 			}
 
-			return new PageStatus(count, page);
+			return new PageStatus(count, pages);
 		}
 	}
 
@@ -227,6 +236,10 @@ class MainPage implements WebPage {
 				String title = page.getPageTitle();
 				if (title == null) {
 					title = "";
+				}
+				long edition = page.getEdition();
+				if (edition != 0L) {
+					title = "Edition " + edition + " " + title;
 				}
 				litem.addChild("p",
 						" " +

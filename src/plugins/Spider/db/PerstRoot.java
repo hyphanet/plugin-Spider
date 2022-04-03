@@ -41,6 +41,14 @@ public class PerstRoot extends Persistent {
 		config = new Config(storage);
 	}
 	
+	/**
+	 * Finds or creates pages in the database.
+	 * 
+	 * @param uri The URI of the page to find.
+	 * @param create if true then the page is created if it doesn't exist.
+	 * @param comment is only used when create is true.
+	 * @return the page.
+	 */
 	public Page getPageByURI(FreenetURI uri, boolean create, String comment) {
 		idPage.exclusiveLock();
 		uriPage.exclusiveLock();
@@ -63,6 +71,15 @@ public class PerstRoot extends Persistent {
 			uriPage.unlock();
 			idPage.unlock();
 		}
+	}
+
+	/**
+	 * Find a page in the database.
+	 * @param uri The page to find.
+	 * @return null if not found
+	 */
+	public Page getPageByURI(FreenetURI uri) {
+		return getPageByURI(uri, false, null);
 	}
 
 	public Page getPageById(long id) {

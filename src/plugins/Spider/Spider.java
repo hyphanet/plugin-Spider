@@ -85,7 +85,7 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 		FredPluginVersioned, FredPluginRealVersioned, FredPluginL10n, RequestClient {
 
 	/** Document ID of fetching documents */
-	protected Map<Page, ClientGetter> runningFetch = Collections.synchronizedMap(new HashMap<Page, ClientGetter>());
+	protected Map<String, ClientGetter> runningFetch = Collections.synchronizedMap(new HashMap<String, ClientGetter>());
 
 	private Map<ClientGetter, ScheduledFuture<?>> runningFutures = Collections.synchronizedMap(new HashMap<ClientGetter, ScheduledFuture<?>>());
 
@@ -128,8 +128,7 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 
 	private final Set<SubscribedToUSK> subscribedToUSKs = new HashSet<SubscribedToUSK>();
 
-	private BulkPageIterator newPages;
-	private BulkPageIterator failedPages;
+	private BulkPageIterator[] bulkPageIterators = new BulkPageIterator[Status.values().length];
 
 	public int getLibraryBufferSize() {
 		return librarybuffer.bufferUsageEstimate();
@@ -178,12 +177,16 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 	 *
 	 * SSKs are added as their corresponding USK.
 	 *
-	 * Uris already in the database are not added.
+	 * Uris already in the database are not added. New Uris are put in NEW.
+	 *
+	 * USKs in the database but with new edition are moved to NEW_EDITION.
 	 *
 	 * @param uri the new uri that needs to be fetched for further indexing
 	 */
 	public void queueURI(FreenetURI uri, String comment) {
 		String sURI = uri.toString();
+		final long NO_USK = -1L;
+		long edition = NO_USK;
 		String lowerCaseURI = sURI.toLowerCase(Locale.US);
 		for (String ext : getRoot().getConfig().getBadlistedExtensions()) {
 			if (lowerCaseURI.endsWith(ext)) {
@@ -207,10 +210,21 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 			uri = uri.uskForSSK();
 		}
 
+		if (uri.isUSK()) {
+			edition = uri.getSuggestedEdition();
+			uri = uri.setSuggestedEdition(0L);
+		}
+
 		db.beginThreadTransaction(Storage.EXCLUSIVE_TRANSACTION);
 		boolean dbTransactionEnded = false;
 		try {
-			getRoot().getPageByURI(uri, true, comment);
+			Page page = getRoot().getPageByURI(uri, true, comment);
+			if (edition != NO_USK) {
+				final long oldEdition = page.getEdition();
+				if (edition > oldEdition) {
+					page.setStatus(edition, Status.NEW_EDITION, "New edition replacing " + oldEdition);
+				}
+			}
 			db.endThreadTransaction();
 			dbTransactionEnded = true;
 		} catch (RuntimeException e) {
@@ -337,8 +351,9 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 		ArrayList<ClientGetter> toStart = null;
 		synchronized (this) {
 			if (stopped) {
-				newPages = null;
-				failedPages = null;
+				bulkPageIterators[Status.NEW.ordinal()] = null;
+				bulkPageIterators[Status.NEW_EDITION.ordinal()] = null;
+				bulkPageIterators[Status.FAILED.ordinal()] = null;
 				return;
 			}
 
@@ -350,55 +365,32 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 					return;
 				}
 
-				if (newPages == null) {
-					newPages = new BulkPageIterator(Status.NEW);
-				}
-
 				toStart = new ArrayList<ClientGetter>(maxParallelRequests - running);
-				while (running + toStart.size() < maxParallelRequests && newPages.hasNext(maxParallelRequests)) {
-					Page page = newPages.next();
-					Logger.debug(this, "Page " + page + " found in NEW.");
-					// Skip if getting this page already
-					if (runningFetch.containsKey(page)) continue;
 
-					try {
-						ClientGetter getter = makeGetter(page);
-
-						Logger.minor(this, "Starting new " + getter + " " + page);
-						toStart.add(getter);
-						runningFetch.put(page, getter);
-					} catch (MalformedURLException e) {
-						Logger.error(this, "IMPOSSIBLE-Malformed URI: " + page, e);
-						page.setStatus(Status.FATALLY_FAILED);
-						page.setComment("MalformedURLException");
-					}
-				}
-
-				if (running + toStart.size() < maxParallelRequests) {
-					if (failedPages == null) {
-						failedPages = new BulkPageIterator(Status.FAILED);
+				Status[] statuses = {Status.NEW, Status.NEW_EDITION, Status.FAILED};
+				for (Status status : statuses) {
+					if (bulkPageIterators[status.ordinal()] == null) {
+						bulkPageIterators[status.ordinal()] = new BulkPageIterator(status);
 					}
 
-					while (running + toStart.size() < maxParallelRequests && failedPages.hasNext(maxParallelRequests)) {
-						Page page = failedPages.next();
-						Logger.debug(this, "Page " + page + " found in FAILED.");
-						// 	Skip if getting this page already
-						if (runningFetch.containsKey(page)) continue;
+					while (running + toStart.size() < maxParallelRequests &&
+							bulkPageIterators[status.ordinal()].hasNext(maxParallelRequests)) {
+						Page page = bulkPageIterators[status.ordinal()].next();
+						Logger.debug(this, "Page " + page + " found in " + status + ".");
+						// Skip if getting this page already
+						if (runningFetch.containsKey(page.getURI())) continue;
 
 						try {
 							ClientGetter getter = makeGetter(page);
 
-							Logger.minor(this, "Starting queued " + getter + " " + page);
+							Logger.minor(this, "Starting new " + getter + " " + page);
 							toStart.add(getter);
-							runningFetch.put(page, getter);
+							runningFetch.put(page.getURI(), getter);
 						} catch (MalformedURLException e) {
 							Logger.error(this, "IMPOSSIBLE-Malformed URI: " + page, e);
-							page.setStatus(Status.FATALLY_FAILED);
-							page.setComment("MalformedURLException");
+							page.setStatus(Status.FATALLY_FAILED, "MalformedURLException");
 						}
 					}
-				} else {
-					failedPages = null;
 				}
 			}
 		}
@@ -466,30 +458,24 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 	 * Callback for fetching the pages
 	 */
 	private class ClientGetterCallback implements ClientGetCallback {
-		final Page page;
-
-		public ClientGetterCallback(Page page) {
-			this.page = page;
-		}
-
 		@Override
 		public void onFailure(FetchException e, ClientGetter state) {
-			Logger.minor(this, "onFailure: " + page + " (q:" + callbackExecutor.getQueue().size() + ")");
+			Logger.minor(this, "onFailure: " + state.getURI() + " (q:" + callbackExecutor.getQueue().size() + ")");
 			removeFuture(state);
 
 			if (stopped) return;
 
-			callbackExecutor.execute(new OnFailureCallback(e, state, page));
+			callbackExecutor.execute(new OnFailureCallback(e, state));
 		}
 
 		@Override
 		public void onSuccess(final FetchResult result, final ClientGetter state) {
-			Logger.minor(this, "onSuccess: " + page + " (q:" + callbackExecutor.getQueue().size() + ")");
+			Logger.minor(this, "onSuccess: " + state.getURI() + " (q:" + callbackExecutor.getQueue().size() + ")");
 			removeFuture(state);
 
 			if (stopped) return;
 
-			callbackExecutor.execute(new OnSuccessCallback(result, state, page));
+			callbackExecutor.execute(new OnSuccessCallback(result, state));
 		}
 
 		private void removeFuture(ClientGetter getter) {
@@ -497,10 +483,6 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 			if (future != null) {
 				future.cancel(false);
 			}
-		}
-
-		public String toString() {
-			return super.toString() + ":" + page;
 		}
 
         @Override
@@ -514,8 +496,12 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 	}
 
 	private ClientGetter makeGetter(Page page) throws MalformedURLException {
-		ClientGetter getter = new ClientGetter(new ClientGetterCallback(page),
-				new FreenetURI(page.getURI()), ctx,
+		FreenetURI uri = new FreenetURI(page.getURI());
+		if (uri.isUSK()) {
+			uri = uri.setSuggestedEdition(page.getEdition());
+		}
+		ClientGetter getter = new ClientGetter(new ClientGetterCallback(),
+				uri, ctx,
 				getPollingPriorityProgress(), null);
 		return getter;
 	}
@@ -523,16 +509,14 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 	protected class OnFailureCallback implements Runnable {
 		private FetchException e;
 		private ClientGetter state;
-		private Page page;
 
-		OnFailureCallback(FetchException e, ClientGetter state, Page page) {
+		OnFailureCallback(FetchException e, ClientGetter state) {
 			this.e = e;
 			this.state = state;
-			this.page = page;
 		}
 
 		public void run() {
-			onFailure(e, state, page);
+			onFailure(e, state);
 		}
 	}
 
@@ -542,16 +526,14 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 	protected class OnSuccessCallback implements Runnable {
 		private FetchResult result;
 		private ClientGetter state;
-		private Page page;
 
-		OnSuccessCallback(FetchResult result, ClientGetter state, Page page) {
+		OnSuccessCallback(FetchResult result, ClientGetter state) {
 			this.result = result;
 			this.state = state;
-			this.page = page;
 		}
 
 		public void run() {
-			onSuccess(result, state, page);
+			onSuccess(result, state);
 		}
 	}
 
@@ -590,23 +572,33 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 	 * 
 	 * @param result
 	 * @param state
-	 * @param page
 	 */
 	// single threaded
-	protected void onSuccess(FetchResult result, ClientGetter state, Page page) {
+	protected void onSuccess(FetchResult result, ClientGetter state) {
 		synchronized (this) {
 			if (stopped) return;    				
 		}
 
-		lastRequestFinishedAt.set(currentTimeMillis());
 		FreenetURI uri = state.getURI();
+		FreenetURI dbURI = uri;
+		if (uri.isUSK() ) {
+			dbURI = uri.setSuggestedEdition(0L);
+		}
+
+		lastRequestFinishedAt.set(currentTimeMillis());
 		ClientMetadata cm = result.getMetadata();
 		Bucket data = result.asBucket();
 		String mimeType = cm.getMIMEType();
 
 		boolean dbTransactionEnded = false;
 		db.beginThreadTransaction(Storage.EXCLUSIVE_TRANSACTION);
+		Page page = null;
 		try {
+			page = getRoot().getPageByURI(dbURI);
+			if (page == null) {
+				Logger.error(this, "Cannot find page " + dbURI);
+				return;
+			}
 			librarybuffer.setBufferSize(1 + getConfig().getNewFormatIndexBufferLimit()*1024*1024);
 			/*
 			 * instead of passing the current object, the pagecallback object for every page is
@@ -638,8 +630,7 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 
 			} catch (UnsafeContentTypeException e) {
 				// wrong mime type
-				page.setStatus(Status.FATALLY_FAILED);
-				page.setComment("UnsafeContentTypeException");
+				page.setStatus(Status.FATALLY_FAILED, "UnsafeContentTypeException");
 				db.endThreadTransaction();
 				dbTransactionEnded = true;
 
@@ -651,7 +642,7 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 				return;
 			} catch (Exception e) {
 				// we have lots of invalid html on net - just normal, not error
-				Logger.normal(this, "exception on content filter for " + page, e);
+				Logger.normal(this, "exception on content filter for " + uri, e);
 				return;
 			}
 
@@ -668,7 +659,9 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 				data.free();
 
 				synchronized (this) {
-					runningFetch.remove(page);
+					if (page != null) {
+						runningFetch.remove(page.getURI());
+					}
 				}
 			} finally {
 				if (!dbTransactionEnded) {
@@ -676,10 +669,9 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 					db.rollbackThreadTransaction();
 					db.beginThreadTransaction(Storage.EXCLUSIVE_TRANSACTION);
 					// page is now invalidated.
-					page = getRoot().getPageByURI(uri, false, "");
-					if(page != null) {
-						page.setStatus(Status.FATALLY_FAILED);
-						page.setComment("could not complete operation dbTransaction not ended");
+					if (page != null) {
+						page.setStatus(Status.FATALLY_FAILED,
+								"could not complete operation dbTransaction not ended");
 					}
 					db.endThreadTransaction();
 				}
@@ -687,47 +679,48 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 		}
 	}
 
-	protected void onFailure(FetchException fe, ClientGetter getter, Page page) {
-		Logger.minor(this, "Failed: " + page + " : " + getter, fe);
+	protected void onFailure(FetchException fe, ClientGetter getter) {
+		FreenetURI uri = getter.getURI();
+		Logger.minor(this, "Failed: " + uri + " : " + getter, fe);
 
 		synchronized (this) {
 			if (stopped) return;
 		}
 
+		FreenetURI dbURI = uri;
+		if (uri.isUSK() ) {
+			dbURI = uri.setSuggestedEdition(0L);
+		}
+
 		lastRequestFinishedAt.set(currentTimeMillis());
 		boolean dbTransactionEnded = false;
 		db.beginThreadTransaction(Storage.EXCLUSIVE_TRANSACTION);
+		Page page = null;
 		try {
-			synchronized (page) {
-				if (fe.newURI != null) {
-					// Cases are noticed when the USK is redirected,
-					// because of the missing meta-string, to its SSK.
-					// That is not good from the purpose of maintaining the USK
-					// in the index.
-					FreenetURI newURI = fe.newURI;
-					if (fe.mode == FetchException.FetchExceptionMode.NOT_ENOUGH_PATH_COMPONENTS) {
-						try {
-							FreenetURI uri;
-							uri = new FreenetURI(page.getURI());
-							if (uri.isUSK() && !uri.hasMetaStrings()) {
-								newURI = uri.pushMetaString("");
-							}
-						} catch (MalformedURLException e) {
-							// Ignore problems in the URI of the page.
-						}
+			page = getRoot().getPageByURI(dbURI);
+			if (page == null) {
+				return;
+			}
+			if (fe.newURI != null) {
+				// Cases are noticed when the USK is redirected,
+				// because of the missing meta-string, to its SSK.
+				// That is not good from the purpose of maintaining the USK
+				// in the index.
+				FreenetURI newURI = fe.newURI;
+				if (fe.mode == FetchException.FetchExceptionMode.NOT_ENOUGH_PATH_COMPONENTS) {
+					if (uri.isUSK() && !uri.hasMetaStrings()) {
+						newURI = uri.pushMetaString("");
 					}
-					// redirect, mark as succeeded
-					queueURI(newURI, "redirect from " + getter.getURI());
-					page.setStatus(Status.DONE);
-					page.setComment("Redirected to " + newURI + " because of " + fe.getMode());
-				} else if (fe.isFatal()) {
-					// too many tries or fatal, mark as failed
-					page.setStatus(Status.FATALLY_FAILED);
-					page.setComment("Fatal: " + fe.getMode());
-				} else {
-					// requeue at back
-					page.setStatus(Status.FAILED);
 				}
+				// redirect, mark as succeeded
+				queueURI(newURI, "redirect from " + getter.getURI());
+				page.setStatus(Status.DONE, "Redirected to " + newURI + " because of " + fe.getMode());
+			} else if (fe.isFatal()) {
+				// too many tries or fatal, mark as failed
+				page.setStatus(Status.FATALLY_FAILED, "Fatal: " + fe.getMode());
+			} else {
+				// requeue at back
+				page.setStatus(Status.FAILED);
 			}
 			db.endThreadTransaction();
 			dbTransactionEnded = true;
@@ -735,7 +728,9 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 			Logger.error(this, "Unexcepected exception in onFailure(): " + e, e);
 			throw new RuntimeException("Unexcepected exception in onFailure()", e);
 		} finally {
-			runningFetch.remove(page);
+			if (page != null) {
+				runningFetch.remove(page.getURI());
+			}
 			if (!dbTransactionEnded) {
 				Logger.minor(this, "rollback transaction", new Exception("debug"));
 				db.rollbackThreadTransaction();
@@ -754,7 +749,7 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 		synchronized (this) {
 			stopped = true;
 
-			for (Map.Entry<Page, ClientGetter> me : runningFetch.entrySet()) {
+			for (Map.Entry<String, ClientGetter> me : runningFetch.entrySet()) {
 				ClientGetter getter = me.getValue();
 				Logger.minor(this, "Canceling request" + getter);
 				getter.cancel(clientContext);
@@ -856,7 +851,11 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 		PageCallBack(Page page) {
 			this.page = page;
 			try {
-				this.uri = new FreenetURI(page.getURI());
+				uri = new FreenetURI(page.getURI());
+				final long edition = page.getEdition();
+				if (edition != 0L) {
+					uri = uri.setSuggestedEdition(edition);
+				}
 				Logger.debug(this, "New PageCallBack for " + this.page + " (" + this.uri + ").");
 			} catch (MalformedURLException ex) {
 				Logger.error(this, "Error creating uri from '"+page.getURI()+"'", ex);
@@ -878,7 +877,7 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 		public void foundURI(FreenetURI uri, boolean inline) {
 			if (stopped) throw new RuntimeException("plugin stopping");
 			if (logDEBUG) Logger.debug(this, "foundURI " + uri + " on " + page);
-			queueURI(uri, "Added from " + page.getURI());
+			queueURI(uri, "Added from " + this.uri);
 		}
 
 		protected Integer lastPosition = null;
@@ -1029,9 +1028,9 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 		return pageMaker;
 	}
 
-	public List<Page> getRunningFetch() {
+	public List<String> getRunningFetch() {
 		synchronized (runningFetch) {
-			return new ArrayList<Page>(runningFetch.keySet());
+			return new ArrayList<String>(runningFetch.keySet());
 		}
 	}
 

@@ -3,7 +3,9 @@
  */
 package plugins.Spider.db;
 
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
 import freenet.support.Logger;
 import plugins.Spider.org.garret.perst.FieldIndex;
@@ -17,6 +19,8 @@ public class Page extends Persistent implements Comparable<Page> {
 	protected long id;
 	/** URI of the page */
 	protected String uri;
+	/** suggestedEdition of the page */
+	protected long edition;
 	/** Title */
 	protected String pageTitle;
 	/** Status */
@@ -29,20 +33,55 @@ public class Page extends Persistent implements Comparable<Page> {
 	public Page() {
 	}
 
-	Page(String uri, String comment, Storage storage) {
+	Page(String uri, long edition, String comment, Storage storage) {
 		this.uri = uri;
+		this.edition = edition;
 		this.comment = comment;
 		this.status = Status.NEW;
 		this.lastChange = System.currentTimeMillis();
 		
 		storage.makePersistent(this);
 	}
-	
-	public synchronized void setStatus(Status status) {
-		Logger.debug(this, "New status " + status + " for " + this);
+
+	Page(String uri, String comment, Storage storage) {
+		this(uri, 0L, comment, storage);
+	}
+
+	public long getEdition() {
+		return edition;
+	}
+
+	public synchronized void setStatus(long edition, Status status, String comment) {
+		List<String> mess = new ArrayList<String>(); 
+		if (edition != 0L) {
+			mess.add("edition " + edition);
+		}
+		if (status != null) {
+			mess.add("status " + status);
+		}
+		if (comment != null) {
+			mess.add("comment \"" + comment + "\"");
+		}
+		Logger.debug(this, "New " + String.join(", ", mess) + " for " + this);
 		preModify();
-		this.status = status;
+		if (edition != 0L) {
+			this.edition = edition;
+		}
+		if (status != null) {
+			this.status = status;
+		}
+		if (comment != null) {
+			this.comment = comment;
+		}
 		postModify();
+	}
+
+	public synchronized void setStatus(Status status) {
+		setStatus(status, null);
+	}
+
+	public synchronized void setStatus(Status status, String comment) {
+		setStatus(0, status, comment);
 	}
 
 	public Status getStatus() {
@@ -50,10 +89,7 @@ public class Page extends Persistent implements Comparable<Page> {
 	}
 
 	public synchronized void setComment(String comment) {
-		Logger.debug(this, "New comment " + comment + " for " + this);
-		preModify();
-		this.comment = comment;
-		postModify();
+		setStatus(0, null, comment);
 	}
 	
 	public String getComment() {
@@ -106,7 +142,7 @@ public class Page extends Persistent implements Comparable<Page> {
 
 	@Override
 	public String toString() {
-		return "[PAGE: id=" + id + ", title=" + pageTitle + ", uri=" + uri + ", status=" + status + ", comment="
+		return "[PAGE: id=" + id + ", title=" + pageTitle + ", uri=" + uri + ", edition=" + edition + " status=" + status + ", comment="
 		+ comment
 		+ "]";
 	}
@@ -147,44 +183,6 @@ public class Page extends Persistent implements Comparable<Page> {
 
 		if (storage != null) {
 			PerstRoot root = (PerstRoot) storage.getRoot();
-			FieldIndex<Page> coll = root.getPageIndex(status);
-			coll.exclusiveLock();
-			try {
-				coll.put(this);
-			} finally {
-				coll.unlock();
-			}
-		}
-	}
-
-	/**
-	 * Called when we find the page in the wrong list.
-	 * 
-	 * This should never happen but it has and is a major problem since it
-	 * locks up the search.
-	 */
-	public void pageFoundInWrongList() {
-		Storage storage = getStorage();
-
-		if (storage != null) {
-			PerstRoot root = (PerstRoot) storage.getRoot();
-			Logger.error(this, "Page " + this + " found in wrong list. Will remove from all lists and put back.");
-			for (Status status : Status.values()) {
-				FieldIndex<Page> coll = root.getPageIndex(status);
-				coll.exclusiveLock();
-				try {
-					coll.remove(this);
-					Logger.minor(this, "Page " + this + " was removed from " + status);
-				} catch (StorageError e) {
-					if(e.getErrorCode() == StorageError.KEY_NOT_FOUND) {
-						// This is the normal case.
-					} else {
-						Logger.error(this, "Error in storage when removing " + this + " from " + status + ".", e);
-					}
-				} finally {
-					coll.unlock();
-				}
-			}
 			FieldIndex<Page> coll = root.getPageIndex(status);
 			coll.exclusiveLock();
 			try {

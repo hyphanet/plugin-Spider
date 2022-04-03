@@ -10,6 +10,7 @@ package plugins.Spider.db;
  */
 public enum Status {
 	NEW, // Newly found URIs, i.e. never fetched.
+	NEW_EDITION, // Updated edition
 	NOT_PUSHED,
 	/**
 	 * NOT_PUSHED, when LibraryBuffer is enabled, means we have successfully fetched the page but have not
