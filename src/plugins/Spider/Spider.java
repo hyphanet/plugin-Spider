@@ -702,19 +702,31 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 				return;
 			}
 			if (fe.newURI != null) {
-				// Cases are noticed when the USK is redirected,
-				// because of the missing meta-string, to its SSK.
-				// That is not good from the purpose of maintaining the USK
-				// in the index.
 				FreenetURI newURI = fe.newURI;
 				if (fe.mode == FetchException.FetchExceptionMode.NOT_ENOUGH_PATH_COMPONENTS) {
 					if (uri.isUSK() && !uri.hasMetaStrings()) {
 						newURI = uri.pushMetaString("");
 					}
 				}
-				// redirect, mark as succeeded
-				queueURI(newURI, "redirect from " + getter.getURI());
-				page.setStatus(Status.DONE, "Redirected to " + newURI + " because of " + fe.getMode());
+				// mark as succeeded
+				Status whereTo = Status.DONE;
+				if (uri.isUSK()) {
+					whereTo = Status.PROCESSED_USK;
+				} else if (uri.isKSK()) {
+					whereTo = Status.PROCESSED_KSK;
+				}
+				page.setStatus(whereTo, "Redirected to " + newURI + " because of " + fe.getMode());
+				// redirect. This is done in an independent Runnable to get its own lock. 
+				final FreenetURI redirectedTo = newURI;
+				final FreenetURI redirectedFrom = getter.getURI();
+				callbackExecutor.execute(new Runnable() {
+					@Override
+					public void run() {
+						// If this is a new Edition it is moved again from PROCESSED_USK to NEW_EDITION.
+						queueURI(redirectedTo, "redirect from " + redirectedFrom);
+					}
+					
+				});
 			} else if (fe.isFatal()) {
 				// too many tries or fatal, mark as failed
 				page.setStatus(Status.FATALLY_FAILED, "Fatal: " + fe.getMode());
