@@ -6,6 +6,7 @@ package plugins.Spider.web;
 
 import plugins.Spider.Spider;
 import plugins.Spider.db.Config;
+import plugins.Spider.db.Status;
 import freenet.clients.http.PageMaker;
 import freenet.pluginmanager.PluginRespirator;
 import freenet.support.HTMLNode;
@@ -34,13 +35,16 @@ class ConfigPage implements WebPage {
 	public synchronized void processPostRequest(HTTPRequest request, HTMLNode contentNode) {
 		config = spider.getConfig().clone();
 		
-		if (request.isPartSet("maxParallelRequestsWorking")) {
-			int v = request.getIntPart("maxParallelRequestsWorking", config.getMaxParallelRequestsWorking());
-			config.setMaxParallelRequestsWorking(v);
-		}
-		if (request.isPartSet("maxParallelRequestsNonWorking")) {
-			int v = request.getIntPart("maxParallelRequestsNonWorking", config.getMaxParallelRequestsNonWorking());
-			config.setMaxParallelRequestsNonWorking(v);
+		for (int w = 0; w < Config.workingRelationsToProcess.length; w++) {
+			boolean working = Config.workingRelationsToProcess[w];
+			for (int s = 0; s < Config.statusesToProcess.length; s++) {
+				Status status = Config.statusesToProcess[s];
+				final String name = "maxParallelRequests" + working + status;
+				if (request.isPartSet(name)) {
+					int v = request.getIntPart(name, config.getMaxParallelRequests(working, status));
+					config.setMaxParallelRequests(working, status, v);
+				}
+			}
 		}
 		if (request.isPartSet("beginWorkingPeriod")) {
 			int v = request.getIntPart("beginWorkingPeriod", config.getBeginWorkingPeriod());
@@ -115,16 +119,20 @@ class ConfigPage implements WebPage {
 		configForm.addChild("div", "class", "configprefix", "Spider Options");
 		
 		HTMLNode spiderConfig = configForm.addChild("ul", "class", "config");
-		addConfig(spiderConfig, //
-		        "Max Parallel Requests (Working)", "Maximum number of parallel requests if we are in the working period.", //
-		        "maxParallelRequestsWorking", //
-		        new String[] { "0", "1", "2", "5", "10", "15", "25", "50", "75", "100", "125", "150", "200", "250", "500", "1000" }, //
-		        Integer.toString(config.getMaxParallelRequestsWorking()));
-		addConfig(spiderConfig, //
-		        "Max Parallel Requests (Non-Working)", "Maximum number of parallel requests if we are not in the working period.", //
-		        "maxParallelRequestsNonWorking", //
-		        new String[] { "0", "1", "2", "5", "10", "15", "25", "50", "75", "100", "125", "150", "200", "250", "500", "1000" }, //
-		        Integer.toString(config.getMaxParallelRequestsNonWorking()));
+		for (int w = 0; w < Config.workingRelationsToProcess.length; w++) {
+			boolean working = Config.workingRelationsToProcess[w];
+			for (int s = 0; s < Config.statusesToProcess.length; s++) {
+				Status status = Config.statusesToProcess[s];
+				final String name = "maxParallelRequests" + working + status;
+				addConfig(spiderConfig, //
+						"Max Parallel for " + status + " (" + (working ? "Working" : "Non-Working") + ")",
+						"Maximum number of parallel requests from " + status +
+						" if we are in the " + (working ? "working" : "non-working" ) + " period.",
+						name, //
+						new String[] { "0", "1", "2", "5", "10", "15", "25", "50", "75", "100", "125", "150", "200", "250", "500", "1000" }, //
+						Integer.toString(config.getMaxParallelRequests(working, status)));
+			}
+		}
 
 		addConfig(spiderConfig, //
 		        "Working period beginning hour", "Beginning hour of the Working period.", //

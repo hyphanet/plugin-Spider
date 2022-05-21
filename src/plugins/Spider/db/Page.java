@@ -27,6 +27,8 @@ public class Page extends Persistent implements Comparable<Page> {
 	protected Status status;
 	/** Last Change Time */
 	protected long lastChange;
+	/** Last Fetched Time */
+	protected long lastFetched;
 	/** Comment, for debugging */
 	protected String comment;
 
@@ -39,6 +41,7 @@ public class Page extends Persistent implements Comparable<Page> {
 		this.comment = comment;
 		this.status = Status.NEW;
 		this.lastChange = System.currentTimeMillis();
+		this.lastFetched = 0L;
 		
 		storage.makePersistent(this);
 	}

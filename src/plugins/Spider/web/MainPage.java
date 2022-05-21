@@ -90,15 +90,19 @@ class MainPage implements WebPage {
 		HTMLNode overviewTable = contentNode.addChild("table", "class", "column");
 		HTMLNode overviewTableRow = overviewTable.addChild("tr");
 
-		List<String> runningFetch = spider.getRunningFetch();
 		Config config = spider.getConfig();
 
 		// Column 1
 		HTMLNode nextTableCell = overviewTableRow.addChild("td", "class", "first");
 		HTMLNode statusContent = pageMaker.getInfobox("#", "Spider Status", nextTableCell);
-		statusContent.addChild("#", "Running Request: " + runningFetch.size() + "/"
-		        + config.getMaxParallelRequests());
-		statusContent.addChild("br");
+		for (int i = 0; i < Config.statusesToProcess.length; i++) {
+			Status status = Config.statusesToProcess[i];
+			List<String> runningFetch = spider.getRunningFetch(status);
+			statusContent.addChild("#", "Running Request for " + status + ": " + runningFetch.size() + "/"
+			        + config.getMaxParallelRequests(status));
+			statusContent.addChild("br");
+			
+		}
 		for (Status status : Status.values()) {
 			statusContent.addChild("#", status + ": " + getPageStatus(status).count);
 			statusContent.addChild("br");
@@ -176,26 +180,27 @@ class MainPage implements WebPage {
 			} 
 		}
 
-		InfoboxNode running = pageMaker.getInfobox("Running URI");
-		HTMLNode runningBox = running.outer;
-		runningBox.addAttribute("style", "right: 0;");
-		HTMLNode runningContent = running.content;
+		for (Status status : Config.statusesToProcess) {
+			List<String> runningFetch = spider.getRunningFetch(status);
+			if (!runningFetch.isEmpty()) {
+				InfoboxNode running = pageMaker.getInfobox("Running URIs for " + status);
+				HTMLNode runningBox = running.outer;
+				runningBox.addAttribute("style", "right: 0;");
+				HTMLNode runningContent = running.content;
 
-		if (runningFetch.isEmpty()) {
-			runningContent.addChild("#", "NO URI");
-		} else {
-			runningContent.addChild("#", "USKs shown without edition.");
-			HTMLNode list = runningContent.addChild("ol", "style", "overflow: auto; white-space: nowrap;");
+				runningContent.addChild("#", "USKs shown without edition.");
+				HTMLNode list = runningContent.addChild("ol", "style", "overflow: auto; white-space: nowrap;");
 
-			Iterator<String> pi = runningFetch.iterator();
-			int maxURI = config.getMaxShownURIs();
-			for (int i = 0; i < maxURI && pi.hasNext(); i++) {
-				String runningURI = pi.next();
-				HTMLNode litem = list.addChild("li");
-				litem.addChild("a", "href", "/freenet:" + runningURI, runningURI);
+				Iterator<String> pi = runningFetch.iterator();
+				int maxURI = config.getMaxShownURIs();
+				for (int i = 0; i < maxURI && pi.hasNext(); i++) {
+					String runningURI = pi.next();
+					HTMLNode litem = list.addChild("li");
+					litem.addChild("a", "href", "/freenet:" + runningURI, runningURI);
+				}
+				contentNode.addChild(runningBox);
 			}
 		}
-		contentNode.addChild(runningBox);
 
 		for (Status status : Status.values()) {
 			InfoboxNode d = pageMaker.getInfobox(status + " URIs");

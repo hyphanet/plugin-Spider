@@ -85,7 +85,12 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 		FredPluginVersioned, FredPluginRealVersioned, FredPluginL10n, RequestClient {
 
 	/** Document ID of fetching documents */
-	protected Map<String, ClientGetter> runningFetch = Collections.synchronizedMap(new HashMap<String, ClientGetter>());
+	protected Map<Status, Map<String, ClientGetter>> runningFetches = new HashMap<Status, Map<String, ClientGetter>>();
+	{
+		for (Status status : Config.statusesToProcess) {
+			runningFetches.put(status, Collections.synchronizedMap(new HashMap<String, ClientGetter>()));
+		}
+	}
 
 	private Map<ClientGetter, ScheduledFuture<?>> runningFutures = Collections.synchronizedMap(new HashMap<ClientGetter, ScheduledFuture<?>>());
 
@@ -94,7 +99,7 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 	 */
 	protected Set<String> allowedMIMETypes;
 
-	static int dbVersion = 47;
+	static int dbVersion = 48;
 	static int version = 53;
 
 	/** We use the standard http://127.0.0.1:8888/ for parsing HTML regardless of what the local
@@ -128,7 +133,7 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 
 	private final Set<SubscribedToUSK> subscribedToUSKs = new HashSet<SubscribedToUSK>();
 
-	private BulkPageIterator[] bulkPageIterators = new BulkPageIterator[Status.values().length];
+	private Map<Status, BulkPageIterator> bulkPageIterators = null;
 
 	public int getLibraryBufferSize() {
 		return librarybuffer.bufferUsageEstimate();
@@ -348,34 +353,39 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 	 * Start requests from new and queued.
 	 */
 	private void startFetches() {
-		ArrayList<ClientGetter> toStart = null;
 		synchronized (this) {
 			if (stopped) {
-				bulkPageIterators[Status.NEW.ordinal()] = null;
-				bulkPageIterators[Status.NEW_EDITION.ordinal()] = null;
-				bulkPageIterators[Status.FAILED.ordinal()] = null;
+				bulkPageIterators = null;
 				return;
 			}
 
-			synchronized (runningFetch) {
-				int maxParallelRequests = getRoot().getConfig().getMaxParallelRequests();
-				int running = runningFetch.size();
+			if (bulkPageIterators == null) {
+				bulkPageIterators = new HashMap<Status, BulkPageIterator>();
+			}
+		}
 
-				if (maxParallelRequests <= running) {
-					return;
-				}
+		for (Status status : Config.statusesToProcess) {
+			ArrayList<ClientGetter> toStart = null;
+			synchronized (this) {
+				Map<String, ClientGetter> runningFetch = runningFetches.get(status);
+				synchronized (runningFetch) {
+					int maxParallelRequests = getRoot().getConfig().getMaxParallelRequests(status);
+					int running = runningFetch.size();
 
-				toStart = new ArrayList<ClientGetter>(maxParallelRequests - running);
-
-				Status[] statuses = {Status.NEW, Status.NEW_EDITION, Status.FAILED};
-				for (Status status : statuses) {
-					if (bulkPageIterators[status.ordinal()] == null) {
-						bulkPageIterators[status.ordinal()] = new BulkPageIterator(status);
+					if (maxParallelRequests <= running) {
+						continue;
 					}
 
+					toStart = new ArrayList<ClientGetter>(maxParallelRequests - running);
+
+					if (!bulkPageIterators.containsKey(status)) {
+						bulkPageIterators.put(status, new BulkPageIterator(status));
+					}
+
+					BulkPageIterator bulkPageIterator = bulkPageIterators.get(status);
 					while (running + toStart.size() < maxParallelRequests &&
-							bulkPageIterators[status.ordinal()].hasNext(maxParallelRequests)) {
-						Page page = bulkPageIterators[status.ordinal()].next();
+							bulkPageIterator.hasNext(maxParallelRequests)) {
+						Page page = bulkPageIterator.next();
 						Logger.debug(this, "Page " + page + " found in " + status + ".");
 						// Skip if getting this page already
 						if (runningFetch.containsKey(page.getURI())) continue;
@@ -393,29 +403,29 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 					}
 				}
 			}
-		}
 
-		for (final ClientGetter g : toStart) {
-			try {
-				g.start(clientContext);
-				Logger.minor(this, g + " started");
-			} catch (FetchException e) {
-				g.getClientCallback().onFailure(e, g);
-				continue;
-			}
-			ScheduledFuture<?> future = callbackExecutor.scheduleWithFixedDelay(new Runnable() {
-				long lapsLeft = 10 * 60 * 60; // Ten hours
-				@Override
-				public void run() {
-					if (lapsLeft-- <= 0) {
-						g.cancel(clientContext);
-						Logger.minor(this, g + " aborted because of time-out");
-						ScheduledFuture<?> f = runningFutures.get(g);
-						f.cancel(false);
-					}
+			for (final ClientGetter g : toStart) {
+				try {
+					g.start(clientContext);
+					Logger.minor(this, g + " started");
+				} catch (FetchException e) {
+					g.getClientCallback().onFailure(e, g);
+					continue;
 				}
-			}, 10, 1, TimeUnit.SECONDS);
-			runningFutures.put(g, future);
+				ScheduledFuture<?> future = callbackExecutor.scheduleWithFixedDelay(new Runnable() {
+					long lapsLeft = 10 * 60 * 60; // Ten hours
+					@Override
+					public void run() {
+						if (lapsLeft-- <= 0) {
+							g.cancel(clientContext);
+							Logger.minor(this, g + " aborted because of time-out");
+							ScheduledFuture<?> f = runningFutures.get(g);
+							f.cancel(false);
+						}
+					}
+				}, 10, 1, TimeUnit.SECONDS);
+				runningFutures.put(g, future);
+			}
 		}
 	}
 
@@ -660,7 +670,7 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 
 				synchronized (this) {
 					if (page != null) {
-						runningFetch.remove(page.getURI());
+						removeFromRunningFetches(page);
 					}
 				}
 			} finally {
@@ -674,6 +684,18 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 								"could not complete operation dbTransaction not ended");
 					}
 					db.endThreadTransaction();
+				}
+			}
+		}
+	}
+
+	private void removeFromRunningFetches(Page page) {
+		if (runningFetches != null) {
+			for (Status status : Config.statusesToProcess) {
+				if (runningFetches.containsKey(status)) {
+					if (runningFetches.get(status).remove(page.getURI()) != null) {
+						break;
+					}
 				}
 			}
 		}
@@ -741,7 +763,7 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 			throw new RuntimeException("Unexcepected exception in onFailure()", e);
 		} finally {
 			if (page != null) {
-				runningFetch.remove(page.getURI());
+				removeFromRunningFetches(page);
 			}
 			if (!dbTransactionEnded) {
 				Logger.minor(this, "rollback transaction", new Exception("debug"));
@@ -761,15 +783,17 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 		synchronized (this) {
 			stopped = true;
 
-			for (Map.Entry<String, ClientGetter> me : runningFetch.entrySet()) {
-				ClientGetter getter = me.getValue();
-				Logger.minor(this, "Canceling request" + getter);
-				getter.cancel(clientContext);
+			for (Status status : Config.statusesToProcess) {
+				for (Map.Entry<String, ClientGetter> me : runningFetches.get(status).entrySet()) {
+					ClientGetter getter = me.getValue();
+					Logger.minor(this, "Canceling request" + getter);
+					getter.cancel(clientContext);
+				}
+				runningFetches.get(status).clear();
 			}
 			for (SubscribedToUSK stu : new HashSet<SubscribedToUSK>(subscribedToUSKs)) {
 				stu.unsubscribe();
 			}
-			runningFetch.clear();
 			callbackExecutor.shutdownNow();
 		}
 		librarybuffer.terminate();
@@ -1040,9 +1064,13 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 		return pageMaker;
 	}
 
-	public List<String> getRunningFetch() {
-		synchronized (runningFetch) {
-			return new ArrayList<String>(runningFetch.keySet());
+	public List<String> getRunningFetch(Status status) {
+		synchronized (runningFetches) {
+			if (runningFetches != null) {
+				return new ArrayList<String>(runningFetches.get(status).keySet());
+			} else {
+				return new ArrayList<String>();
+			}
 		}
 	}
 
