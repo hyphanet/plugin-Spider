@@ -35,7 +35,11 @@ public class PerstRoot extends Persistent {
 		uriPage = storage.createFieldIndex(Page.class, "uri", true);
 		statusPages = new FieldIndex[Status.values().length];
 		for (Status status : Status.values()) {
-			statusPages[status.ordinal()] = storage.<Page>createFieldIndex(Page.class, "lastChange", true);
+			String fieldName = "lastChange";
+			if (status == Status.NEW_EDITION) {
+				fieldName = "lastFetched";
+			}
+			statusPages[status.ordinal()] = storage.<Page>createFieldIndex(Page.class, fieldName, true);
 		}
 
 		config = new Config(storage);

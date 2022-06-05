@@ -242,6 +242,10 @@ class MainPage implements WebPage {
 				if (title == null) {
 					title = "";
 				}
+				String changed = page.getLastFetchedAsString();
+				if (!changed.equals("")) {
+					title = "Last changed " + changed + " " + title;
+				}
 				long edition = page.getEdition();
 				if (edition != 0L) {
 					title = "Edition " + edition + " " + title;

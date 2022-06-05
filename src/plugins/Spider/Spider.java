@@ -227,7 +227,11 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 			if (edition != NO_USK) {
 				final long oldEdition = page.getEdition();
 				if (edition > oldEdition) {
-					page.setStatus(edition, Status.NEW_EDITION, "New edition replacing " + oldEdition);
+					Status whereTo = Status.NEW_EDITION;
+					if (!page.hasBeenFetched()) {
+						whereTo = Status.NEW;
+					}
+					page.setStatus(edition, whereTo, "New edition replacing " + oldEdition);
 				}
 			}
 			db.endThreadTransaction();
@@ -636,6 +640,7 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 				}
 				pageCallBack.finish();
 				page.setStatus(Status.NOT_PUSHED);
+				page.setLastFetched();
 				librarybuffer.maybeSend();
 
 			} catch (UnsafeContentTypeException e) {
@@ -724,18 +729,19 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 				return;
 			}
 			if (fe.newURI != null) {
-				FreenetURI newURI = fe.newURI;
-				if (fe.mode == FetchException.FetchExceptionMode.NOT_ENOUGH_PATH_COMPONENTS) {
-					if (uri.isUSK() && !uri.hasMetaStrings()) {
-						newURI = uri.pushMetaString("");
-					}
-				}
 				// mark as succeeded
 				Status whereTo = Status.DONE;
 				if (uri.isUSK()) {
 					whereTo = Status.PROCESSED_USK;
 				} else if (uri.isKSK()) {
 					whereTo = Status.PROCESSED_KSK;
+				}
+				FreenetURI newURI = fe.newURI;
+				if (fe.mode == FetchException.FetchExceptionMode.NOT_ENOUGH_PATH_COMPONENTS) {
+					if (uri.isUSK() && !uri.hasMetaStrings()) {
+						newURI = uri.pushMetaString("");
+						whereTo = Status.DONE;
+					}
 				}
 				page.setStatus(whereTo, "Redirected to " + newURI + " because of " + fe.getMode());
 				// redirect. This is done in an independent Runnable to get its own lock. 
@@ -1111,6 +1117,10 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 				} else if (uri.isKSK()) {
 					to = Status.PROCESSED_KSK;
 				} else if (uri.isSSK()) {
+					to = Status.DONE;
+				} else if (uri.isUSK() &&
+						uri.hasMetaStrings() && !uri.getMetaString().equals("")) {
+					// This is not the top element of this USK.
 					to = Status.DONE;
 				} else if (uri.isUSK()) {
 					to = Status.PROCESSED_USK;

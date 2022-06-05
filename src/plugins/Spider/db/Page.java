@@ -27,7 +27,12 @@ public class Page extends Persistent implements Comparable<Page> {
 	protected Status status;
 	/** Last Change Time */
 	protected long lastChange;
-	/** Last Fetched Time */
+	/** Last Fetched Time
+	 * 
+	 * This is for the case when many USK pages are updated more often 
+	 * than they are fetched. In that case, this is used to prioritize
+	 * the update of older pages over pages that were recently fetched.
+	 */
 	protected long lastFetched;
 	/** Comment, for debugging */
 	protected String comment;
@@ -41,7 +46,7 @@ public class Page extends Persistent implements Comparable<Page> {
 		this.comment = comment;
 		this.status = Status.NEW;
 		this.lastChange = System.currentTimeMillis();
-		this.lastFetched = 0L;
+		this.lastFetched = 0L; // 0 means never fetched.
 		
 		storage.makePersistent(this);
 	}
@@ -124,6 +129,25 @@ public class Page extends Persistent implements Comparable<Page> {
 
 	public Date getLastChange() {
 		return new Date(lastChange);
+	}
+
+	public void setLastFetched() {
+		lastFetched = System.currentTimeMillis();
+	}
+
+	public boolean hasBeenFetched() {
+		return lastFetched != 0L;
+	}
+
+	public Date getLastFetched() {
+		return new Date(lastFetched);
+	}
+
+	public String getLastFetchedAsString() {
+		if (lastFetched > 0L) {
+			return new Date(lastFetched).toString();
+		}
+		return "";
 	}
 
 	@Override
