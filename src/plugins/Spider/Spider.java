@@ -128,10 +128,9 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 	private LibraryBuffer librarybuffer;
 
 	private final AtomicLong lastRequestFinishedAt = new AtomicLong();
-	private final AtomicInteger newUSKs = new AtomicInteger();
 	private final AtomicInteger editionsFound = new AtomicInteger();
 
-	private final Set<SubscribedToUSK> subscribedToUSKs = new HashSet<SubscribedToUSK>();
+	private final Set<SubscribedToUSK> subscribedToUSKs = Collections.synchronizedSet(new HashSet<SubscribedToUSK>());
 
 	private Map<Status, BulkPageIterator> bulkPageIterators = null;
 
@@ -153,10 +152,6 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 
 	public int getSubscribedToUSKs() {
 		return subscribedToUSKs.size();
-	}
-
-	public int getNewUSKs() {
-		return newUSKs.get();
 	}
 
 	public int getEditionsFound() {
@@ -256,6 +251,7 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 			try {
 				usk = USK.create(uri);
 			} catch (MalformedURLException e) {
+				Logger.error(this, "Cannot subscribe to " + uri + ".", e);
 				return;
 			}
 			(clientContext.uskManager).subscribe(usk, this, false, Spider.this);
@@ -265,7 +261,7 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 		public void onFoundEdition(long l, USK key, ClientContext context, boolean metadata,
 				short codec, byte[] data, boolean newKnownGood, boolean newSlot) {
 			Logger.minor(this, "Found new Edition for " + key + ", newKnownGood=" + newKnownGood + " newSlot=" + newSlot + ".");
-			newUSKs.getAndIncrement();
+			editionsFound.getAndIncrement();
 			subscribedToUSKs.remove(this);
 			FreenetURI uri = key.getURI();
 

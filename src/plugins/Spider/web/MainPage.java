@@ -111,9 +111,7 @@ class MainPage implements WebPage {
 		statusContent.addChild("br");
 		statusContent.addChild("#", "Subscribed USKs: " + spider.getSubscribedToUSKs());
 		statusContent.addChild("br");
-		statusContent.addChild("#", "URIs replaced by new USKs: " + spider.getNewUSKs());
-		statusContent.addChild("br");
-		statusContent.addChild("#", "Found editions: " + spider.getEditionsFound());
+		statusContent.addChild("#", "Found new editions: " + spider.getEditionsFound());
 		statusContent.addChild("br");
 		statusContent.addChild("#", "Library buffer size: "+spider.getLibraryBufferSize());
 		long lastRequestFinishedAt = spider.getLastRequestFinishedAt();
