@@ -243,6 +243,7 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 	}
 
 	private class SubscribedToUSK implements USKCallback {
+		private static final int DELAY_IN_MINUTES_AFTER_NEW_EDITION_SEEN = 10;
 		private FreenetURI uri;
 		USK usk;
 
@@ -258,14 +259,19 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 		}
 
 		@Override
-		public void onFoundEdition(long l, USK key, ClientContext context, boolean metadata,
+		public void onFoundEdition(long l, final USK key, ClientContext context, boolean metadata,
 				short codec, byte[] data, boolean newKnownGood, boolean newSlot) {
 			Logger.minor(this, "Found new Edition for " + key + ", newKnownGood=" + newKnownGood + " newSlot=" + newSlot + ".");
 			editionsFound.getAndIncrement();
-			subscribedToUSKs.remove(this);
-			FreenetURI uri = key.getURI();
+			final FreenetURI uri = key.getURI();
 
-			queueURI(uri, "USK found edition " + uri);
+			callbackExecutor.schedule(new Runnable() {
+				@Override
+				public void run() {
+					Logger.debug(this, "Queueing new Edition for " + key + ".");
+					queueURI(uri, "USK found edition " + uri);
+				}
+			}, DELAY_IN_MINUTES_AFTER_NEW_EDITION_SEEN, TimeUnit.MINUTES);
 		}
 
 		public void unsubscribe() {

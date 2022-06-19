@@ -114,9 +114,8 @@ public class Page extends Persistent implements Comparable<Page> {
 	
 	public void setPageTitle(String pageTitle) {
 		Logger.debug(this, "New page title for " + this);
-		preModify();
 		this.pageTitle = pageTitle;
-		postModify();
+		modify();
 	}
 
 	public String getPageTitle() {
