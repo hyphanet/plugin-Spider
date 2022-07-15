@@ -85,10 +85,10 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 		FredPluginVersioned, FredPluginRealVersioned, FredPluginL10n, RequestClient {
 
 	/** Document ID of fetching documents */
-	protected Map<Status, Map<String, ClientGetter>> runningFetches = new HashMap<Status, Map<String, ClientGetter>>();
+	protected Map<Status, Map<FreenetURI, ClientGetter>> runningFetches = new HashMap<Status, Map<FreenetURI, ClientGetter>>();
 	{
 		for (Status status : Config.statusesToProcess) {
-			runningFetches.put(status, Collections.synchronizedMap(new HashMap<String, ClientGetter>()));
+			runningFetches.put(status, Collections.synchronizedMap(new HashMap<FreenetURI, ClientGetter>()));
 		}
 	}
 
@@ -373,7 +373,7 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 		for (Status status : Config.statusesToProcess) {
 			ArrayList<ClientGetter> toStart = null;
 			synchronized (this) {
-				Map<String, ClientGetter> runningFetch = runningFetches.get(status);
+				Map<FreenetURI, ClientGetter> runningFetch = runningFetches.get(status);
 				synchronized (runningFetch) {
 					int maxParallelRequests = getRoot().getConfig().getMaxParallelRequests(status);
 					int running = runningFetch.size();
@@ -397,11 +397,15 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 						if (runningFetch.containsKey(page.getURI())) continue;
 
 						try {
-							ClientGetter getter = makeGetter(page);
+							FreenetURI uri = new FreenetURI(page.getURI());
+							if (uri.isUSK()) {
+								uri = uri.setSuggestedEdition(page.getEdition());
+							}
+							ClientGetter getter = makeGetter(uri);
 
 							Logger.minor(this, "Starting new " + getter + " " + page);
 							toStart.add(getter);
-							runningFetch.put(page.getURI(), getter);
+							runningFetch.put(uri, getter);
 						} catch (MalformedURLException e) {
 							Logger.error(this, "IMPOSSIBLE-Malformed URI: " + page, e);
 							page.setStatus(Status.FATALLY_FAILED, "MalformedURLException");
@@ -513,11 +517,7 @@ public class Spider implements FredPlugin, FredPluginThreadless,
         }
 	}
 
-	private ClientGetter makeGetter(Page page) throws MalformedURLException {
-		FreenetURI uri = new FreenetURI(page.getURI());
-		if (uri.isUSK()) {
-			uri = uri.setSuggestedEdition(page.getEdition());
-		}
+	private ClientGetter makeGetter(FreenetURI uri) throws MalformedURLException {
 		ClientGetter getter = new ClientGetter(new ClientGetterCallback(),
 				uri, ctx,
 				getPollingPriorityProgress(), null);
@@ -678,9 +678,7 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 				data.free();
 
 				synchronized (this) {
-					if (page != null) {
-						removeFromRunningFetches(page);
-					}
+					removeFromRunningFetches(uri);
 				}
 			} finally {
 				if (!dbTransactionEnded) {
@@ -698,11 +696,11 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 		}
 	}
 
-	private void removeFromRunningFetches(Page page) {
+	private void removeFromRunningFetches(FreenetURI uri) {
 		if (runningFetches != null) {
 			for (Status status : Config.statusesToProcess) {
 				if (runningFetches.containsKey(status)) {
-					if (runningFetches.get(status).remove(page.getURI()) != null) {
+					if (runningFetches.get(status).remove(uri) != null) {
 						break;
 					}
 				}
@@ -779,9 +777,7 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 			Logger.error(this, "Unexcepected exception in onFailure(): " + e, e);
 			throw new RuntimeException("Unexcepected exception in onFailure()", e);
 		} finally {
-			if (page != null) {
-				removeFromRunningFetches(page);
-			}
+			removeFromRunningFetches(uri);
 			if (!dbTransactionEnded) {
 				Logger.minor(this, "rollback transaction", new Exception("debug"));
 				db.rollbackThreadTransaction();
@@ -801,7 +797,7 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 			stopped = true;
 
 			for (Status status : Config.statusesToProcess) {
-				for (Map.Entry<String, ClientGetter> me : runningFetches.get(status).entrySet()) {
+				for (Map.Entry<FreenetURI, ClientGetter> me : runningFetches.get(status).entrySet()) {
 					ClientGetter getter = me.getValue();
 					Logger.minor(this, "Canceling request" + getter);
 					getter.cancel(clientContext);
@@ -1082,13 +1078,15 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 	}
 
 	public List<String> getRunningFetch(Status status) {
+		List<String> result = new ArrayList<String>();
 		synchronized (runningFetches) {
 			if (runningFetches != null) {
-				return new ArrayList<String>(runningFetches.get(status).keySet());
-			} else {
-				return new ArrayList<String>();
+				for (FreenetURI uri : runningFetches.get(status).keySet()) {
+					result.add(uri.toString());
+				}
 			}
 		}
+		return result;
 	}
 
 	public PluginRespirator getPluginRespirator() {
