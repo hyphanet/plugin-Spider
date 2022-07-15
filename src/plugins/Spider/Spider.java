@@ -476,7 +476,9 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 	private class ClientGetterCallback implements ClientGetCallback {
 		@Override
 		public void onFailure(FetchException e, ClientGetter state) {
-			Logger.minor(this, "onFailure: " + state.getURI() + " (q:" + callbackExecutor.getQueue().size() + ")");
+			Logger.minor(this,
+				     "onFailure: " + state.getURI() + " (q:" + callbackExecutor.getQueue().size() + ")",
+				     e);
 			removeFuture(state);
 
 			if (stopped) return;
@@ -708,9 +710,16 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 		}
 	}
 
+	/**
+	 * Do what needs to be done when a fetch request has failed.
+	 *
+	 * @param fe Is the exception that make it fail.
+	 *           Used to decide what to do.
+	 * @param getter is the ClientGetter that failed.
+	 */
 	protected void onFailure(FetchException fe, ClientGetter getter) {
-		FreenetURI uri = getter.getURI();
-		Logger.minor(this, "Failed: " + uri + " : " + getter, fe);
+		final FreenetURI uri = getter.getURI();
+		Logger.minor(this, "Failed: " + uri + " : " + getter);
 
 		synchronized (this) {
 			if (stopped) return;
@@ -748,7 +757,7 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 				page.setStatus(whereTo, "Redirected to " + newURI + " because of " + fe.getMode());
 				// redirect. This is done in an independent Runnable to get its own lock. 
 				final FreenetURI redirectedTo = newURI;
-				final FreenetURI redirectedFrom = getter.getURI();
+				final FreenetURI redirectedFrom = uri;
 				callbackExecutor.execute(new Runnable() {
 					@Override
 					public void run() {
