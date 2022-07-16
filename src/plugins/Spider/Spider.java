@@ -415,13 +415,6 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 			}
 
 			for (final ClientGetter g : toStart) {
-				try {
-					g.start(clientContext);
-					Logger.minor(this, g + " started");
-				} catch (FetchException e) {
-					g.getClientCallback().onFailure(e, g);
-					continue;
-				}
 				ScheduledFuture<?> future = callbackExecutor.scheduleWithFixedDelay(new Runnable() {
 					long lapsLeft = 10 * 60 * 60; // Ten hours
 					@Override
@@ -435,6 +428,13 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 					}
 				}, 10, 1, TimeUnit.SECONDS);
 				runningFutures.put(g, future);
+				try {
+					g.start(clientContext);
+					Logger.minor(this, g + " started");
+				} catch (FetchException e) {
+					g.getClientCallback().onFailure(e, g);
+					continue;
+				}
 			}
 		}
 	}
@@ -481,7 +481,7 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 		@Override
 		public void onFailure(FetchException e, ClientGetter state) {
 			Logger.minor(this,
-				     "onFailure: " + state.getURI() + " (q:" + callbackExecutor.getQueue().size() + ")",
+				     state + " onFailure: " + state.getURI() + " (q:" + callbackExecutor.getQueue().size() + ")",
 				     e);
 			removeFuture(state);
 
@@ -492,7 +492,7 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 
 		@Override
 		public void onSuccess(final FetchResult result, final ClientGetter state) {
-			Logger.minor(this, "onSuccess: " + state.getURI() + " (q:" + callbackExecutor.getQueue().size() + ")");
+			Logger.minor(this, state + " onSuccess: " + state.getURI() + " (q:" + callbackExecutor.getQueue().size() + ")");
 			removeFuture(state);
 
 			if (stopped) return;
