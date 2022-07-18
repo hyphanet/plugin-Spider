@@ -301,8 +301,8 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 	class BulkPageIterator implements Iterator<Page> {
 		private Status queue;
 		private Deque<Page> list = new LinkedList<Page>();
-		private int BULK_FETCH_SIZE = 1000;
-		private long TIME_TO_DEFER_DATABASE_READ = TimeUnit.SECONDS.toMillis(30);
+		private int BULK_FETCH_SIZE = 100;
+		private long TIME_TO_DEFER_DATABASE_READ = TimeUnit.SECONDS.toMillis(10);
 		private Date lastPoll = new Date();
 
 		BulkPageIterator(Status status) {
