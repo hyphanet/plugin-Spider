@@ -393,11 +393,11 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 							bulkPageIterator.hasNext(maxParallelRequests)) {
 						Page page = bulkPageIterator.next();
 						Logger.debug(this, "Page " + page + " found in " + status + ".");
-						// Skip if getting this page already
-						if (runningFetch.containsKey(page.getURI())) continue;
-
 						try {
 							FreenetURI uri = new FreenetURI(page.getURI());
+							// Skip if getting this page already
+							if (runningFetch.containsKey(uri)) continue;
+
 							if (uri.isUSK()) {
 								uri = uri.setSuggestedEdition(page.getEdition());
 							}
