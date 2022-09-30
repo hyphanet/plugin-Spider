@@ -768,8 +768,24 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 				// too many tries or fatal, mark as failed
 				page.setStatus(Status.FATALLY_FAILED, "Fatal: " + fe.getMode());
 			} else {
-				// requeue at back
-				page.setStatus(Status.FAILED);
+				// If uris are already queued that are afterwards rendered "bad"
+				// by changing the badlisted extensions list, then they are cleaned
+				// out if they fail.
+				boolean badListed = false;
+				String sURI = uri.toString();
+				String lowerCaseURI = sURI.toLowerCase(Locale.US);
+				for (String ext : getRoot().getConfig().getBadlistedExtensions()) {
+					if (lowerCaseURI.endsWith(ext)) {
+						badListed = true;
+					}
+				}
+
+				if (badListed) {
+					page.setStatus(Status.FATALLY_FAILED);
+				} else {
+					// requeue at back
+					page.setStatus(Status.FAILED);
+				}
 			}
 			db.endThreadTransaction();
 			dbTransactionEnded = true;
