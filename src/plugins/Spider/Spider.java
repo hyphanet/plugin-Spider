@@ -625,7 +625,7 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 			 * provided).
 			 */
 			PageCallBack pageCallBack = new PageCallBack(page);
-			Logger.minor(this, "Successful: " + uri + " : " + page.getId());
+			Logger.minor(this, "Successful: " + uri + " id=" + page.getId());
 
 			try {
 				if ("text/plain".equals(mimeType)) {
@@ -653,7 +653,7 @@ public class Spider implements FredPlugin, FredPluginThreadless,
 				db.endThreadTransaction();
 				dbTransactionEnded = true;
 
-				Logger.minor(this, "UnsafeContentTypeException " + uri + " : " + page.getId(), e);
+				Logger.minor(this, "" + e + " " + uri + " id=" + page.getId());
 				return; // Ignore
 			} catch (IOException e) {
 				// ugh?
