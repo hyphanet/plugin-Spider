@@ -3,6 +3,10 @@
  */
 package plugins.Spider.db;
 
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
 import freenet.support.Logger;
 import plugins.Spider.org.garret.perst.FieldIndex;
 import plugins.Spider.org.garret.perst.IPersistentMap;
@@ -15,31 +19,77 @@ public class Page extends Persistent implements Comparable<Page> {
 	protected long id;
 	/** URI of the page */
 	protected String uri;
+	/** suggestedEdition of the page */
+	protected long edition;
 	/** Title */
 	protected String pageTitle;
 	/** Status */
 	protected Status status;
 	/** Last Change Time */
 	protected long lastChange;
+	/** Last Fetched Time
+	 * 
+	 * This is for the case when many USK pages are updated more often 
+	 * than they are fetched. In that case, this is used to prioritize
+	 * the update of older pages over pages that were recently fetched.
+	 */
+	protected long lastFetched;
 	/** Comment, for debugging */
 	protected String comment;
 
 	public Page() {
 	}
 
-	Page(String uri, String comment, Storage storage) {
+	Page(String uri, long edition, String comment, Storage storage) {
 		this.uri = uri;
+		this.edition = edition;
 		this.comment = comment;
-		this.status = Status.QUEUED;
+		this.status = Status.NEW;
 		this.lastChange = System.currentTimeMillis();
+		this.lastFetched = 0L; // 0 means never fetched.
 		
 		storage.makePersistent(this);
 	}
-	
-	public synchronized void setStatus(Status status) {
+
+	Page(String uri, String comment, Storage storage) {
+		this(uri, 0L, comment, storage);
+	}
+
+	public long getEdition() {
+		return edition;
+	}
+
+	public synchronized void setStatus(long edition, Status status, String comment) {
+		List<String> mess = new ArrayList<String>(); 
+		if (edition != 0L) {
+			mess.add("edition " + edition);
+		}
+		if (status != null) {
+			mess.add("status " + status);
+		}
+		if (comment != null) {
+			mess.add("comment \"" + comment + "\"");
+		}
+		Logger.debug(this, "New " + String.join(", ", mess) + " for " + this);
 		preModify();
-		this.status = status;
+		if (edition != 0L) {
+			this.edition = edition;
+		}
+		if (status != null) {
+			this.status = status;
+		}
+		if (comment != null) {
+			this.comment = comment;
+		}
 		postModify();
+	}
+
+	public synchronized void setStatus(Status status) {
+		setStatus(status, null);
+	}
+
+	public synchronized void setStatus(Status status, String comment) {
+		setStatus(0, status, comment);
 	}
 
 	public Status getStatus() {
@@ -47,9 +97,7 @@ public class Page extends Persistent implements Comparable<Page> {
 	}
 
 	public synchronized void setComment(String comment) {
-		preModify();
-		this.comment = comment;
-		postModify();
+		setStatus(0, null, comment);
 	}
 	
 	public String getComment() {
@@ -65,13 +113,40 @@ public class Page extends Persistent implements Comparable<Page> {
 	}
 	
 	public void setPageTitle(String pageTitle) {
-		preModify();
+		Logger.debug(this, "New page title for " + this);
 		this.pageTitle = pageTitle;
-		postModify();
+		modify();
 	}
 
 	public String getPageTitle() {
 		return pageTitle;
+	}
+
+	public String getLastChangeAsString() {
+		return new Date(lastChange).toString();
+	}
+
+	public Date getLastChange() {
+		return new Date(lastChange);
+	}
+
+	public void setLastFetched() {
+		lastFetched = System.currentTimeMillis();
+	}
+
+	public boolean hasBeenFetched() {
+		return lastFetched != 0L;
+	}
+
+	public Date getLastFetched() {
+		return new Date(lastFetched);
+	}
+
+	public String getLastFetchedAsString() {
+		if (lastFetched > 0L) {
+			return new Date(lastFetched).toString();
+		}
+		return "";
 	}
 
 	@Override
@@ -93,7 +168,7 @@ public class Page extends Persistent implements Comparable<Page> {
 
 	@Override
 	public String toString() {
-		return "[PAGE: id=" + id + ", title=" + pageTitle + ", uri=" + uri + ", status=" + status + ", comment="
+		return "[PAGE: id=" + id + ", title=" + pageTitle + ", uri=" + uri + ", edition=" + edition + " status=" + status + ", comment="
 		+ comment
 		+ "]";
 	}
@@ -115,10 +190,10 @@ public class Page extends Persistent implements Comparable<Page> {
 				if(e.getErrorCode() == StorageError.KEY_NOT_FOUND) {
 					// No serious consequences, so just log it, rather than killing the whole thing.
 					Logger.error(this, "Page: Key not found in index: "+this, e);
-					System.err.println("Page: Key not found in index: "+this);
-					e.printStackTrace();
-				} else
+				} else {
+					Logger.error(this, "remove from index " + status + " failed", e);
 					throw e;
+				}
 			} finally {
 				coll.unlock();
 			}

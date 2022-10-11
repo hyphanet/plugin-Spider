@@ -31,7 +31,7 @@ public class TermEntryWriter {
 	}
 	
 	public void writeObject(TermEntry en, DataOutputStream dos) throws IOException {
-		dos.writeLong(TermEntry.serialVersionUID);
+		dos.writeLong(TermEntry.serialVersionUID2);
 		TermEntry.EntryType type = en.entryType();
 		dos.writeInt(type.ordinal());
 		dos.writeUTF(en.subj);
@@ -39,14 +39,15 @@ public class TermEntryWriter {
 		switch (type) {
 		case PAGE:
 			TermPageEntry enn = (TermPageEntry)en;
-			enn.page.writeFullBinaryKeyWithLength(dos);
-			int size = enn.hasPositions() ? enn.positionsSize() : 0;
+			dos.writeUTF(enn.page.toString());
 			if(enn.title == null)
-				dos.writeInt(size);
+				dos.writeBoolean(false);
 			else {
-				dos.writeInt(~size); // invert bits to signify title is set
+				dos.writeBoolean(true);
 				dos.writeUTF(enn.title);
 			}
+			int size = enn.hasPositions() ? enn.positionsSize() : 0;
+			dos.writeInt(size);
 			if(size != 0) {
 				if(enn.hasFragments()) {
 					for(Map.Entry<Integer, String> p : enn.positionsMap().entrySet()) {
@@ -64,6 +65,8 @@ public class TermEntryWriter {
 				}
 			}
 			return;
+		default:
+			throw new RuntimeException("Not implemented");
 		}
 	}
 

@@ -12,13 +12,20 @@ import java.util.Calendar;
 
 public class Config extends Persistent implements Cloneable {
 
+	public static final Status[] statusesToProcess = {Status.NEW, Status.NEW_EDITION, Status.FAILED};
+	public static final boolean[] workingRelationsToProcess = {true, false};
 	private String indexTitle;
 	private String indexOwner;
 	private String indexOwnerEmail;
 
 	private int maxShownURIs;
-	private int maxParallelRequestsWorking;
-	private int maxParallelRequestsNonWorking;
+	/** working, status
+	 * 
+	 * This should be an array with dimensions working and status.
+	 * This is problematic in the database so it will instead be stored
+	 * as a string of semicolon-separated ints.
+	 */
+	private String maxParallelRequests;
 	private int beginWorkingPeriod; // Between 0 and 23
 	private int endWorkingPeriod; // Between 0 and 23
 	private String[] badlistedExtensions;
@@ -40,8 +47,7 @@ public class Config extends Persistent implements Cloneable {
 
 		maxShownURIs = 50;
 
-		maxParallelRequestsWorking = 0;
-		maxParallelRequestsNonWorking = 0;
+		maxParallelRequests = "";
 		beginWorkingPeriod = 23;
 		endWorkingPeriod = 7;
 
@@ -111,25 +117,64 @@ public class Config extends Persistent implements Cloneable {
 		return indexOwnerEmail;
 	}
 
-	public synchronized void setMaxParallelRequestsWorking(int maxParallelRequests) {
+	private int workingIndex(boolean b) {
+		for (int i = 0; i < workingRelationsToProcess.length; i++) {
+			if (workingRelationsToProcess[i] == b) {
+				return i;
+			}
+		}
+		throw new RuntimeException();
+	}
+
+	private int statusIndex(Status status) {
+		for (int i = 0; i < statusesToProcess.length; i++) {
+			if (statusesToProcess[i] == status) {
+				return i;
+			}
+		}
+		throw new RuntimeException();
+	}
+
+	private int[][] unpackMaxParallelRequests() {
+		int[][] requests = new int[workingRelationsToProcess.length][statusesToProcess.length];
+		String[] arr = maxParallelRequests.split(";");
+		int arrIndex = 0;
+		for (int w = 0; w < workingRelationsToProcess.length; w++) {
+			for (int s= 0; s < statusesToProcess.length; s++) {
+				requests[w][s] = 0;
+				if (arrIndex < arr.length && !arr[arrIndex].equals("")) {
+					try {
+						requests[w][s] = Integer.parseInt(arr[arrIndex++]);
+					} catch (NumberFormatException e) {
+						// Ignore if we can't do the conversion.
+					}
+				}
+			}
+		}
+		return requests;
+	}
+
+	public synchronized void setMaxParallelRequests(boolean working, Status status, int maxParallelRequests) {
 		assert !isPersistent();
-		this.maxParallelRequestsWorking = maxParallelRequests;
+		int[][] requests = unpackMaxParallelRequests();
+		requests[workingIndex(working)][statusIndex(status)] = maxParallelRequests;
+		
+		StringBuilder sb = new StringBuilder();
+		for (int w = 0; w < workingRelationsToProcess.length; w++) {
+			for (int s= 0; s < statusesToProcess.length; s++) {
+				sb.append(Integer.toString(requests[w][s]));
+				sb.append(";");
+			}
+		}
+		this.maxParallelRequests = sb.toString();
 	}
 
-	public synchronized int getMaxParallelRequestsWorking() {
-		return maxParallelRequestsWorking;
+	public synchronized int getMaxParallelRequests(boolean working, Status status) {
+		int[][] requests = unpackMaxParallelRequests();
+		return requests[workingIndex(working)][statusIndex(status)];
 	}
 
-	public synchronized void setMaxParallelRequestsNonWorking(int maxParallelRequests) {
-		assert !isPersistent();
-		this.maxParallelRequestsNonWorking = maxParallelRequests;
-	}
-
-	public synchronized int getMaxParallelRequestsNonWorking() {
-		return maxParallelRequestsNonWorking;
-	}
-
-	public synchronized int getMaxParallelRequests() {
+	public synchronized int getMaxParallelRequests(Status status) {
 		int actualHour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY);
 		Boolean isWorking = true;
 
@@ -145,11 +190,7 @@ public class Config extends Persistent implements Cloneable {
 			isWorking = (actualHour > this.getBeginWorkingPeriod() || actualHour < this.getEndWorkingPeriod());
 		}
 
-		if(isWorking) {
-			return this.getMaxParallelRequestsWorking();
-		} else {
-			return this.getMaxParallelRequestsNonWorking();
-		}
+		return this.getMaxParallelRequests(isWorking, status);
 	}
 
 	public synchronized void setBeginWorkingPeriod(int beginWorkingPeriod) {

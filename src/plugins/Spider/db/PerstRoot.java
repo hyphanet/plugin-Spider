@@ -1,24 +1,19 @@
 package plugins.Spider.db;
 
 import java.util.Iterator;
-import java.util.List;
 
 import plugins.Spider.org.garret.perst.FieldIndex;
-import plugins.Spider.org.garret.perst.IterableIterator;
 import plugins.Spider.org.garret.perst.Key;
 import plugins.Spider.org.garret.perst.Persistent;
 import plugins.Spider.org.garret.perst.Storage;
 import freenet.keys.FreenetURI;
+import freenet.support.Logger;
 
 public class PerstRoot extends Persistent {
 
 	protected FieldIndex<Page> idPage;
 	protected FieldIndex<Page> uriPage;
-	protected FieldIndex<Page> queuedPages;
-	protected FieldIndex<Page> failedPages;
-	protected FieldIndex<Page> succeededPages;
-	protected FieldIndex<Page> notPushedPages;
-	protected FieldIndex<Page> indexedPages;
+	FieldIndex[] statusPages;
 
 	private Config config;
 
@@ -28,42 +23,67 @@ public class PerstRoot extends Persistent {
 	public static PerstRoot createRoot(Storage storage) {
 		PerstRoot root = new PerstRoot();
 
-		root.idPage = storage.createFieldIndex(Page.class, "id", true);
-		root.uriPage = storage.createFieldIndex(Page.class, "uri", true);
-		root.queuedPages = storage.createFieldIndex(Page.class, "lastChange", false);
-		root.failedPages = storage.createFieldIndex(Page.class, "lastChange", false);
-		root.succeededPages = storage.createFieldIndex(Page.class, "lastChange", false);
-		root.notPushedPages = storage.createFieldIndex(Page.class, "lastChange", false);
-		root.indexedPages = storage.createFieldIndex(Page.class, "lastChange", false);
-
-		root.config = new Config(storage);
+		root.create(storage);
 
 		storage.setRoot(root);
 
 		return root;
 	}
+
+	private void create(Storage storage) {
+		idPage = storage.createFieldIndex(Page.class, "id", true);
+		uriPage = storage.createFieldIndex(Page.class, "uri", true);
+		statusPages = new FieldIndex[Status.values().length];
+		for (Status status : Status.values()) {
+			String fieldName = "lastChange";
+			if (status == Status.NEW_EDITION) {
+				fieldName = "lastFetched";
+			}
+			statusPages[status.ordinal()] = storage.<Page>createFieldIndex(Page.class, fieldName, true);
+		}
+
+		config = new Config(storage);
+	}
 	
+	/**
+	 * Finds or creates pages in the database.
+	 * 
+	 * @param uri The URI of the page to find.
+	 * @param create if true then the page is created if it doesn't exist.
+	 * @param comment is only used when create is true.
+	 * @return the page.
+	 */
 	public Page getPageByURI(FreenetURI uri, boolean create, String comment) {
 		idPage.exclusiveLock();
 		uriPage.exclusiveLock();
-		queuedPages.exclusiveLock();
+		getPageIndex(Status.NEW).exclusiveLock();
 		try {
 			Page page = uriPage.get(new Key(uri.toString()));
 
 			if (create && page == null) {
+				Logger.debug(this, "New page created for " + uri.toString());
 				page = new Page(uri.toString(), comment, getStorage());
 
 				idPage.append(page);
 				uriPage.put(page);
-				queuedPages.put(page);
+				getPageIndex(Status.NEW).put(page);
 			}
 
 			return page;
 		} finally {
-			queuedPages.unlock();
+			getPageIndex(Status.NEW).unlock();
 			uriPage.unlock();
 			idPage.unlock();
 		}
+	}
+
+	/**
+	 * Find a page in the database.
+	 * @param uri The page to find.
+	 * @return null if not found
+	 */
+	public Page getPageByURI(FreenetURI uri) {
+		return getPageByURI(uri, false, null);
 	}
 
 	public Page getPageById(long id) {
@@ -77,20 +97,7 @@ public class PerstRoot extends Persistent {
 	}
 
 	FieldIndex<Page> getPageIndex(Status status) {
-		switch (status) {
-		case FAILED:
-			return failedPages;
-		case QUEUED:
-			return queuedPages;
-		case SUCCEEDED:
-			return succeededPages;
-		case NOT_PUSHED:
-			return notPushedPages;
-		case INDEXED:
-			return indexedPages;
-		default:
-			return null;
-		}
+		return statusPages[status.ordinal()];
 	}
 
 	public void exclusiveLock(Status status) {

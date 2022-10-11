@@ -18,7 +18,8 @@ package plugins.Spider.index;
 */
 abstract public class TermEntry implements Comparable<TermEntry> {
 
-	final static long serialVersionUID = 0xF23194B7F015560CL;
+	// final static long serialVersionUID = 0xF23194B7F015560CL;
+	final static long serialVersionUID2 = 0xF33194B7F015560CL;
 
 	public enum EntryType {
 		INDEX, TERM, PAGE

@@ -4,10 +4,17 @@
  */
 package plugins.Spider.web;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
+import java.util.NoSuchElementException;
+
+import javax.naming.SizeLimitExceededException;
 
 import plugins.Spider.Spider;
 import plugins.Spider.db.Config;
@@ -52,11 +59,16 @@ class MainPage implements WebPage {
 	 */
 	public void processPostRequest(HTTPRequest request, HTMLNode contentNode) {
 		// Queue URI
-		String addURI = request.getPartAsString("addURI", 512);
+		String addURI = null;
+		try {
+			addURI = request.getPartAsStringThrowing("addURI", 512);
+		} catch (SizeLimitExceededException e1) {
+		} catch (NoSuchElementException e1) {
+		}
 		if (addURI != null && addURI.length() != 0) {
 			try {
 				FreenetURI uri = new FreenetURI(addURI);
-				spider.queueURI(uri, "manually", true);
+				spider.queueURI(uri, "manually");
 
 				pageMaker.getInfobox("infobox infobox-success", "URI Added", contentNode).
 					addChild("#", "Added " + uri);
@@ -65,7 +77,6 @@ class MainPage implements WebPage {
 					addChild("#", e.getMessage());
 				Logger.normal(this, "Manual added URI cause exception", e);
 			}
-			spider.startSomeRequests();
 		}
 	}
 
@@ -79,32 +90,28 @@ class MainPage implements WebPage {
 		HTMLNode overviewTable = contentNode.addChild("table", "class", "column");
 		HTMLNode overviewTableRow = overviewTable.addChild("tr");
 
-		PageStatus queuedStatus = getPageStatus(Status.QUEUED);
-		PageStatus indexedStatus = getPageStatus(Status.INDEXED);
-		PageStatus succeededStatus = getPageStatus(Status.SUCCEEDED);
-		PageStatus failedStatus = getPageStatus(Status.FAILED);
-		PageStatus notPushedStatus = getPageStatus(Status.NOT_PUSHED);
-
-		List<Page> runningFetch = spider.getRunningFetch();
 		Config config = spider.getConfig();
 
 		// Column 1
 		HTMLNode nextTableCell = overviewTableRow.addChild("td", "class", "first");
 		HTMLNode statusContent = pageMaker.getInfobox("#", "Spider Status", nextTableCell);
-		statusContent.addChild("#", "Running Request: " + runningFetch.size() + "/"
-		        + config.getMaxParallelRequests());
-		statusContent.addChild("br");
-		statusContent.addChild("#", "Queued: " + queuedStatus.count);
-		statusContent.addChild("br");
-		statusContent.addChild("#", "Indexed: " + indexedStatus.count);
-		statusContent.addChild("br");
-		statusContent.addChild("#", "Succeeded: " + succeededStatus.count);
-		statusContent.addChild("br");
-		statusContent.addChild("#", "Not pushed: " + notPushedStatus.count);
-		statusContent.addChild("br");
-		statusContent.addChild("#", "Failed: " + failedStatus.count);
-		statusContent.addChild("br");
+		for (int i = 0; i < Config.statusesToProcess.length; i++) {
+			Status status = Config.statusesToProcess[i];
+			List<String> runningFetch = spider.getRunningFetch(status);
+			statusContent.addChild("#", "Running Request for " + status + ": " + runningFetch.size() + "/"
+			        + config.getMaxParallelRequests(status));
+			statusContent.addChild("br");
+			
+		}
+		for (Status status : Status.values()) {
+			statusContent.addChild("#", status + ": " + getPageStatus(status).count);
+			statusContent.addChild("br");
+		}
 		statusContent.addChild("#", "Queued Event: " + spider.callbackExecutor.getQueue().size());
+		statusContent.addChild("br");
+		statusContent.addChild("#", "Subscribed USKs: " + spider.getSubscribedToUSKs());
+		statusContent.addChild("br");
+		statusContent.addChild("#", "Found new editions: " + spider.getEditionsFound());
 		statusContent.addChild("br");
 		statusContent.addChild("#", "Library buffer size: "+spider.getLibraryBufferSize());
 		long lastRequestFinishedAt = spider.getLastRequestFinishedAt();
@@ -136,61 +143,71 @@ class MainPage implements WebPage {
 		addForm.addChild("label", "for", "addURI", "Add URI:");
 		addForm.addChild("input", new String[] { "name", "style" }, new String[] { "addURI", "width: 20em;" });
 		addForm.addChild("input", new String[] { "type", "value" }, new String[] { "submit", "Add" });
+		mainContent.addChild("p");
+		final File file = new File(".", "library.info");
+		FileReader fr = null;
+		BufferedReader br = null;
+		try {
+			fr = new FileReader(file);
+			br = new BufferedReader(fr);
+			String line;
+			while ((line = br.readLine()) != null) {
+				mainContent.addChild("#", line);
+				mainContent.addChild("br");
+			}
+			br.close();
+		} catch (FileNotFoundException e) {
+			// There is no such file. That is fine.
+		} catch (IOException e) {
+			// We suddenly couldn't read this file. Strange problem.
+			throw new RuntimeException(e);
+		} finally {
+			if (br != null) {
+				try {
+					br.close();
+				} catch (IOException e) {
+					// Ignore.
+				}
+			}
+			if (fr != null) {
+				try {
+					fr.close();
+				} catch (IOException e) {
+					// Ignore.
+				}
+			} 
+		}
 
-		InfoboxNode running = pageMaker.getInfobox("Running URI");
-		HTMLNode runningBox = running.outer;
-		runningBox.addAttribute("style", "right: 0;");
-		HTMLNode runningContent = running.content;
+		for (Status status : Config.statusesToProcess) {
+			List<String> runningFetch = spider.getRunningFetch(status);
+			if (!runningFetch.isEmpty()) {
+				InfoboxNode running = pageMaker.getInfobox("Running URIs for " + status);
+				HTMLNode runningBox = running.outer;
+				runningBox.addAttribute("style", "right: 0;");
+				HTMLNode runningContent = running.content;
 
-		if (runningFetch.isEmpty()) {
-			runningContent.addChild("#", "NO URI");
-		} else {
-			HTMLNode list = runningContent.addChild("ol", "style", "overflow: auto; white-space: nowrap;");
+				runningContent.addChild("#", "USKs shown without edition.");
+				HTMLNode list = runningContent.addChild("ol", "style", "overflow: auto; white-space: nowrap;");
 
-			Iterator<Page> pi = runningFetch.iterator();
-			int maxURI = config.getMaxShownURIs();
-			for (int i = 0; i < maxURI && pi.hasNext(); i++) {
-				Page page = pi.next();
-				HTMLNode litem = list.addChild("li", "title", page.getComment());
-				litem.addChild("a", "href", "/freenet:" + page.getURI(), page.getURI());
+				Iterator<String> pi = runningFetch.iterator();
+				int maxURI = config.getMaxShownURIs();
+				for (int i = 0; i < maxURI && pi.hasNext(); i++) {
+					String runningURI = pi.next();
+					HTMLNode litem = list.addChild("li");
+					litem.addChild("a", "href", "/freenet:" + runningURI, runningURI);
+				}
+				contentNode.addChild(runningBox);
 			}
 		}
-		contentNode.addChild(runningBox);
 
-		InfoboxNode queued = pageMaker.getInfobox("Queued URI");
-		HTMLNode queuedBox = queued.outer;
-		queuedBox.addAttribute("style", "right: 0; overflow: auto;");
-		HTMLNode queuedContent = queued.content;
-		listPages(queuedStatus, queuedContent);
-		contentNode.addChild(queuedBox);
-
-		InfoboxNode indexed = pageMaker.getInfobox("Indexed URI");
-		HTMLNode indexedBox = indexed.outer;
-		indexedBox.addAttribute("style", "right: 0;");
-		HTMLNode indexedContent = indexed.content;
-		listPages(indexedStatus, indexedContent);
-		contentNode.addChild(indexedBox);
-
-		InfoboxNode succeeded = pageMaker.getInfobox("Succeeded URI");
-		HTMLNode succeededBox = succeeded.outer;
-		succeededBox.addAttribute("style", "right: 0;");
-		HTMLNode succeededContent = succeeded.content;
-		listPages(succeededStatus, succeededContent);
-		contentNode.addChild(succeededBox);
-
-		InfoboxNode notPushed = pageMaker.getInfobox("Not pushed URI");
-		HTMLNode notPushedBox = notPushed.outer;
-		notPushedBox.addAttribute("style", "right: 0;");
-		HTMLNode notPushedContent = notPushed.content;
-		listPages(notPushedStatus, notPushedContent);
-		contentNode.addChild(notPushedBox);
-
-		InfoboxNode failed = pageMaker.getInfobox("Failed URI");
-		HTMLNode failedBox = failed.outer;
-		failedBox.addAttribute("style", "right: 0;");
-		HTMLNode failedContent = failed.content;
-		listPages(failedStatus, failedContent);
-		contentNode.addChild(failedBox);
+		for (Status status : Status.values()) {
+			InfoboxNode d = pageMaker.getInfobox(status + " URIs");
+			HTMLNode box = d.outer;
+			box.addAttribute("style", "right: 0; overflow: auto;");
+			HTMLNode content = d.content;
+			listPages(getPageStatus(status), content);
+			contentNode.addChild(box);
+		}
 	}
 
 	//-- Utilities
@@ -201,12 +218,12 @@ class MainPage implements WebPage {
 			Iterator<Page> it = root.getPages(status);
 
 			int showURI = spider.getConfig().getMaxShownURIs();
-			List<Page> page = new ArrayList();
-			while (page.size() < showURI && it.hasNext()) {
-				page.add(it.next());
+			List<Page> pages = new ArrayList<Page>();
+			while (pages.size() < showURI && it.hasNext()) {
+				pages.add(it.next());
 			}
 
-			return new PageStatus(count, page);
+			return new PageStatus(count, pages);
 		}
 	}
 
@@ -219,6 +236,23 @@ class MainPage implements WebPage {
 			for (Page page : pageStatus.pages) {
 				HTMLNode litem = list.addChild("li", "title", page.getComment());
 				litem.addChild("a", "href", "/freenet:" + page.getURI(), page.getURI());
+				String title = page.getPageTitle();
+				if (title == null) {
+					title = "";
+				}
+				String changed = page.getLastFetchedAsString();
+				if (!changed.equals("")) {
+					title = "Last changed " + changed + " " + title;
+				}
+				long edition = page.getEdition();
+				if (edition != 0L) {
+					title = "Edition " + edition + " " + title;
+				}
+				litem.addChild("p",
+						" " +
+						page.getLastChangeAsString() + " " +
+						title + " " +
+						"(" + page.getComment() + ")");
 			}
 		}
 	}
